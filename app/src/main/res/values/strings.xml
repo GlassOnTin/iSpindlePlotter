@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">iSpindle Plotter</string>
+    <string name="server_notification_channel">iSpindle server</string>
+    <string name="server_running">Listening for iSpindle readings</string>
+</resources>
