@@ -1,0 +1,228 @@
+package com.ispindle.plotter.ui
+
+import android.content.Context
+import android.net.Network
+import android.util.Log
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.ispindle.plotter.network.ConfigForm
+import com.ispindle.plotter.network.IspindleApBinder
+import com.ispindle.plotter.network.IspindleConfigClient
+import com.ispindle.plotter.network.IspindleHttpServer
+import com.ispindle.plotter.network.LiveReading
+import com.ispindle.plotter.network.NetworkUtils
+import com.ispindle.plotter.network.ScannedAp
+import com.ispindle.plotter.network.StateInfo
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+
+/**
+ * State machine for the "Configure iSpindle" flow:
+ *
+ *   Idle ──connect──▶ Joining ──onAvailable──▶ Connected
+ *                 \                          ╱
+ *                  ▼                        ▼
+ *                 Failed              ScanLoaded ──save──▶ Saving ──▶ Joined / Timeout
+ *
+ * Every transition carries the live reading where available so the UI can
+ * reassure the user that the iSpindle is still talking.
+ */
+class ConfigureViewModel(
+    private val appContext: Context
+) : ViewModel() {
+
+    sealed class Phase {
+        data object Idle : Phase()
+        data object Joining : Phase()
+        data class Connected(val state: StateInfo) : Phase()
+        data class ScanLoaded(val state: StateInfo, val networks: List<ScannedAp>) : Phase()
+        data object Saving : Phase()
+        data class Joined(val homeSsid: String, val deviceIp: String) : Phase()
+        data object SaveTimeout : Phase()
+        data class Failed(val message: String) : Phase()
+        data object Unsupported : Phase()
+    }
+
+    data class UiState(
+        val phase: Phase = Phase.Idle,
+        val live: LiveReading? = null,
+        val form: ConfigForm = ConfigForm(homeSsid = "", homePassword = ""),
+        val ssidPrefix: String = "iSpindel",
+        val exactSsid: String? = null,
+        val apPassphrase: String? = null
+    )
+
+    private val _state = MutableStateFlow(UiState())
+    val state: StateFlow<UiState> = _state.asStateFlow()
+
+    private var bindJob: Job? = null
+    private var liveJob: Job? = null
+    private var network: Network? = null
+    private var client: IspindleConfigClient? = null
+
+    fun updateForm(transform: (ConfigForm) -> ConfigForm) {
+        _state.update { it.copy(form = transform(it.form)) }
+    }
+
+    fun updateApSsid(prefix: String?, exact: String?, passphrase: String?) {
+        _state.update {
+            it.copy(
+                ssidPrefix = prefix ?: it.ssidPrefix,
+                exactSsid = exact?.takeIf { v -> v.isNotBlank() },
+                apPassphrase = passphrase?.takeIf { v -> v.isNotBlank() }
+            )
+        }
+    }
+
+    fun connect() {
+        bindJob?.cancel()
+        liveJob?.cancel()
+        _state.update { it.copy(phase = Phase.Joining, live = null) }
+
+        val ui = _state.value
+        bindJob = viewModelScope.launch {
+            IspindleApBinder.connect(
+                context = appContext,
+                ssidPrefix = ui.ssidPrefix,
+                exactSsid = ui.exactSsid,
+                passphrase = ui.apPassphrase
+            ).collect { ev ->
+                when (ev) {
+                    IspindleApBinder.State.Requesting -> { /* shown as Joining */ }
+                    IspindleApBinder.State.Unsupported ->
+                        _state.update { it.copy(phase = Phase.Unsupported) }
+                    is IspindleApBinder.State.Lost ->
+                        _state.update { it.copy(phase = Phase.Failed(ev.reason)) }
+                    is IspindleApBinder.State.Connected -> onApConnected(ev.network)
+                }
+            }
+        }
+    }
+
+    private fun onApConnected(net: Network) {
+        network = net
+        val c = IspindleConfigClient(net)
+        client = c
+        viewModelScope.launch {
+            try {
+                val st = c.getState()
+                val pre = prefilledForm(st)
+                _state.update { it.copy(phase = Phase.Connected(st), form = pre) }
+                // Kick off scan and live reading concurrently.
+                launch { loadScan() }
+                startLiveLoop(c)
+            } catch (t: Throwable) {
+                Log.e(TAG, "post-connect probe failed", t)
+                _state.update { it.copy(phase = Phase.Failed("Joined AP but iSpindle did not respond: ${t.message}")) }
+            }
+        }
+    }
+
+    private fun prefilledForm(state: StateInfo): ConfigForm {
+        val phoneIp = NetworkUtils.preferredIpv4()
+        val current = _state.value.form
+        return current.copy(
+            serverHost = current.serverHost ?: phoneIp,
+            serverPort = current.serverPort ?: IspindleHttpServer.DEFAULT_PORT,
+            serverPath = current.serverPath ?: "/",
+            sleepSeconds = current.sleepSeconds ?: 900,
+            serviceTypeIndex = current.serviceTypeIndex ?: 0
+        )
+    }
+
+    private suspend fun loadScan() {
+        val c = client ?: return
+        try {
+            val nets = c.scanNetworks()
+            val current = _state.value
+            val phase = current.phase
+            if (phase is Phase.Connected) {
+                _state.update { it.copy(phase = Phase.ScanLoaded(phase.state, nets)) }
+            }
+        } catch (t: Throwable) {
+            Log.w(TAG, "scan failed: ${t.message}")
+        }
+    }
+
+    private fun startLiveLoop(c: IspindleConfigClient) {
+        liveJob?.cancel()
+        liveJob = viewModelScope.launch {
+            while (isActive) {
+                try {
+                    _state.update { it.copy(live = c.getLiveReading()) }
+                } catch (_: Throwable) { /* expected as we tear down */ }
+                kotlinx.coroutines.delay(2_000)
+            }
+        }
+    }
+
+    fun save() {
+        val ui = _state.value
+        val c = client ?: return
+        val form = ui.form
+        if (form.homeSsid.isBlank()) {
+            _state.update { it.copy(phase = Phase.Failed("Pick a home network SSID first")) }
+            return
+        }
+        liveJob?.cancel()
+        _state.update { it.copy(phase = Phase.Saving) }
+        viewModelScope.launch {
+            runCatching { c.saveConfig(form) }
+                .onFailure {
+                    Log.w(TAG, "saveConfig threw (often expected — device reboots): ${it.message}")
+                }
+            // Whether or not the save HTTP call returns cleanly, the iSpindle
+            // is now rebooting and will join the home network. Poll /state.
+            val joined = runCatching { c.pollUntilJoined(form.homeSsid) }.getOrDefault(false)
+            if (joined) {
+                val finalState = runCatching { c.getState() }.getOrNull()
+                _state.update {
+                    it.copy(
+                        phase = Phase.Joined(
+                            homeSsid = form.homeSsid,
+                            deviceIp = finalState?.stationIp.orEmpty()
+                        )
+                    )
+                }
+            } else {
+                _state.update { it.copy(phase = Phase.SaveTimeout) }
+            }
+            // Either way we're done with the AP.
+            disconnect()
+        }
+    }
+
+    fun disconnect() {
+        liveJob?.cancel(); liveJob = null
+        bindJob?.cancel(); bindJob = null
+        network = null
+        client = null
+    }
+
+    fun reset() {
+        disconnect()
+        _state.value = UiState()
+    }
+
+    override fun onCleared() {
+        disconnect()
+        super.onCleared()
+    }
+
+    class Factory(private val appContext: Context) : androidx.lifecycle.ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T =
+            ConfigureViewModel(appContext) as T
+    }
+
+    companion object {
+        private const val TAG = "ConfigureViewModel"
+    }
+}

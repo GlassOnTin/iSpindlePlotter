@@ -10,4 +10,5 @@ sealed class Dest(val route: String, val label: String) {
         fun of(deviceId: Long) = "calibrate/$deviceId"
     }
     data object Setup : Dest("setup", "Setup Guide")
+    data object Configure : Dest("configure", "Configure")
 }

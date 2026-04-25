@@ -21,8 +21,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.platform.LocalContext
 import com.ispindle.plotter.IspindleApp
 import com.ispindle.plotter.ui.screens.CalibrationScreen
+import com.ispindle.plotter.ui.screens.ConfigureScreen
 import com.ispindle.plotter.ui.screens.DevicesScreen
 import com.ispindle.plotter.ui.screens.GraphScreen
 import com.ispindle.plotter.ui.screens.HomeScreen
@@ -92,7 +95,23 @@ fun AppRoot(app: IspindleApp, vm: MainViewModel) {
                     onOpenCalibrate = { navController.navigate(Dest.Calibrate.of(it)) }
                 )
             }
-            composable(Dest.Setup.route) { SetupScreen(padding = padding) }
+            composable(Dest.Setup.route) {
+                SetupScreen(
+                    padding = padding,
+                    onAutoConfigure = { navController.navigate(Dest.Configure.route) }
+                )
+            }
+            composable(Dest.Configure.route) {
+                val ctx = LocalContext.current.applicationContext
+                val configureVm: ConfigureViewModel = viewModel(
+                    factory = ConfigureViewModel.Factory(ctx)
+                )
+                ConfigureScreen(
+                    vm = configureVm,
+                    padding = padding,
+                    onBack = { navController.popBackStack() }
+                )
+            }
             composable(
                 Dest.Graph.route,
                 arguments = listOf(navArgument("deviceId") { type = NavType.LongType })

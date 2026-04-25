@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -28,7 +29,7 @@ import com.ispindle.plotter.network.IspindleHttpServer
 import com.ispindle.plotter.network.NetworkUtils
 
 @Composable
-fun SetupScreen(padding: PaddingValues) {
+fun SetupScreen(padding: PaddingValues, onAutoConfigure: () -> Unit = {}) {
     val ctx = LocalContext.current
     val ip = NetworkUtils.preferredIpv4() ?: "<not connected>"
     val port = IspindleHttpServer.DEFAULT_PORT
@@ -42,7 +43,21 @@ fun SetupScreen(padding: PaddingValues) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Text("Pairing your iSpindle", style = androidx.compose.material3.MaterialTheme.typography.titleLarge)
+        Text("Pairing your iSpindle", style = MaterialTheme.typography.titleLarge)
+
+        Card {
+            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Auto-configure (Android 10+)", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Drives the iSpindle's config portal directly: joins its AP, scans your home networks, " +
+                            "submits the form, and waits for the device to come online. Skips the manual browser step entirely.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Button(onClick = onAutoConfigure) { Text("Configure iSpindle now") }
+            }
+        }
+
+        Text("Or do it manually:", style = MaterialTheme.typography.titleMedium)
 
         Card {
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
