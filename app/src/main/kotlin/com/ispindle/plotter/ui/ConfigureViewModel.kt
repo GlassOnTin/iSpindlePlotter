@@ -56,7 +56,11 @@ class ConfigureViewModel(
         val form: ConfigForm = ConfigForm(homeSsid = "", homePassword = ""),
         val ssidPrefix: String = "iSpindel",
         val exactSsid: String? = null,
-        val apPassphrase: String? = null
+        val apPassphrase: String? = null,
+        // Captured before the WiFi specifier joins the iSpindle AP, so it
+        // still reflects the home-network address. Once we're on the AP,
+        // NetworkUtils returns 192.168.4.x which the iSpindle can't reach.
+        val homeIpSnapshot: String? = null
     )
 
     private val _state = MutableStateFlow(UiState())
@@ -84,7 +88,11 @@ class ConfigureViewModel(
     fun connect() {
         bindJob?.cancel()
         liveJob?.cancel()
-        _state.update { it.copy(phase = Phase.Joining, live = null) }
+        // Snapshot the home-network IP *before* binding to the iSpindle AP.
+        // After the bind, wlan0 reports the AP's subnet and we lose the
+        // home address we want the iSpindle to POST to.
+        val homeIp = NetworkUtils.preferredIpv4()
+        _state.update { it.copy(phase = Phase.Joining, live = null, homeIpSnapshot = homeIp) }
 
         val ui = _state.value
         bindJob = viewModelScope.launch {
@@ -126,15 +134,35 @@ class ConfigureViewModel(
     }
 
     private fun prefilledForm(state: StateInfo): ConfigForm {
-        val phoneIp = NetworkUtils.preferredIpv4()
+        // Prefer the snapshot taken before binding to the AP, since
+        // NetworkUtils.preferredIpv4() now returns the iSpindle subnet.
+        val phoneIp = _state.value.homeIpSnapshot ?: NetworkUtils.preferredIpv4()
         val current = _state.value.form
         return current.copy(
-            serverHost = current.serverHost ?: phoneIp,
+            serverHost = current.serverHost?.takeUnless { it.isBlank() } ?: phoneIp,
             serverPort = current.serverPort ?: IspindleHttpServer.DEFAULT_PORT,
-            serverPath = current.serverPath ?: "/",
+            serverPath = current.serverPath?.takeUnless { it.isBlank() } ?: "/",
             sleepSeconds = current.sleepSeconds ?: 900,
             serviceTypeIndex = current.serviceTypeIndex ?: 0
         )
+    }
+
+    /**
+     * Resets the server-side fields to point at this phone — what the user
+     * almost always wants, restorable in one tap if they edit by accident.
+     */
+    fun applyPhoneDefaults() {
+        val phoneIp = _state.value.homeIpSnapshot ?: NetworkUtils.preferredIpv4()
+        _state.update {
+            it.copy(
+                form = it.form.copy(
+                    serverHost = phoneIp,
+                    serverPort = IspindleHttpServer.DEFAULT_PORT,
+                    serverPath = "/",
+                    serviceTypeIndex = 0
+                )
+            )
+        }
     }
 
     private suspend fun loadScan() {

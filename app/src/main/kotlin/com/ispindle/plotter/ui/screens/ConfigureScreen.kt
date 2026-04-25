@@ -217,6 +217,33 @@ private fun ConnectedCard(
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth()
             )
+            Text(
+                "Where the iSpindle should POST readings — defaults to this phone, " +
+                        "which is usually what you want. Tap \"Use this phone\" to restore the defaults.",
+                style = MaterialTheme.typography.bodySmall
+            )
+            val phoneDefault = ui.homeIpSnapshot
+            val pointsAtPhone = phoneDefault != null && form.serverHost == phoneDefault &&
+                    form.serverPort == com.ispindle.plotter.network.IspindleHttpServer.DEFAULT_PORT &&
+                    form.serverPath == "/"
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedButton(
+                    onClick = { vm.applyPhoneDefaults() },
+                    enabled = phoneDefault != null && !pointsAtPhone
+                ) {
+                    Text(if (pointsAtPhone) "Pointing at phone ✓" else "Use this phone")
+                }
+                if (phoneDefault == null) {
+                    Text(
+                        "(no home IP detected — connect this phone to home WiFi first)",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = form.serverHost.orEmpty(),
