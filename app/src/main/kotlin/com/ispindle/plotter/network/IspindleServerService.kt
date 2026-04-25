@@ -35,14 +35,32 @@ class IspindleServerService : Service() {
         val app = applicationContext as IspindleApp
         server = app.httpServer
         ensureChannel()
-        startForegroundInternal("Starting…")
-        server.start()
-        observerJob = scope.launch {
-            server.state.collectLatest { updateNotification(it) }
+        // Android 14+ raises ForegroundServiceStartNotAllowedException if the
+        // app isn't visible when the service starts, or if the dataSync FGS
+        // time budget is exhausted. Either case means we can't legally raise
+        // the notification — log and stop quietly rather than crash. The
+        // user-facing Start/Stop buttons run while the activity is in the
+        // foreground, so this is only the background-restart edge case.
+        try {
+            startForegroundInternal("Starting…")
+            server.start()
+            observerJob = scope.launch {
+                server.state.collectLatest { updateNotification(it) }
+            }
+        } catch (t: Throwable) {
+            android.util.Log.e(
+                "IspindleServerService",
+                "Foreground start denied — stopping service",
+                t
+            )
+            stopSelf()
         }
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
+    // START_NOT_STICKY: don't have the OS resurrect us in the background.
+    // The user's explicit Start tap is the only path that should bring the
+    // server up, and that always happens while the activity is visible.
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_NOT_STICKY
 
     override fun onDestroy() {
         observerJob?.cancel()

@@ -15,8 +15,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -117,8 +115,6 @@ fun ConfigureScreen(
 private fun IdleCard(vm: ConfigureViewModel, ui: ConfigureViewModel.UiState) {
     val ctx = LocalContext.current
     var prefix by remember { mutableStateOf(ui.ssidPrefix) }
-    var exact by remember { mutableStateOf(ui.exactSsid.orEmpty()) }
-    var passphrase by remember { mutableStateOf(ui.apPassphrase.orEmpty()) }
     var permRationale by remember { mutableStateOf<String?>(null) }
 
     val requiredPermission: String? = when {
@@ -127,15 +123,16 @@ private fun IdleCard(vm: ConfigureViewModel, ui: ConfigureViewModel.UiState) {
         else -> null
     }
 
+    fun launchConnect() {
+        vm.updateApSsid(prefix, exact = null, passphrase = null)
+        vm.connect()
+    }
+
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (granted) {
-            vm.updateApSsid(prefix, exact, passphrase)
-            vm.connect()
-        } else {
-            permRationale = "WiFi-scan permission was declined. Auto-pair can't proceed without it."
-        }
+        if (granted) launchConnect()
+        else permRationale = "WiFi-scan permission was declined. Auto-pair can't proceed without it."
     }
 
     Card(Modifier.fillMaxWidth()) {
@@ -143,30 +140,16 @@ private fun IdleCard(vm: ConfigureViewModel, ui: ConfigureViewModel.UiState) {
             Text("Auto-pair with iSpindle", style = MaterialTheme.typography.titleMedium)
             Text(
                 "1. Hold the iSpindle horizontally at power-on for ~20 s — it raises an AP named iSpindel_<chipID>.\n" +
-                        "2. Tap Connect. Android will ask you to approve joining its WiFi.\n" +
-                        "3. Pick your home network, enter the password, save. The iSpindle reboots and joins.",
+                        "2. Tap Connect. If several iSpindles are in range Android shows a picker so you can choose the right one.\n" +
+                        "3. Pick your home network, enter its password, save. The iSpindle reboots and joins.",
                 style = MaterialTheme.typography.bodySmall
             )
             OutlinedTextField(
                 value = prefix,
                 onValueChange = { prefix = it },
                 label = { Text("AP SSID prefix") },
+                supportingText = { Text("Default firmware uses iSpindel_<chipID>; adjust only if you renamed it.") },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-            OutlinedTextField(
-                value = exact,
-                onValueChange = { exact = it },
-                label = { Text("Exact SSID (optional, overrides prefix)") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-            OutlinedTextField(
-                value = passphrase,
-                onValueChange = { passphrase = it },
-                label = { Text("AP passphrase (blank for open)") },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth()
             )
             Button(onClick = {
@@ -176,8 +159,7 @@ private fun IdleCard(vm: ConfigureViewModel, ui: ConfigureViewModel.UiState) {
                 ) {
                     launcher.launch(perm)
                 } else {
-                    vm.updateApSsid(prefix, exact, passphrase)
-                    vm.connect()
+                    launchConnect()
                 }
             }) { Text("Connect") }
             permRationale?.let {
@@ -289,13 +271,11 @@ private fun NetworkList(
     selected: String,
     onPick: (String) -> Unit
 ) {
+    // Plain Column — the screen above is already verticalScroll, and Compose
+    // forbids nesting LazyColumn inside a vertically scrollable parent.
     Card(Modifier.fillMaxWidth()) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(4.dp)
-        ) {
-            items(networks, key = { it.ssid }) { ap ->
+        Column(Modifier.padding(4.dp)) {
+            networks.forEach { ap ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),

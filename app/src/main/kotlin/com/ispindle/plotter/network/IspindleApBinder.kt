@@ -61,17 +61,30 @@ object IspindleApBinder {
         val cm = context.applicationContext
             .getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
-        val specBuilder = WifiNetworkSpecifier.Builder().apply {
-            if (exactSsid != null) setSsid(exactSsid)
-            else setSsidPattern(PatternMatcher(ssidPrefix, PatternMatcher.PATTERN_PREFIX))
-            if (!passphrase.isNullOrEmpty()) setWpa2Passphrase(passphrase)
-        }
+        val cleanedExact = exactSsid?.trim().takeUnless { it.isNullOrEmpty() }
+        val cleanedPrefix = ssidPrefix.trim().ifEmpty { "iSpindel" }
+        val cleanedPass = passphrase?.takeUnless { it.isEmpty() }
 
-        val request = NetworkRequest.Builder()
-            .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-            .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-            .setNetworkSpecifier(specBuilder.build())
-            .build()
+        val request = try {
+            val specBuilder = WifiNetworkSpecifier.Builder().apply {
+                if (cleanedExact != null) {
+                    setSsid(cleanedExact)
+                } else {
+                    setSsidPattern(PatternMatcher(cleanedPrefix, PatternMatcher.PATTERN_PREFIX))
+                }
+                if (cleanedPass != null) setWpa2Passphrase(cleanedPass)
+            }
+            NetworkRequest.Builder()
+                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .setNetworkSpecifier(specBuilder.build())
+                .build()
+        } catch (t: Throwable) {
+            Log.e(TAG, "Building NetworkRequest failed", t)
+            trySend(State.Lost("Invalid AP settings: ${t.message ?: t.javaClass.simpleName}"))
+            close()
+            return@callbackFlow
+        }
 
         val callback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
