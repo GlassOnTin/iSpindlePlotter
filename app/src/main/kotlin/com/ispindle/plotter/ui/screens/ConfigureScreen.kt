@@ -286,7 +286,7 @@ private fun ConnectedCard(
                     onClick = { vm.applyPhoneDefaults() },
                     enabled = phoneDefault != null && !pointsAtPhone
                 ) {
-                    Text(if (pointsAtPhone) "Pointing at phone ✓" else "Use this phone")
+                    Text(if (pointsAtPhone) "Pointing at phone ✓" else "Use this phone IP")
                 }
                 if (phoneDefault == null) {
                     Text(
@@ -296,6 +296,7 @@ private fun ConnectedCard(
                     )
                 }
             }
+            HostnameRow(vm = vm, ui = ui)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = form.serverHost.orEmpty(),
@@ -348,6 +349,64 @@ private fun ConnectedCard(
                 Button(onClick = { vm.save() }) { Text("Save & reboot") }
                 OutlinedButton(onClick = { vm.reset() }) { Text("Cancel") }
             }
+        }
+    }
+}
+
+@Composable
+private fun HostnameRow(vm: ConfigureViewModel, ui: ConfigureViewModel.UiState) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedButton(
+                onClick = { vm.probeHostname() },
+                enabled = ui.homeIpSnapshot != null &&
+                        ui.hostnameProbe !is ConfigureViewModel.HostnameProbe.Probing
+            ) { Text("Find hostname") }
+            when (val p = ui.hostnameProbe) {
+                ConfigureViewModel.HostnameProbe.Idle -> Text(
+                    "Use a router-published name so the iSpindle survives DHCP changes.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                ConfigureViewModel.HostnameProbe.Probing -> Text(
+                    "Resolving…",
+                    style = MaterialTheme.typography.labelSmall
+                )
+                ConfigureViewModel.HostnameProbe.NotFound -> Text(
+                    "No reverse-DNS record for this phone — use the IP, or set a hostname in your router.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+                is ConfigureViewModel.HostnameProbe.Unique -> Text(
+                    p.hostname,
+                    fontFamily = FontFamily.Monospace,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.tertiary
+                )
+                is ConfigureViewModel.HostnameProbe.Ambiguous -> Text(
+                    "${p.hostname} resolves to ${p.resolvesTo.size} IPs — name is shared.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+        when (val p = ui.hostnameProbe) {
+            is ConfigureViewModel.HostnameProbe.Unique -> {
+                Button(onClick = { vm.applyHostnameAsServer(p.hostname) }) {
+                    Text("Use ${p.hostname}")
+                }
+            }
+            is ConfigureViewModel.HostnameProbe.Ambiguous -> {
+                Text(
+                    "Other IPs answering to that name: " +
+                            p.resolvesTo.filter { it != ui.homeIpSnapshot }.joinToString(", "),
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
+            else -> Unit
         }
     }
 }

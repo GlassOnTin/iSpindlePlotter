@@ -1,6 +1,7 @@
 package com.ispindle.plotter.network
 
 import java.net.Inet4Address
+import java.net.InetAddress
 import java.net.NetworkInterface
 
 object NetworkUtils {
@@ -24,5 +25,40 @@ object NetworkUtils {
             }
         }
         return candidates.minByOrNull { it.first }?.second?.takeIf { it.isNotBlank() }
+    }
+
+    /**
+     * Asks the system resolver for the PTR (reverse DNS) of an IPv4 address.
+     * On a FritzBox / dnsmasq LAN this is how the router exposes a stable
+     * name for each DHCP client (e.g. 192.168.0.109 → Pixel-8-Pro.fritz.box).
+     *
+     * Returns null if no PTR is registered, or if the response is just the
+     * IP echoed back (which Java's resolver does when the lookup fails).
+     */
+    fun reverseLookup(ip: String): String? {
+        return try {
+            val addr = InetAddress.getByName(ip)
+            val name = addr.canonicalHostName
+            if (name.equals(ip, ignoreCase = true)) null
+            else name.trimEnd('.').takeIf { it.isNotBlank() }
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
+    /**
+     * Resolves [hostname] forward to all configured IPv4 addresses. Used to
+     * sanity-check that a hostname suggested by reverse DNS still points at
+     * the phone — a FritzBox can return a stale name that resolves to a
+     * sibling device's IP if multiple clients have advertised it.
+     */
+    fun forwardLookupIpv4(hostname: String): List<String> {
+        return try {
+            InetAddress.getAllByName(hostname)
+                .filterIsInstance<Inet4Address>()
+                .mapNotNull { it.hostAddress }
+        } catch (_: Throwable) {
+            emptyList()
+        }
     }
 }

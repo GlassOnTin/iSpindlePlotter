@@ -5,6 +5,7 @@ import android.net.Network
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import com.ispindle.plotter.IspindleApp
 import com.ispindle.plotter.calibration.CubicParser
 import com.ispindle.plotter.data.PendingCalibration
@@ -42,6 +43,17 @@ class ConfigureViewModel(
     private val appContext: Context
 ) : ViewModel() {
 
+    sealed class HostnameProbe {
+        data object Idle : HostnameProbe()
+        data object Probing : HostnameProbe()
+        /** Reverse DNS gave a single hostname that round-trips to our IP. */
+        data class Unique(val hostname: String) : HostnameProbe()
+        /** Reverse DNS gave a name, but forward returned more than one IP. */
+        data class Ambiguous(val hostname: String, val resolvesTo: List<String>) : HostnameProbe()
+        /** Reverse DNS produced no usable name. */
+        data object NotFound : HostnameProbe()
+    }
+
     sealed class Phase {
         data object Idle : Phase()
         data object Joining : Phase()
@@ -67,7 +79,9 @@ class ConfigureViewModel(
         val homeIpSnapshot: String? = null,
         val firmwarePolynomial: String? = null,
         val parsedCoeffs: DoubleArray? = null,
-        val polynomialImported: Boolean = false
+        val polynomialImported: Boolean = false,
+        // Result of the reverse-DNS suggestion ↔ forward-DNS sanity check.
+        val hostnameProbe: HostnameProbe = HostnameProbe.Idle
     ) {
         override fun equals(other: Any?): Boolean = other is UiState &&
                 phase == other.phase && live == other.live && form == other.form &&
@@ -228,6 +242,40 @@ class ConfigureViewModel(
                 )
             )
         }
+    }
+
+    /**
+     * Reverse-resolves the snapshotted home IP and forward-checks the
+     * result. If the round-trip yields a single IP that matches ours, we
+     * have a stable name (e.g. `Pixel-8-Pro.fritz.box`) the iSpindle can
+     * use across phone IP changes. The probe runs off-main because Java's
+     * resolver blocks on UDP.
+     */
+    fun probeHostname() {
+        val phoneIp = _state.value.homeIpSnapshot ?: NetworkUtils.preferredIpv4()
+        if (phoneIp == null) {
+            _state.update { it.copy(hostnameProbe = HostnameProbe.NotFound) }
+            return
+        }
+        _state.update { it.copy(hostnameProbe = HostnameProbe.Probing) }
+        viewModelScope.launch(Dispatchers.IO) {
+            val name = NetworkUtils.reverseLookup(phoneIp)
+            val outcome = if (name == null) {
+                HostnameProbe.NotFound
+            } else {
+                val ips = NetworkUtils.forwardLookupIpv4(name)
+                when {
+                    ips.size == 1 && ips[0] == phoneIp -> HostnameProbe.Unique(name)
+                    phoneIp in ips -> HostnameProbe.Ambiguous(name, ips)
+                    else -> HostnameProbe.NotFound
+                }
+            }
+            _state.update { it.copy(hostnameProbe = outcome) }
+        }
+    }
+
+    fun applyHostnameAsServer(hostname: String) {
+        _state.update { it.copy(form = it.form.copy(serverHost = hostname)) }
     }
 
     private suspend fun loadScan() {

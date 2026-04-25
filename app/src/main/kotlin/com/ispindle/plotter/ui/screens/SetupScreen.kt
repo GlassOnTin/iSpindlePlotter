@@ -109,6 +109,22 @@ fun SetupScreen(padding: PaddingValues, onAutoConfigure: () -> Unit = {}) {
 
         Card {
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Stable address (FritzBox)", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "AVM FritzBox routers run dnsmasq and publish a DNS record for every DHCP " +
+                            "client under .fritz.box. Use that hostname instead of a raw IP and " +
+                            "the iSpindle keeps reaching the phone after DHCP renewals.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Step(1, "Open http://fritz.box → Home Network → Network → Network Connections.")
+                Step(2, "Find this phone, edit, tick \"Always assign the same IPv4 address to this device\". This pins both IP and DNS name.")
+                Step(3, "On the Configure screen, tap \"Find hostname\". If the FritzBox publishes a unique name for the phone you can use it as the iSpindle's server address.")
+                Step(4, "If multiple devices share the name (FritzBox keeps stale entries), give the phone a distinct name on the same edit screen, delete the old entries, then re-pair the iSpindle.")
+            }
+        }
+
+        Card {
+            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("Troubleshooting", style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
                 Text("• Phone and iSpindle must be on the same subnet. Check your router's guest-network isolation.")
                 Text("• If the phone's IP changes (DHCP lease expiry), re-enter the new IP in the iSpindle portal.")
