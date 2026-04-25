@@ -30,6 +30,9 @@ interface DeviceDao {
     @Query("UPDATE devices SET lastSeenMs = :t WHERE id = :id")
     suspend fun touch(id: Long, t: Long)
 
+    @Query("DELETE FROM devices WHERE id = :id")
+    suspend fun deleteById(id: Long)
+
     @Query("UPDATE devices SET calA = :a, calB = :b, calC = :c, calD = :d, calDegree = :degree, calRSquared = :r2 WHERE id = :id")
     suspend fun updateCalibration(
         id: Long,

@@ -32,6 +32,12 @@ class MainViewModel(private val repo: Repository) : ViewModel() {
         viewModelScope.launch { repo.renameDevice(deviceId, label) }
     }
 
+    fun deleteDevice(deviceId: Long) {
+        viewModelScope.launch { repo.deleteDevice(deviceId) }
+    }
+
+    suspend fun readingCount(deviceId: Long): Int = repo.readingCount(deviceId)
+
     fun addCalibrationPoint(deviceId: Long, angle: Double, sg: Double, note: String) {
         viewModelScope.launch { repo.addCalibrationPoint(deviceId, angle, sg, note) }
     }

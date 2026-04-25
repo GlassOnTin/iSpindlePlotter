@@ -101,6 +101,11 @@ class Repository(
         deviceDao.update(d.copy(userLabel = label))
     }
 
+    /** Removes the device. ON DELETE CASCADE drops its readings and calibration points. */
+    suspend fun deleteDevice(deviceId: Long) = deviceDao.deleteById(deviceId)
+
+    suspend fun readingCount(deviceId: Long) = readingDao.countForDevice(deviceId)
+
     suspend fun enabledCalibrationPoints(deviceId: Long) =
         calibrationDao.enabledForDevice(deviceId)
 }

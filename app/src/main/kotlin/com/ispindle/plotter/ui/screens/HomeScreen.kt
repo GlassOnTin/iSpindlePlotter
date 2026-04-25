@@ -1,5 +1,11 @@
 package com.ispindle.plotter.ui.screens
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.os.Build
+import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -19,7 +25,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.ispindle.plotter.data.Reading
 import com.ispindle.plotter.network.IspindleHttpServer
@@ -61,8 +69,22 @@ fun HomeScreen(
                     is IspindleHttpServer.State.Error -> "Error: ${s.message}" to null
                 }
                 Text(status)
-                endpoint?.let {
-                    Text("Point iSpindle → $it", fontFamily = FontFamily.Monospace)
+                endpoint?.let { url ->
+                    Text(
+                        text = "Point iSpindle → $url",
+                        fontFamily = FontFamily.Monospace,
+                        textDecoration = TextDecoration.Underline,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(role = Role.Button) {
+                                copyToClipboard(ctx, label = "iSpindle endpoint", text = url)
+                            }
+                    )
+                    Text(
+                        text = "Tap to copy",
+                        style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
+                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -102,6 +124,15 @@ fun HomeScreen(
         }
 
         Spacer(Modifier.height(4.dp))
+    }
+}
+
+private fun copyToClipboard(ctx: Context, label: String, text: String) {
+    val clip = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
+    clip.setPrimaryClip(ClipData.newPlainText(label, text))
+    // Android 13+ shows a system "copied" UI itself, so suppress the duplicate toast there.
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+        Toast.makeText(ctx, "Copied $text", Toast.LENGTH_SHORT).show()
     }
 }
 
