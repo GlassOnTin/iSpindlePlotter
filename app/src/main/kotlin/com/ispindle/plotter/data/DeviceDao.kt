@@ -30,6 +30,9 @@ interface DeviceDao {
     @Query("UPDATE devices SET lastSeenMs = :t WHERE id = :id")
     suspend fun touch(id: Long, t: Long)
 
+    @Query("UPDATE devices SET lastSeenMs = :t, lastSeenIp = :ip WHERE id = :id")
+    suspend fun touchWithIp(id: Long, t: Long, ip: String?)
+
     @Query("DELETE FROM devices WHERE id = :id")
     suspend fun deleteById(id: Long)
 

@@ -140,6 +140,12 @@ private fun DeviceRow(
                         (device.calRSquared?.let { ", R²=%.4f".format(it) } ?: "")
             else "Calibration: none"
             Text(calStatus, style = MaterialTheme.typography.bodySmall)
+            device.lastSeenIp?.let {
+                Text(
+                    "Last reported from $it",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
 
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 TextButton(onClick = onGraph) { Text("Graph") }

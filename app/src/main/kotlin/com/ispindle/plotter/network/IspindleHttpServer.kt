@@ -13,6 +13,7 @@ import io.ktor.server.engine.EmbeddedServer
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.statuspages.StatusPages
+import io.ktor.server.plugins.origin
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
@@ -110,7 +111,11 @@ class IspindleHttpServer(
             call.respond(HttpStatusCode.BadRequest, mapOf("error" to (t.message ?: "bad json")))
             return
         }
-        repository.ingest(payload, System.currentTimeMillis())
+        // origin.remoteHost is the immediate peer's IP — that's the iSpindle
+        // because the firmware POSTs directly to us with no proxy in between.
+        val remoteIp = runCatching { call.request.origin.remoteHost }.getOrNull()
+            ?.takeUnless { it.isBlank() || it == "unknown" }
+        repository.ingest(payload, System.currentTimeMillis(), remoteIp)
         call.respond(HttpStatusCode.OK, mapOf("status" to "ok"))
     }
 

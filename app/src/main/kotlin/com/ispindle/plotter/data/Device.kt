@@ -22,5 +22,6 @@ data class Device(
     val calC: Double = 0.0,
     val calD: Double = 0.0,
     val calDegree: Int = 0,
-    val calRSquared: Double? = null
+    val calRSquared: Double? = null,
+    val lastSeenIp: String? = null
 )

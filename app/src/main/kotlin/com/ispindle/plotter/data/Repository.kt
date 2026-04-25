@@ -21,7 +21,7 @@ class Repository(
 
     suspend fun deviceById(id: Long) = deviceDao.findById(id)
 
-    suspend fun ingest(payload: IspindlePayload, receivedMs: Long): Long {
+    suspend fun ingest(payload: IspindlePayload, receivedMs: Long, remoteIp: String? = null): Long {
         val hwId = payload.id ?: payload.name.hashCode()
         val reportedName = payload.name ?: "iSpindel$hwId"
 
@@ -32,13 +32,14 @@ class Repository(
                     reportedName = reportedName,
                     userLabel = reportedName,
                     firstSeenMs = receivedMs,
-                    lastSeenMs = receivedMs
+                    lastSeenMs = receivedMs,
+                    lastSeenIp = remoteIp
                 )
             )
             deviceDao.findById(newId)!!
         }
 
-        deviceDao.touch(device.id, receivedMs)
+        deviceDao.touchWithIp(device.id, receivedMs, remoteIp ?: device.lastSeenIp)
 
         val tempC = when (payload.tempUnits.uppercase()) {
             "F" -> (payload.temperature - 32.0) * 5.0 / 9.0
