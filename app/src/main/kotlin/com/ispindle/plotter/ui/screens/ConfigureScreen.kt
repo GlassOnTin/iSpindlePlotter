@@ -24,6 +24,10 @@ import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -42,6 +46,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.ispindle.plotter.network.IspindleService
 import com.ispindle.plotter.network.LiveReading
 import com.ispindle.plotter.network.ScannedAp
 import com.ispindle.plotter.ui.ConfigureViewModel
@@ -268,6 +273,14 @@ private fun ConnectedCard(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
+
+            ServiceTypeDropdown(
+                selected = IspindleService.fromSelApi(form.serviceTypeIndex),
+                onSelected = { svc ->
+                    vm.updateForm { it.copy(serviceTypeIndex = svc.selApi) }
+                }
+            )
+
             OutlinedTextField(
                 value = form.sleepSeconds?.toString().orEmpty(),
                 onValueChange = { v -> vm.updateForm { f -> f.copy(sleepSeconds = v.toIntOrNull()) } },
@@ -288,6 +301,55 @@ private fun ConnectedCard(
                 Button(onClick = { vm.save() }) { Text("Save & reboot") }
                 OutlinedButton(onClick = { vm.reset() }) { Text("Cancel") }
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ServiceTypeDropdown(
+    selected: IspindleService,
+    onSelected: (IspindleService) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val isHttp = selected == IspindleService.GenericHttp || selected == IspindleService.GenericHttps
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = it }
+        ) {
+            OutlinedTextField(
+                value = "${selected.label} (selAPI=${selected.selApi})",
+                onValueChange = { /* read-only */ },
+                readOnly = true,
+                label = { Text("Service type") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                modifier = Modifier
+                    .menuAnchor()
+                    .fillMaxWidth()
+            )
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                IspindleService.entries.forEach { svc ->
+                    DropdownMenuItem(
+                        text = { Text("${svc.label} (selAPI=${svc.selApi})") },
+                        onClick = {
+                            onSelected(svc)
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+        if (!isHttp) {
+            Text(
+                "⚠ This app only receives readings when the iSpindle uses Generic HTTP " +
+                        "(or HTTPS). Other services post to their own cloud and bypass the phone.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.error
+            )
         }
     }
 }

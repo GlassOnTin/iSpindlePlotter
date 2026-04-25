@@ -9,6 +9,7 @@ import com.ispindle.plotter.network.ConfigForm
 import com.ispindle.plotter.network.IspindleApBinder
 import com.ispindle.plotter.network.IspindleConfigClient
 import com.ispindle.plotter.network.IspindleHttpServer
+import com.ispindle.plotter.network.IspindleService
 import com.ispindle.plotter.network.LiveReading
 import com.ispindle.plotter.network.NetworkUtils
 import com.ispindle.plotter.network.ScannedAp
@@ -143,7 +144,7 @@ class ConfigureViewModel(
             serverPort = current.serverPort ?: IspindleHttpServer.DEFAULT_PORT,
             serverPath = current.serverPath?.takeUnless { it.isBlank() } ?: "/",
             sleepSeconds = current.sleepSeconds ?: 900,
-            serviceTypeIndex = current.serviceTypeIndex ?: 0
+            serviceTypeIndex = current.serviceTypeIndex ?: IspindleService.GenericHttp.selApi
         )
     }
 
@@ -159,7 +160,7 @@ class ConfigureViewModel(
                     serverHost = phoneIp,
                     serverPort = IspindleHttpServer.DEFAULT_PORT,
                     serverPath = "/",
-                    serviceTypeIndex = 0
+                    serviceTypeIndex = IspindleService.GenericHttp.selApi
                 )
             )
         }

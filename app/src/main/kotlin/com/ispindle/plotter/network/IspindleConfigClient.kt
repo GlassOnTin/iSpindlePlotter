@@ -105,10 +105,12 @@ class IspindleConfigClient(private val network: Network) {
             form.serverPort?.let { add("port" to it.toString()) }
             form.serverPath?.let { add("uri" to it) }
             form.token?.let { add("token" to it) }
-            // selAPI = 0 maps to "Generic HTTP" in HTTP_API_LIST inside the
-            // firmware's <select id="API">. That is the integration this app
-            // listens for, so force it unless the caller overrides.
-            add("selAPI" to (form.serviceTypeIndex ?: 0).toString())
+            // The firmware reads selAPI as a DataType enum (Globals.h),
+            // where 3 = Generic HTTP — the only mode that POSTs to a user-
+            // configurable host:port matching what this app listens for.
+            // Mistakes here are silent: the iSpindle just reports to the
+            // wrong service. Default to GenericHttp unless caller overrides.
+            add("selAPI" to (form.serviceTypeIndex ?: IspindleService.GenericHttp.selApi).toString())
         }
         val q = params.joinToString("&") { (k, v) ->
             "${URLEncoder.encode(k, "UTF-8")}=${URLEncoder.encode(v, "UTF-8")}"
@@ -220,3 +222,36 @@ data class ConfigForm(
     val token: String? = null,
     val serviceTypeIndex: Int? = null
 )
+
+/**
+ * iSpindel firmware's `selAPI` field maps to a service-type enum defined in
+ * `pio/lib/Globals/Globals.h` (the `DT*` defines). The integer value posted
+ * to /wifisave?selAPI=N is taken directly from that enum, so picking the
+ * wrong number sends the device's reports to a completely different
+ * service. The default for this app is `Generic HTTP` (3) — that is the one
+ * mode that POSTs to a configurable host:port and matches what
+ * IspindleHttpServer listens for.
+ */
+enum class IspindleService(val selApi: Int, val label: String) {
+    GenericHttp(3, "Generic HTTP"),
+    GenericHttps(15, "Generic HTTPS"),
+    Ubidots(0, "Ubidots"),
+    Thingspeak(1, "Thingspeak"),
+    CraftBeerPi(2, "CraftBeerPi"),
+    Tcontrol(4, "TControl"),
+    Fhem(5, "FHEM"),
+    GenericTcp(6, "Generic TCP"),
+    Ispindelde(7, "iSpindel.de"),
+    InfluxDb(8, "InfluxDB"),
+    Prometheus(9, "Prometheus"),
+    Mqtt(10, "MQTT"),
+    Blynk(12, "Blynk"),
+    BrewBlox(13, "BrewBlox"),
+    AwsMqtt(14, "AWS IoT MQTT"),
+    Bricks(16, "Bricks");
+
+    companion object {
+        fun fromSelApi(value: Int?): IspindleService =
+            entries.firstOrNull { it.selApi == value } ?: GenericHttp
+    }
+}
