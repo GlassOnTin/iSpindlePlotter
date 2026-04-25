@@ -68,6 +68,30 @@ class IspindleConfigClient(private val network: Network) {
             .sortedByDescending { it.quality }
     }
 
+    /**
+     * Reads the saved POLYN expression by scraping the /wifi config form.
+     * The firmware renders every saved parameter as
+     *   <input id="POLYN" name="POLYN" length=N placeholder="..." value="...">
+     * (HTTP_FORM_PARAM in WiFiManagerKT.h:131), and this is the only public
+     * way to read the calibration string back — there is no JSON dump.
+     *
+     * Returns null if the field is absent or empty (uncalibrated device).
+     */
+    suspend fun getCurrentPolynomial(): String? {
+        val body = rawGet("/wifi")
+        // Match the input element with id="POLYN" anywhere on the page,
+        // then pull the value attribute. Anchored to id= to avoid catching
+        // a stray "POLYN" inside the placeholder text.
+        val inputRegex = Regex("""<input\s[^>]*id="POLYN"[^>]*>""", RegexOption.IGNORE_CASE)
+        val tag = inputRegex.find(body)?.value ?: return null
+        val valueRegex = Regex("""value="([^"]*)"""", RegexOption.IGNORE_CASE)
+        val value = valueRegex.find(tag)?.groupValues?.getOrNull(1)?.trim().orEmpty()
+        // The firmware HTML-encodes &amp;, &lt;, etc. via htmlencode() —
+        // for the polynomial form (digits, +, -, *, ^, e, dots, tilt) only
+        // &amp; would matter, so undo that one.
+        return value.replace("&amp;", "&").takeIf { it.isNotBlank() }
+    }
+
     /** Parses the auto-refreshing /iSpindel HTML page for live readings. */
     suspend fun getLiveReading(): LiveReading = request("/iSpindel") { body ->
         fun tdAfter(label: String): String? {

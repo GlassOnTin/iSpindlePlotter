@@ -42,6 +42,9 @@ android {
         named("main") {
             java.srcDirs("src/main/kotlin")
         }
+        named("test") {
+            java.srcDirs("src/test/kotlin")
+        }
     }
 
     compileOptions {
@@ -98,4 +101,6 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
 
     debugImplementation(libs.androidx.ui.tooling)
+
+    testImplementation("junit:junit:4.13.2")
 }

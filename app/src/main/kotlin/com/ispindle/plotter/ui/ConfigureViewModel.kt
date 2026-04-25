@@ -5,6 +5,9 @@ import android.net.Network
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ispindle.plotter.IspindleApp
+import com.ispindle.plotter.calibration.CubicParser
+import com.ispindle.plotter.data.PendingCalibration
 import com.ispindle.plotter.network.ConfigForm
 import com.ispindle.plotter.network.IspindleApBinder
 import com.ispindle.plotter.network.IspindleConfigClient
@@ -61,8 +64,33 @@ class ConfigureViewModel(
         // Captured before the WiFi specifier joins the iSpindle AP, so it
         // still reflects the home-network address. Once we're on the AP,
         // NetworkUtils returns 192.168.4.x which the iSpindle can't reach.
-        val homeIpSnapshot: String? = null
-    )
+        val homeIpSnapshot: String? = null,
+        val firmwarePolynomial: String? = null,
+        val parsedCoeffs: DoubleArray? = null,
+        val polynomialImported: Boolean = false
+    ) {
+        override fun equals(other: Any?): Boolean = other is UiState &&
+                phase == other.phase && live == other.live && form == other.form &&
+                ssidPrefix == other.ssidPrefix && exactSsid == other.exactSsid &&
+                apPassphrase == other.apPassphrase && homeIpSnapshot == other.homeIpSnapshot &&
+                firmwarePolynomial == other.firmwarePolynomial &&
+                (parsedCoeffs?.contentEquals(other.parsedCoeffs) ?: (other.parsedCoeffs == null)) &&
+                polynomialImported == other.polynomialImported
+
+        override fun hashCode(): Int {
+            var r = phase.hashCode()
+            r = 31 * r + (live?.hashCode() ?: 0)
+            r = 31 * r + form.hashCode()
+            r = 31 * r + ssidPrefix.hashCode()
+            r = 31 * r + (exactSsid?.hashCode() ?: 0)
+            r = 31 * r + (apPassphrase?.hashCode() ?: 0)
+            r = 31 * r + (homeIpSnapshot?.hashCode() ?: 0)
+            r = 31 * r + (firmwarePolynomial?.hashCode() ?: 0)
+            r = 31 * r + (parsedCoeffs?.contentHashCode() ?: 0)
+            r = 31 * r + polynomialImported.hashCode()
+            return r
+        }
+    }
 
     private val _state = MutableStateFlow(UiState())
     val state: StateFlow<UiState> = _state.asStateFlow()
@@ -124,14 +152,50 @@ class ConfigureViewModel(
                 val st = c.getState()
                 val pre = prefilledForm(st)
                 _state.update { it.copy(phase = Phase.Connected(st), form = pre) }
-                // Kick off scan and live reading concurrently.
+                // Kick off scan, live reading, and polynomial fetch in parallel.
                 launch { loadScan() }
+                launch { loadPolynomial() }
                 startLiveLoop(c)
             } catch (t: Throwable) {
                 Log.e(TAG, "post-connect probe failed", t)
                 _state.update { it.copy(phase = Phase.Failed("Joined AP but iSpindle did not respond: ${t.message}")) }
             }
         }
+    }
+
+    private suspend fun loadPolynomial() {
+        val c = client ?: return
+        try {
+            val raw = c.getCurrentPolynomial()
+            val parsed = raw?.let { CubicParser.parse(it) }
+            _state.update {
+                it.copy(firmwarePolynomial = raw, parsedCoeffs = parsed, polynomialImported = false)
+            }
+        } catch (t: Throwable) {
+            Log.w(TAG, "polynomial fetch failed: ${t.message}")
+        }
+    }
+
+    /**
+     * Stores the parsed coefficients in [IspindleApp.pendingCalibration] so
+     * the next ingest from this iSpindle (after it joins home WiFi) adopts
+     * them as that device's calibration. No-op if parsing failed.
+     */
+    fun importFirmwareCalibration() {
+        val ui = _state.value
+        val coeffs = ui.parsedCoeffs ?: return
+        val raw = ui.firmwarePolynomial ?: return
+        val app = appContext as? IspindleApp ?: return
+        val degree = CubicParser.degree(coeffs)
+        app.pendingCalibration.set(
+            PendingCalibration(
+                coeffs = coeffs,
+                degree = degree,
+                rawExpression = raw,
+                capturedMs = System.currentTimeMillis()
+            )
+        )
+        _state.update { it.copy(polynomialImported = true) }
     }
 
     private fun prefilledForm(state: StateInfo): ConfigForm {

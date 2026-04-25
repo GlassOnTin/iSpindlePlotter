@@ -113,6 +113,53 @@ fun ConfigureScreen(
         }
 
         ui.live?.takeIf { it.tiltDeg != null || it.batteryV != null }?.let { LiveReadingCard(it) }
+
+        ui.firmwarePolynomial?.let { FirmwareCalibrationCard(vm, ui) }
+    }
+}
+
+@Composable
+private fun FirmwareCalibrationCard(
+    vm: ConfigureViewModel,
+    ui: ConfigureViewModel.UiState
+) {
+    val raw = ui.firmwarePolynomial ?: return
+    val parsed = ui.parsedCoeffs
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("On-device calibration", style = MaterialTheme.typography.titleMedium)
+            Text(
+                raw,
+                fontFamily = FontFamily.Monospace,
+                style = MaterialTheme.typography.bodySmall
+            )
+            when {
+                ui.polynomialImported -> Text(
+                    "Imported. Will apply to this device on its first POST after pairing.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.tertiary
+                )
+                parsed != null -> {
+                    val terms = listOfNotNull(
+                        parsed[0].takeIf { it != 0.0 }?.let { "%.4g".format(it) },
+                        parsed[1].takeIf { it != 0.0 }?.let { "%.4g·tilt".format(it) },
+                        parsed[2].takeIf { it != 0.0 }?.let { "%.4g·tilt²".format(it) },
+                        parsed[3].takeIf { it != 0.0 }?.let { "%.4g·tilt³".format(it) }
+                    )
+                    Text("Parsed as: ${terms.joinToString(" + ")}",
+                        style = MaterialTheme.typography.bodySmall)
+                    Button(onClick = { vm.importFirmwareCalibration() }) {
+                        Text("Import calibration")
+                    }
+                }
+                else -> Text(
+                    "Couldn't parse this expression as a cubic in tilt — leaving the firmware copy in place. " +
+                            "Re-enter calibration points by hand on the Calibrate tab if needed.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        }
     }
 }
 

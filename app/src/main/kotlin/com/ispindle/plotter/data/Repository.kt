@@ -1,6 +1,7 @@
 package com.ispindle.plotter.data
 
 import com.ispindle.plotter.calibration.Polynomial
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Single mediator for ingesting a payload, upserting the device row,
@@ -9,7 +10,9 @@ import com.ispindle.plotter.calibration.Polynomial
 class Repository(
     private val deviceDao: DeviceDao,
     private val readingDao: ReadingDao,
-    private val calibrationDao: CalibrationDao
+    private val calibrationDao: CalibrationDao,
+    private val pendingCalibration: AtomicReference<PendingCalibration?> =
+        AtomicReference(null)
 ) {
     val devices = deviceDao.observeAll()
 
@@ -25,7 +28,7 @@ class Repository(
         val hwId = payload.id ?: payload.name.hashCode()
         val reportedName = payload.name ?: "iSpindel$hwId"
 
-        val device = deviceDao.findByHwId(hwId) ?: run {
+        var device = deviceDao.findByHwId(hwId) ?: run {
             val newId = deviceDao.insert(
                 Device(
                     hwId = hwId,
@@ -37,6 +40,29 @@ class Repository(
                 )
             )
             deviceDao.findById(newId)!!
+        }
+
+        // Adopt a pending calibration import (set by the Configure flow)
+        // before computing gravity for this reading. Skip if the user has
+        // already calibrated this device by hand or the hand-off has
+        // expired — in the expired case, drop it so it can't catch a
+        // future, unrelated device.
+        val pending = pendingCalibration.get()
+        if (pending != null && pending.isFresh(receivedMs) && device.calDegree == 0) {
+            if (pendingCalibration.compareAndSet(pending, null)) {
+                deviceDao.updateCalibration(
+                    id = device.id,
+                    a = pending.coeffs.getOrElse(0) { 0.0 },
+                    b = pending.coeffs.getOrElse(1) { 0.0 },
+                    c = pending.coeffs.getOrElse(2) { 0.0 },
+                    d = pending.coeffs.getOrElse(3) { 0.0 },
+                    degree = pending.degree,
+                    r2 = null
+                )
+                device = deviceDao.findById(device.id)!!
+            }
+        } else if (pending != null && !pending.isFresh(receivedMs)) {
+            pendingCalibration.compareAndSet(pending, null)
         }
 
         deviceDao.touchWithIp(device.id, receivedMs, remoteIp ?: device.lastSeenIp)
