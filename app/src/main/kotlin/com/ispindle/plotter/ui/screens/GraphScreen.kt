@@ -24,7 +24,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimeInput
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -219,13 +221,37 @@ private fun TrimBeforeDialog(
     onTrimmed: (Int) -> Unit
 ) {
     val scope = rememberCoroutineScope()
-    // Default to "yesterday" so the picker isn't useless on the first open.
-    val pickerState = rememberDatePickerState(
-        initialSelectedDateMillis = System.currentTimeMillis() - 24 * 3_600_000L
+    val now = System.currentTimeMillis()
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = now - 24 * 3_600_000L
+    )
+    val cal = remember { java.util.Calendar.getInstance() }
+    val timePickerState = rememberTimePickerState(
+        initialHour = cal.get(java.util.Calendar.HOUR_OF_DAY),
+        initialMinute = 0,
+        is24Hour = true
     )
     var preview by remember { mutableIntStateOf(-1) }
 
-    val cutoffMs = pickerState.selectedDateMillis
+    // The DatePicker exposes UTC midnight on the selected date, but users
+    // think in local time when they pick "trim before 14:00 yesterday".
+    // Recombine the date (extracted as UTC LocalDate) with the local-time
+    // hour/minute, then convert back through the device's zone to epoch ms.
+    val cutoffMs = remember(
+        datePickerState.selectedDateMillis,
+        timePickerState.hour,
+        timePickerState.minute
+    ) {
+        val utcMidnight = datePickerState.selectedDateMillis ?: return@remember null
+        val date = java.time.Instant.ofEpochMilli(utcMidnight)
+            .atZone(java.time.ZoneOffset.UTC)
+            .toLocalDate()
+        date.atTime(timePickerState.hour, timePickerState.minute)
+            .atZone(java.time.ZoneId.systemDefault())
+            .toInstant()
+            .toEpochMilli()
+    }
+
     LaunchedEffect(cutoffMs) {
         preview = cutoffMs?.let { vm.readingCountBefore(deviceId, it) } ?: 0
     }
@@ -260,13 +286,29 @@ private fun TrimBeforeDialog(
             TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     ) {
-        Column {
+        Column(
+            modifier = Modifier.verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             Text(
-                "Delete every reading from before midnight on the chosen date.",
+                "Delete every reading recorded before this date and local time.",
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
             )
-            DatePicker(state = pickerState)
+            DatePicker(state = datePickerState, showModeToggle = false)
+            Text(
+                "Time of day (local)",
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.padding(horizontal = 24.dp)
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                TimeInput(state = timePickerState)
+            }
         }
     }
 }
