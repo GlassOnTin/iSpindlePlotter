@@ -133,6 +133,16 @@ class Repository(
 
     suspend fun readingCount(deviceId: Long) = readingDao.countForDevice(deviceId)
 
+    suspend fun readingCountBefore(deviceId: Long, ts: Long) =
+        readingDao.countBefore(deviceId, ts)
+
+    suspend fun deleteReadingsBefore(deviceId: Long, ts: Long): Int =
+        readingDao.deleteBefore(deviceId, ts)
+
+    /** Snapshot for export. Ordered ASC so CSV consumers see chronological rows. */
+    suspend fun readingsSnapshot(deviceId: Long): List<Reading> =
+        readingDao.listForDevice(deviceId)
+
     suspend fun enabledCalibrationPoints(deviceId: Long) =
         calibrationDao.enabledForDevice(deviceId)
 }

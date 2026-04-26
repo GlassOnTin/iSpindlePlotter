@@ -22,6 +22,15 @@ interface ReadingDao {
     @Query("SELECT COUNT(*) FROM readings WHERE deviceId = :deviceId")
     suspend fun countForDevice(deviceId: Long): Int
 
+    @Query("SELECT COUNT(*) FROM readings WHERE deviceId = :deviceId AND timestampMs < :ts")
+    suspend fun countBefore(deviceId: Long, ts: Long): Int
+
+    @Query("DELETE FROM readings WHERE deviceId = :deviceId AND timestampMs < :ts")
+    suspend fun deleteBefore(deviceId: Long, ts: Long): Int
+
     @Query("DELETE FROM readings WHERE deviceId = :deviceId")
     suspend fun deleteForDevice(deviceId: Long)
+
+    @Query("SELECT * FROM readings WHERE deviceId = :deviceId ORDER BY timestampMs ASC")
+    suspend fun listForDevice(deviceId: Long): List<Reading>
 }

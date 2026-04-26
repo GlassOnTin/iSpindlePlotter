@@ -1,27 +1,48 @@
 package com.ispindle.plotter.ui.screens
 
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.ispindle.plotter.ui.MainViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -39,6 +60,8 @@ fun GraphScreen(
     deviceId: Long,
     padding: PaddingValues
 ) {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
     val device by remember(deviceId) { vm.deviceFlow(deviceId) }.collectAsState(initial = null)
     val readings by remember(deviceId) { vm.readingsFor(deviceId).map { it } }
         .collectAsState(initial = emptyList())
@@ -47,6 +70,29 @@ fun GraphScreen(
     val now = System.currentTimeMillis()
     val cutoff = window.hours?.let { now - it * 3_600_000L } ?: Long.MIN_VALUE
     val scoped = readings.filter { it.timestampMs >= cutoff }
+
+    var showTrim by remember { mutableStateOf(false) }
+    var toast by remember { mutableStateOf<String?>(null) }
+    val csvLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/csv")
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            val csv = vm.exportReadingsCsv(deviceId)
+            if (csv.isEmpty()) {
+                toast = "Nothing to export."
+                return@launch
+            }
+            val ok = withContext(Dispatchers.IO) {
+                runCatching {
+                    ctx.contentResolver.openOutputStream(uri, "wt")?.use { out ->
+                        out.write(csv.toByteArray(Charsets.UTF_8))
+                    }
+                }.isSuccess
+            }
+            toast = if (ok) "Exported ${readings.size} readings." else "Export failed."
+        }
+    }
 
     val dateFmt = remember { SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()) }
     val xFmt: (Double) -> String = { ms -> dateFmt.format(Date(ms.toLong())) }
@@ -65,11 +111,9 @@ fun GraphScreen(
         )
         Text(
             "${scoped.size} readings in window · ${readings.size} total",
-            style = androidx.compose.material3.MaterialTheme.typography.bodySmall
+            style = MaterialTheme.typography.bodySmall
         )
-        androidx.compose.foundation.layout.Row(
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             TimeWindow.entries.forEach { w ->
                 FilterChip(
                     selected = window == w,
@@ -77,6 +121,25 @@ fun GraphScreen(
                     label = { Text(w.label) }
                 )
             }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(
+                onClick = { showTrim = true },
+                enabled = readings.isNotEmpty()
+            ) { Text("Trim before…") }
+            OutlinedButton(
+                onClick = {
+                    val stamp = SimpleDateFormat("yyyyMMdd-HHmm", Locale.US).format(Date())
+                    val safeLabel = (device?.userLabel ?: "device")
+                        .replace(Regex("[^A-Za-z0-9_-]"), "_")
+                    csvLauncher.launch("ispindle-${safeLabel}-${stamp}.csv")
+                },
+                enabled = readings.isNotEmpty()
+            ) { Text("Export CSV…") }
+        }
+        toast?.let {
+            Text(it, style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.tertiary)
         }
 
         if (scoped.isEmpty()) {
@@ -132,6 +195,79 @@ fun GraphScreen(
             ),
             xFormatter = xFmt
         )
+    }
+
+    if (showTrim) {
+        TrimBeforeDialog(
+            vm = vm,
+            deviceId = deviceId,
+            onDismiss = { showTrim = false },
+            onTrimmed = { count ->
+                showTrim = false
+                toast = if (count > 0) "Deleted $count readings." else "Nothing to trim."
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TrimBeforeDialog(
+    vm: MainViewModel,
+    deviceId: Long,
+    onDismiss: () -> Unit,
+    onTrimmed: (Int) -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    // Default to "yesterday" so the picker isn't useless on the first open.
+    val pickerState = rememberDatePickerState(
+        initialSelectedDateMillis = System.currentTimeMillis() - 24 * 3_600_000L
+    )
+    var preview by remember { mutableIntStateOf(-1) }
+
+    val cutoffMs = pickerState.selectedDateMillis
+    LaunchedEffect(cutoffMs) {
+        preview = cutoffMs?.let { vm.readingCountBefore(deviceId, it) } ?: 0
+    }
+
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                enabled = cutoffMs != null && preview > 0,
+                onClick = {
+                    val ts = cutoffMs ?: return@TextButton
+                    scope.launch {
+                        val deleted = vm.deleteReadingsBefore(deviceId, ts)
+                        onTrimmed(deleted)
+                    }
+                },
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error
+                )
+            ) {
+                Text(
+                    when (preview) {
+                        -1 -> "Counting…"
+                        0 -> "Nothing to delete"
+                        1 -> "Delete 1 reading"
+                        else -> "Delete $preview readings"
+                    }
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    ) {
+        Column {
+            Text(
+                "Delete every reading from before midnight on the chosen date.",
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+            )
+            DatePicker(state = pickerState)
+        }
     }
 }
 
