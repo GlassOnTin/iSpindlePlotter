@@ -43,7 +43,9 @@ object Fermentation {
             val ratePerHour: Double,
             val predictedFg: Double,
             val etaToFinishHours: Double?,
-            val source: PredictionSource
+            val source: PredictionSource,
+            val predictedFgSigma: Double? = null,
+            val measurementSigma: Double? = null
         ) : State()
 
         data class Slowing(
@@ -52,7 +54,9 @@ object Fermentation {
             val ratePerHour: Double,
             val predictedFg: Double,
             val etaToFinishHours: Double?,
-            val source: PredictionSource
+            val source: PredictionSource,
+            val predictedFgSigma: Double? = null,
+            val measurementSigma: Double? = null
         ) : State()
 
         data class Complete(
@@ -80,8 +84,14 @@ object Fermentation {
      *
      * @param hours times in hours from the first sample, ascending.
      * @param sgs SG readings, same indexing.
+     * @param calRSquared optional R² of the device's calibration polynomial,
+     *        used to set a floor on measurement σ.
      */
-    fun analyse(hours: DoubleArray, sgs: DoubleArray): State {
+    fun analyse(
+        hours: DoubleArray,
+        sgs: DoubleArray,
+        calRSquared: Double? = null
+    ): State {
         require(hours.size == sgs.size)
         val n = hours.size
         if (n < MIN_POINTS) return State.Insufficient
@@ -92,12 +102,34 @@ object Fermentation {
         val drop = og - current
         val durationH = hours.last() - hours.first()
 
-        // 1. Recent-rate fit on the last 6 hours of data.
+        // Per-point measurement σ: data noise from short-window detrending,
+        // floored by the calibration polynomial's residual sigma. Used both
+        // for outlier rejection and for FG uncertainty propagation below.
+        val sigmaData = NoiseModel.estimateDataNoise(hours, sgs)
+        val sigmaCal = calRSquared?.let { NoiseModel.fromCalibrationRSquared(it) }
+        val sigma = NoiseModel.combine(sigmaData, sigmaCal)
+
+        // 1. Recent-rate fit on the last 6 hours of data, with 3σ outlier
+        //    rejection. The first pass sets the local trend; points whose
+        //    residual exceeds 3σ from that trend are excluded from the
+        //    second pass. Important when a noisy reading lands during the
+        //    short tail window and would otherwise dominate the slope.
         val tailStart = hours.last() - RECENT_WINDOW_HOURS
         val tailIdx = hours.indices.filter { hours[it] >= tailStart }
         val tailHours = DoubleArray(tailIdx.size) { hours[tailIdx[it]] }
         val tailSgs = DoubleArray(tailIdx.size) { sgs[tailIdx[it]] }
-        val tailFit = if (tailIdx.size >= 3) Fits.fitLinear(tailHours, tailSgs) else null
+        val tailFitInitial = if (tailIdx.size >= 3) Fits.fitLinear(tailHours, tailSgs) else null
+        val tailFit = if (tailFitInitial != null && tailIdx.size >= 5) {
+            val keep = tailHours.indices.filter { i ->
+                kotlin.math.abs(tailSgs[i] - tailFitInitial.predict(tailHours[i])) <= 3.0 * sigma
+            }
+            if (keep.size >= 3 && keep.size < tailHours.size) {
+                Fits.fitLinear(
+                    DoubleArray(keep.size) { tailHours[keep[it]] },
+                    DoubleArray(keep.size) { tailSgs[keep[it]] }
+                ) ?: tailFitInitial
+            } else tailFitInitial
+        } else tailFitInitial
         val recentRate = tailFit?.slope
 
         // 2. Lag — flat early data, no decline yet.
@@ -110,8 +142,9 @@ object Fermentation {
 
         // 3. Try the full-window logistic. May be unreliable while we're
         //    still inside the active phase, but worth a shot — the
-        //    bounded LM is conservative.
-        val logistic = LogisticFit.fit(hours, sgs)
+        //    bounded LM is conservative. Pass measurement σ so the result
+        //    carries an FG uncertainty.
+        val logistic = LogisticFit.fit(hours, sgs, sigma)
 
         // 4. Predicted FG with graceful degradation.
         val (predictedFg, source) = pickFgEstimate(
@@ -159,12 +192,30 @@ object Fermentation {
             else -> linearEta(current, terminalSg, recentRate)
         }?.takeIf { it.isFinite() && it >= 0.0 }
 
-        // 8. Active vs Slowing branch on rate magnitude.
+        // 8. FG uncertainty: from the LM covariance when we trust the
+        //    logistic, or from the prior's spread (≈±0.003 SG, the std of
+        //    typical attenuation outcomes 60–90 % across mainstream beer
+        //    styles) when we're falling back to the 75 %-attenuation prior.
+        val priorFgSigma = 0.06 * (og - 1.000).coerceAtLeast(0.005)
+        val predictedFgSigma = when (source) {
+            PredictionSource.Logistic -> logistic?.fgSigma
+            else -> priorFgSigma
+        }
+
+        // 9. Active vs Slowing branch on rate magnitude.
         val rate = recentRate ?: 0.0
         return if (rate < ACTIVE_RATE) {
-            State.Active(og, current, rate, predictedFg, eta, source)
+            State.Active(
+                og = og, current = current, ratePerHour = rate,
+                predictedFg = predictedFg, etaToFinishHours = eta, source = source,
+                predictedFgSigma = predictedFgSigma, measurementSigma = sigma
+            )
         } else {
-            State.Slowing(og, current, rate, predictedFg, eta, source)
+            State.Slowing(
+                og = og, current = current, ratePerHour = rate,
+                predictedFg = predictedFg, etaToFinishHours = eta, source = source,
+                predictedFgSigma = predictedFgSigma, measurementSigma = sigma
+            )
         }
     }
 

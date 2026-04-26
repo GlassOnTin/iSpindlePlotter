@@ -34,7 +34,9 @@ object LogisticFit {
         val k: Double,
         val tMid: Double,
         val rmsResidual: Double,
-        val pointCount: Int
+        val pointCount: Int,
+        /** 1σ uncertainty on FG from the LM covariance. Null when not computed. */
+        val fgSigma: Double? = null
     ) {
         fun predict(t: Double): Double = fg + (og - fg) / (1.0 + exp(k * (t - tMid)))
 
@@ -55,8 +57,18 @@ object LogisticFit {
         }
     }
 
-    /** Fit logistic to [xs] (hours from start) / [ys] (SG). Null on failure. */
-    fun fit(xs: DoubleArray, ys: DoubleArray): Result? {
+    /**
+     * Fit logistic to [xs] (hours from start) / [ys] (SG). Returns null on
+     * failure. When [measurementSigma] is provided, the LM covariance is
+     * scaled by σ² and the result's `fgSigma` reports the 1σ uncertainty
+     * on FG. Without it, the parameter point estimate is unchanged and
+     * `fgSigma` is null.
+     */
+    fun fit(
+        xs: DoubleArray,
+        ys: DoubleArray,
+        measurementSigma: Double? = null
+    ): Result? {
         require(xs.size == ys.size)
         val n = xs.size
         if (n < 6) return null
@@ -103,7 +115,23 @@ object LogisticFit {
         if (!finalRss.isFinite()) return null
         val og = p[0]; val fg = p[1]; val k = p[2]; val tMid = p[3]
         if (k <= 0.0 || og - fg <= 0.0) return null
-        return Result(og, fg, k, tMid, sqrt(finalRss / n), n)
+
+        // FG covariance: rebuild J^T J at the converged solution (no
+        // λ damping), invert, and pick the [1,1] entry — that's Var(fg)
+        // up to the residual scale. With a measurement σ provided we use
+        // it directly; otherwise fall back to the in-sample residual std
+        // at n - 4 degrees of freedom.
+        val fgSigma = if (n >= 5) {
+            val (jtjClean, _) = jacobianBlocks(xs, ys, p)
+            val cov = invert4x4(jtjClean)
+            val varFg = cov?.get(1)?.get(1)
+            if (varFg != null && varFg > 0.0 && varFg.isFinite()) {
+                val sigma = measurementSigma ?: sqrt(finalRss / (n - 4))
+                sqrt(sigma * sigma * varFg)
+            } else null
+        } else null
+
+        return Result(og, fg, k, tMid, sqrt(finalRss / n), n, fgSigma)
     }
 
     /** SG = FG + (OG-FG) / (1 + exp(k(t - tMid))). */
@@ -173,6 +201,34 @@ object LogisticFit {
         p[2] = p[2].coerceIn(1e-4, 100.0)
         // tMid free-floating but clipped to a sane span.
         p[3] = p[3].coerceIn(-1000.0, 1e6)
+    }
+
+    /**
+     * 4×4 inverse via Gauss-Jordan elimination with partial pivoting.
+     * Used to read the parameter covariance entries off (J^T J)^-1.
+     */
+    private fun invert4x4(a: Array<DoubleArray>): Array<DoubleArray>? {
+        val m = Array(4) { i -> DoubleArray(8).also {
+            for (j in 0..3) it[j] = a[i][j]
+            it[4 + i] = 1.0
+        } }
+        for (col in 0..3) {
+            var pivot = col
+            for (r in col + 1..3) {
+                if (abs(m[r][col]) > abs(m[pivot][col])) pivot = r
+            }
+            if (abs(m[pivot][col]) < 1e-18) return null
+            if (pivot != col) { val t = m[col]; m[col] = m[pivot]; m[pivot] = t }
+            val pv = m[col][col]
+            for (j in 0..7) m[col][j] /= pv
+            for (r in 0..3) {
+                if (r == col) continue
+                val f = m[r][col]
+                if (f == 0.0) continue
+                for (j in 0..7) m[r][j] -= f * m[col][j]
+            }
+        }
+        return Array(4) { i -> DoubleArray(4) { j -> m[i][4 + j] } }
     }
 
     /** 4×4 linear solve via Gaussian elimination with partial pivoting. */

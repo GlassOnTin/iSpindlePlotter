@@ -181,7 +181,8 @@ fun GraphScreen(
             val sg = r.computedGravity ?: r.reportedGravity
             if (sg != null && sg > 0.0) r.timestampMs.toDouble() to sg else null
         }
-        val sgOverlay = remember(sgPoints) { buildSgOverlay(sgPoints) }
+        val calR2 = device?.calRSquared
+        val sgOverlay = remember(sgPoints, calR2) { buildSgOverlay(sgPoints, calR2) }
         MetricCard(
             title = "Specific gravity",
             series = ChartSeries(
@@ -202,7 +203,7 @@ fun GraphScreen(
             ),
             overlay = sgOverlay
         )
-        SgEstimateLine(scoped, sgPoints)
+        SgEstimateLine(scoped, sgPoints, calR2)
 
         MetricCard(
             title = "Battery (V)",
@@ -233,13 +234,14 @@ fun GraphScreen(
 @Composable
 private fun SgEstimateLine(
     readings: List<Reading>,
-    sgPoints: List<Pair<Double, Double>>
+    sgPoints: List<Pair<Double, Double>>,
+    calRSquared: Double? = null
 ) {
     if (sgPoints.size < 6) return
     val tStartMs = sgPoints.first().first
     val xs = DoubleArray(sgPoints.size) { (sgPoints[it].first - tStartMs) / 3_600_000.0 }
     val ys = DoubleArray(sgPoints.size) { sgPoints[it].second }
-    val state = remember(sgPoints) { Fermentation.analyse(xs, ys) }
+    val state = remember(sgPoints, calRSquared) { Fermentation.analyse(xs, ys, calRSquared) }
 
     when (state) {
         is Fermentation.State.Insufficient -> EstimateText(
@@ -255,11 +257,13 @@ private fun SgEstimateLine(
             EstimateText(buildString {
                 append("Active · ")
                 append("OG %.4f → est FG %.4f".format(state.og, state.predictedFg))
+                state.predictedFgSigma?.let { append(" ± %.4f".format(it)) }
                 append(" · %.4f now · ".format(state.current))
                 append("rate %.3f SG/h · ".format(state.ratePerHour))
                 append("ETA ${formatHoursAhead(state.etaToFinishHours)}")
                 append(" · ABV %.1f%% → %.1f%%".format(abvNow, abvAtFg))
                 append(" · ${state.source.label()}")
+                state.measurementSigma?.let { append(" · σ_meas %.4f".format(it)) }
             })
         }
         is Fermentation.State.Slowing -> {
@@ -268,11 +272,13 @@ private fun SgEstimateLine(
             EstimateText(buildString {
                 append("Slowing · ")
                 append("OG %.4f → est FG %.4f".format(state.og, state.predictedFg))
+                state.predictedFgSigma?.let { append(" ± %.4f".format(it)) }
                 append(" · %.4f now · ".format(state.current))
                 append("rate %.3f SG/h · ".format(state.ratePerHour))
                 append("ETA ${formatHoursAhead(state.etaToFinishHours)}")
                 append(" · ABV %.1f%% → %.1f%%".format(abvNow, abvAtFg))
                 append(" · ${state.source.label()}")
+                state.measurementSigma?.let { append(" · σ_meas %.4f".format(it)) }
             })
         }
         is Fermentation.State.Complete -> {
@@ -304,16 +310,42 @@ private fun SgEstimateLine(
  * Returns null when there's nothing useful to overlay (Lag with no rate,
  * Insufficient, or Stuck/Complete where the data already covers the story).
  */
-private fun buildSgOverlay(sgPoints: List<Pair<Double, Double>>): ChartOverlay? {
+private fun buildSgOverlay(
+    sgPoints: List<Pair<Double, Double>>,
+    calRSquared: Double? = null
+): ChartOverlay? {
     if (sgPoints.size < 6) return null
     val tStartMs = sgPoints.first().first
     val xs = DoubleArray(sgPoints.size) { (sgPoints[it].first - tStartMs) / 3_600_000.0 }
     val ys = DoubleArray(sgPoints.size) { sgPoints[it].second }
-    val state = Fermentation.analyse(xs, ys)
+    val state = Fermentation.analyse(xs, ys, calRSquared)
     val nowH = xs.last()
     val nowMs = sgPoints.last().first
-    fun overlayMs(predict: (Double) -> Double, etaH: Double, fg: Double): ChartOverlay {
+    fun overlayMs(
+        predict: (Double) -> Double,
+        etaH: Double,
+        fg: Double,
+        fgSigma: Double?
+    ): ChartOverlay {
         val finishMs = nowMs + etaH * 3_600_000.0
+        // Band tapers from zero width at the last data point to ±2σ_FG at
+        // the predicted finish, since uncertainty about the future is what
+        // grows — the line through the data is already constrained by it.
+        val sigma = fgSigma
+        val low: ((Double) -> Double)? = sigma?.let {
+            { msX ->
+                val hours = (msX - tStartMs) / 3_600_000.0
+                val taper = ((msX - nowMs) / (finishMs - nowMs)).coerceIn(0.0, 1.0)
+                predict(hours) - 2.0 * sigma * taper
+            }
+        }
+        val high: ((Double) -> Double)? = sigma?.let {
+            { msX ->
+                val hours = (msX - tStartMs) / 3_600_000.0
+                val taper = ((msX - nowMs) / (finishMs - nowMs)).coerceIn(0.0, 1.0)
+                predict(hours) + 2.0 * sigma * taper
+            }
+        }
         return ChartOverlay(
             color = androidx.compose.ui.graphics.Color(0xFFD1495B),
             sample = { msX ->
@@ -322,8 +354,10 @@ private fun buildSgOverlay(sgPoints: List<Pair<Double, Double>>): ChartOverlay? 
             },
             sampleCount = 96,
             extendXTo = finishMs,
-            extendYDownTo = fg - 0.0015,
-            dashAfterX = nowMs
+            extendYDownTo = (sigma?.let { fg - 2 * it } ?: (fg - 0.0015)),
+            dashAfterX = nowMs,
+            bandLow = low,
+            bandHigh = high
         )
     }
     return when (state) {
@@ -331,13 +365,13 @@ private fun buildSgOverlay(sgPoints: List<Pair<Double, Double>>): ChartOverlay? 
             val eta = state.etaToFinishHours ?: return null
             val fg = state.predictedFg
             val predict = predictorFor(state.source, xs, ys, state, fg, nowH)
-            overlayMs(predict, eta, fg)
+            overlayMs(predict, eta, fg, state.predictedFgSigma)
         }
         is Fermentation.State.Slowing -> {
             val eta = state.etaToFinishHours ?: return null
             val fg = state.predictedFg
             val predict = predictorFor(state.source, xs, ys, state, fg, nowH)
-            overlayMs(predict, eta, fg)
+            overlayMs(predict, eta, fg, state.predictedFgSigma)
         }
         else -> null
     }

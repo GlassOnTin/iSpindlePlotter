@@ -19,7 +19,9 @@ object Fits {
         val intercept: Double,
         val slope: Double,
         val rmsResidual: Double,
-        val pointCount: Int
+        val pointCount: Int,
+        /** 1σ on the slope from σ_residual / √Σ(x-x̄)². Null when n ≤ 2. */
+        val slopeSigma: Double? = null
     ) {
         fun predict(x: Double): Double = intercept + slope * x
 
@@ -60,7 +62,10 @@ object Fits {
             val r = ys[i] - pred
             rss += r * r
         }
-        return Linear(intercept, slope, sqrt(rss / n), n)
+        val rmsResidual = sqrt(rss / n)
+        // Residual std at n-2 dof; slope σ from textbook OLS variance.
+        val slopeSigma = if (n > 2) sqrt(rss / (n - 2) / ssX) else null
+        return Linear(intercept, slope, rmsResidual, n, slopeSigma)
     }
 
     // ---- Exponential decay: y = c + a·exp(-k·x) -------------------------------

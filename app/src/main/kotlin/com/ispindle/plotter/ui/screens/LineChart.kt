@@ -63,7 +63,14 @@ data class ChartOverlay(
     val sampleCount: Int = 96,
     val extendXTo: Double? = null,
     val extendYDownTo: Double? = null,
-    val dashAfterX: Double? = null
+    val dashAfterX: Double? = null,
+    /**
+     * Optional uncertainty band. When both samplers are non-null, a
+     * translucent fill is drawn between [bandLow] and [bandHigh] across
+     * the overlay's x range, behind the line itself.
+     */
+    val bandLow: ((Double) -> Double)? = null,
+    val bandHigh: ((Double) -> Double)? = null
 )
 
 /**
@@ -108,7 +115,17 @@ fun LineChart(
     // see the model line crossing the FG threshold rather than just
     // running off the right edge.
     val xMax = kotlin.math.max(xs.max(), overlay?.extendXTo ?: Double.NEGATIVE_INFINITY)
-    val yMinRaw = kotlin.math.min(ys.min(), overlay?.extendYDownTo ?: Double.POSITIVE_INFINITY)
+    // The uncertainty band can dip below the line's own extendYDownTo, so
+    // pull the y range down to whichever floor is lower.
+    val bandFloor = overlay?.bandLow?.let { low ->
+        val xEnd = overlay.extendXTo ?: xs.max()
+        low(xEnd)
+    }
+    val yMinRaw = kotlin.math.min(
+        ys.min(),
+        kotlin.math.min(overlay?.extendYDownTo ?: Double.POSITIVE_INFINITY,
+                        bandFloor ?: Double.POSITIVE_INFINITY)
+    )
     val yMaxRaw = ys.max()
 
     // Sticky autoscale: keep the y-axis still as new points come in.
@@ -213,6 +230,31 @@ fun LineChart(
                 val step = (xEnd - xStart) / ov.sampleCount
                 val dataMaxX = xs.max()
                 val splitX = ov.dashAfterX ?: dataMaxX
+
+                // Uncertainty band: filled translucent region between
+                // bandLow and bandHigh, drawn first so the line and dots
+                // stay on top.
+                val low = ov.bandLow
+                val high = ov.bandHigh
+                if (low != null && high != null) {
+                    val band = Path()
+                    var started = false
+                    for (i in 0..ov.sampleCount) {
+                        val x = xStart + i * step
+                        val y = high(x)
+                        val px = xToPx(x); val py = yToPx(y)
+                        if (!started) { band.moveTo(px, py); started = true }
+                        else band.lineTo(px, py)
+                    }
+                    for (i in ov.sampleCount downTo 0) {
+                        val x = xStart + i * step
+                        val y = low(x)
+                        band.lineTo(xToPx(x), yToPx(y))
+                    }
+                    band.close()
+                    drawPath(band, ov.color.copy(alpha = 0.18f))
+                }
+
                 val solid = Path()
                 val dashed = Path()
                 var solidStarted = false
