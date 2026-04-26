@@ -14,6 +14,7 @@ import androidx.core.app.NotificationCompat
 import com.ispindle.plotter.IspindleApp
 import com.ispindle.plotter.MainActivity
 import com.ispindle.plotter.R
+import com.ispindle.plotter.data.ServerPrefs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -85,7 +86,12 @@ class IspindleServerService : Service() {
     private fun startForegroundInternal(text: String) {
         val n = buildNotification(text)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(NOTIF_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+            // connectedDevice instead of dataSync because Android 15 caps
+            // dataSync at 6 hours per 24-hour window, which would silently
+            // kill the listener mid-fermentation. connectedDevice has no
+            // such cap; we satisfy its prerequisite via CHANGE_NETWORK_STATE
+            // / CHANGE_WIFI_STATE permissions already in the manifest.
+            startForeground(NOTIF_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
         } else {
             startForeground(NOTIF_ID, n)
         }
@@ -124,15 +130,41 @@ class IspindleServerService : Service() {
     companion object {
         private const val CHANNEL_ID = "ispindle_server"
         private const val NOTIF_ID = 1001
+        private const val TAG = "IspindleServerService"
 
+        /** User-driven start. Marks the server as desired and brings it up. */
         fun start(ctx: Context) {
-            val intent = Intent(ctx, IspindleServerService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ctx.startForegroundService(intent)
-            else ctx.startService(intent)
+            ServerPrefs.setEnabled(ctx, true)
+            launch(ctx)
         }
 
+        /** User-driven stop. Marks the server as disabled and tears it down. */
         fun stop(ctx: Context) {
+            ServerPrefs.setEnabled(ctx, false)
             ctx.stopService(Intent(ctx, IspindleServerService::class.java))
+        }
+
+        /**
+         * App-launch / boot-time auto-start. Honours the persisted preference
+         * so an explicit Stop survives reboots and re-opens.
+         */
+        fun startIfEnabled(ctx: Context) {
+            if (ServerPrefs.isEnabled(ctx)) launch(ctx)
+        }
+
+        private fun launch(ctx: Context) {
+            val intent = Intent(ctx, IspindleServerService::class.java)
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                    ctx.startForegroundService(intent)
+                else
+                    ctx.startService(intent)
+            } catch (t: Throwable) {
+                // Background-restricted contexts (Doze, etc.) may refuse the
+                // FGS start. The boot exemption usually covers us, but if the
+                // OS still denies, log and move on rather than crashing.
+                android.util.Log.w(TAG, "Service start refused: ${t.message}")
+            }
         }
     }
 }
