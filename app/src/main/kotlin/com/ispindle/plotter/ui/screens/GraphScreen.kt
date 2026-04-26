@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.ispindle.plotter.analysis.Fermentation
 import com.ispindle.plotter.analysis.Fits
 import com.ispindle.plotter.data.Reading
 import com.ispindle.plotter.ui.MainViewModel
@@ -228,41 +229,68 @@ private fun SgEstimateLine(
     readings: List<Reading>,
     sgPoints: List<Pair<Double, Double>>
 ) {
-    if (sgPoints.size < 4) return
+    if (sgPoints.size < 6) return
     val tStartMs = sgPoints.first().first
-    val nowMs = System.currentTimeMillis().toDouble()
     val xs = DoubleArray(sgPoints.size) { (sgPoints[it].first - tStartMs) / 3_600_000.0 }
     val ys = DoubleArray(sgPoints.size) { sgPoints[it].second }
-    val fit = remember(sgPoints) { Fits.fitExponentialDecay(xs, ys) }
+    val state = remember(sgPoints) { Fermentation.analyse(xs, ys) }
 
-    if (fit == null) {
-        EstimateText(
-            "SG: not enough trend yet — try widening the time window or wait for more readings.",
-            isError = false
+    when (state) {
+        is Fermentation.State.Insufficient -> EstimateText(
+            "SG: not enough trend yet — wait for more readings or widen the time window."
         )
-        return
-    }
-    val latestSg = ys.last()
-    val gap = latestSg - fit.asymptote
-    val og = ys.max()
-    val abvNow = (og - latestSg) * 131.25
-    val abvAtFg = (og - fit.asymptote) * 131.25
-    val text = buildString {
-        append("Estimated FG ")
-        append("%.4f".format(fit.asymptote))
-        append(" · current %.4f · ".format(latestSg))
-        if (gap < 0.0015) {
-            append("near asymptote — fermentation looks complete")
-        } else {
-            val nowX = (nowMs - tStartMs) / 3_600_000.0
-            val tToTerminal = fit.timeToReach(fit.asymptote + 0.001)
-            val eta = tToTerminal?.minus(nowX)
-            append("ETA to FG+0.001: ${formatHoursAhead(eta)}")
+        is Fermentation.State.Lag -> EstimateText(
+            "Lag phase · OG %.4f · current %.4f · %.1f h since first reading, no decline yet"
+                .format(state.og, state.current, state.durationHours)
+        )
+        is Fermentation.State.Active -> {
+            val abvNow = (state.og - state.current) * 131.25
+            val abvAtFg = (state.og - state.predictedFg) * 131.25
+            EstimateText(buildString {
+                append("Active · ")
+                append("OG %.4f → est FG %.4f".format(state.og, state.predictedFg))
+                append(" · %.4f now · ".format(state.current))
+                append("rate %.3f SG/h · ".format(state.ratePerHour))
+                append("ETA ${formatHoursAhead(state.etaToFinishHours)}")
+                append(" · ABV %.1f%% → %.1f%%".format(abvNow, abvAtFg))
+                append(" · ${state.source.label()}")
+            })
         }
-        append(" · ABV so far %.1f%% → %.1f%% at FG".format(abvNow, abvAtFg))
-        append(" · RMS ±%.4f".format(fit.rmsResidual))
+        is Fermentation.State.Slowing -> {
+            val abvNow = (state.og - state.current) * 131.25
+            val abvAtFg = (state.og - state.predictedFg) * 131.25
+            EstimateText(buildString {
+                append("Slowing · ")
+                append("OG %.4f → est FG %.4f".format(state.og, state.predictedFg))
+                append(" · %.4f now · ".format(state.current))
+                append("rate %.3f SG/h · ".format(state.ratePerHour))
+                append("ETA ${formatHoursAhead(state.etaToFinishHours)}")
+                append(" · ABV %.1f%% → %.1f%%".format(abvNow, abvAtFg))
+                append(" · ${state.source.label()}")
+            })
+        }
+        is Fermentation.State.Complete -> {
+            val abv = (state.og - state.fg) * 131.25
+            EstimateText(
+                "Complete · OG %.4f · FG %.4f · %.1f%% ABV".format(state.og, state.fg, abv)
+            )
+        }
+        is Fermentation.State.Stuck -> {
+            val abvNow = (state.og - state.current) * 131.25
+            EstimateText(
+                "⚠ Stuck · OG %.4f · current %.4f · expected ~%.4f · flat for %.1f h · ABV so far %.1f%%"
+                    .format(state.og, state.current, state.expectedFg, state.flatHours, abvNow),
+                isError = true
+            )
+        }
     }
-    EstimateText(text)
+}
+
+private fun Fermentation.PredictionSource.label(): String = when (this) {
+    Fermentation.PredictionSource.Logistic -> "logistic"
+    Fermentation.PredictionSource.ExpDecay -> "exp"
+    Fermentation.PredictionSource.Linear -> "rate-based (75% attenuation prior)"
+    Fermentation.PredictionSource.Default -> "75% attenuation prior"
 }
 
 @Composable
