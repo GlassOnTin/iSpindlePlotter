@@ -7,6 +7,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -81,7 +84,16 @@ fun LineChart(
     val ys = series.points.map { it.second }
     val xMin = xs.min(); val xMax = xs.max()
     val yMinRaw = ys.min(); val yMaxRaw = ys.max()
-    val (yMin, yMax) = niceRange(yMinRaw, yMaxRaw)
+
+    // Sticky autoscale: keep the y-axis still as new points come in.
+    // Range only widens on out-of-range data, and re-snaps when the
+    // visible data span has shrunk to a small fraction of the cached
+    // range (e.g. after the user trims pre-fermentation noise).
+    val rangeState = remember(series.label) { mutableStateOf<Pair<Double, Double>?>(null) }
+    val (yMin, yMax) = stickyRange(rangeState.value, yMinRaw, yMaxRaw)
+    LaunchedEffect(series.label, yMin, yMax) {
+        if (rangeState.value != yMin to yMax) rangeState.value = yMin to yMax
+    }
 
     Canvas(modifier = modifier.fillMaxWidth().height(height)) {
         val paddingLeft = with(density) { 48.dp.toPx() }
@@ -202,6 +214,44 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawTextAt(
     )
     drawText(layout, topLeft = Offset(x, y))
 }
+
+/**
+ * Stateless decision rule for the y-axis range.
+ *
+ * Returns one of:
+ *   - `niceRange(rawMin, rawMax)` if no cached range yet.
+ *   - A widened nice range when the new data spills out of `cached`.
+ *   - A tighter `niceRange(rawMin, rawMax)` when the cached range is at
+ *     least `RESNAP_RATIO` times wider than the data — the only way the
+ *     axis ever narrows. Stops the chart from looking permanently
+ *     zoomed-out after a Trim before… cleared most of the history.
+ *   - `cached` itself otherwise, so successive renders agree even though
+ *     the data has shifted slightly.
+ *
+ * Pure for testability. Compose pulls the state and feeds it in here.
+ */
+internal fun stickyRange(
+    cached: Pair<Double, Double>?,
+    rawMin: Double,
+    rawMax: Double
+): Pair<Double, Double> {
+    if (cached == null) return niceRange(rawMin, rawMax)
+    val outOfRange = rawMin < cached.first || rawMax > cached.second
+    if (outOfRange) {
+        return niceRange(
+            kotlin.math.min(rawMin, cached.first),
+            kotlin.math.max(rawMax, cached.second)
+        )
+    }
+    val cachedSpan = cached.second - cached.first
+    val dataSpan = rawMax - rawMin
+    if (dataSpan > 0.0 && cachedSpan > RESNAP_RATIO * dataSpan) {
+        return niceRange(rawMin, rawMax)
+    }
+    return cached
+}
+
+private const val RESNAP_RATIO = 2.5
 
 private fun niceRange(min: Double, max: Double): Pair<Double, Double> {
     if (min == max) {
