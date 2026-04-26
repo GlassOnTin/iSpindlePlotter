@@ -33,6 +33,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -115,6 +116,67 @@ fun ConfigureScreen(
         ui.live?.takeIf { it.tiltDeg != null || it.batteryV != null }?.let { LiveReadingCard(it) }
 
         ui.firmwarePolynomial?.let { FirmwareCalibrationCard(vm, ui) }
+
+        if (ui.pushableCalibrations.isNotEmpty()) {
+            PushCalibrationCard(vm, ui)
+        }
+    }
+}
+
+@Composable
+private fun PushCalibrationCard(
+    vm: ConfigureViewModel,
+    ui: ConfigureViewModel.UiState
+) {
+    val selected = ui.pushFromDeviceId?.let { id ->
+        ui.pushableCalibrations.firstOrNull { it.id == id }
+    }
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Send calibration to device", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Writes the chosen polynomial into the iSpindle's POLYN field on Save & " +
+                        "reboot. Useful so the firmware itself reports a sensible gravity " +
+                        "even to other receivers, not just this app.",
+                style = MaterialTheme.typography.bodySmall
+            )
+            ui.pushableCalibrations.forEach { device ->
+                val isSelected = device.id == ui.pushFromDeviceId
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { vm.selectPushSource(if (isSelected) null else device.id) }
+                        .padding(vertical = 4.dp)
+                ) {
+                    Text(if (isSelected) "●" else "○",
+                        style = MaterialTheme.typography.titleMedium)
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            "${device.userLabel}  (degree ${device.calDegree}" +
+                                    (device.calRSquared?.let { ", R²=%.4f".format(it) } ?: "") + ")",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            }
+            selected?.let { d ->
+                val expr = remember(d.id, d.calA, d.calB, d.calC, d.calD, d.calDegree) {
+                    com.ispindle.plotter.calibration.Polynomial.fromDevice(d).toTinyExpr()
+                }
+                Text(
+                    "POLYN = $expr",
+                    fontFamily = FontFamily.Monospace,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            if (ui.pushFromDeviceId != null) {
+                TextButton(onClick = { vm.selectPushSource(null) }) {
+                    Text("Don't change device polynomial")
+                }
+            }
+        }
     }
 }
 

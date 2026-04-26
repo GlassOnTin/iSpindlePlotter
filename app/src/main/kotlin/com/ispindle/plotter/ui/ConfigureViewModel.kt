@@ -8,6 +8,8 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import com.ispindle.plotter.IspindleApp
 import com.ispindle.plotter.calibration.CubicParser
+import com.ispindle.plotter.calibration.Polynomial
+import com.ispindle.plotter.data.Device
 import com.ispindle.plotter.data.PendingCalibration
 import com.ispindle.plotter.network.ConfigForm
 import com.ispindle.plotter.network.IspindleApBinder
@@ -84,6 +86,13 @@ class ConfigureViewModel(
         // connect-time and echoed back unchanged in /wifisave so the
         // firmware doesn't blank fields we don't explicitly resend.
         val firmwareFields: Map<String, String> = emptyMap(),
+        // Devices in this app's database that already have a polynomial we
+        // could push back to the iSpindle's POLYN field.
+        val pushableCalibrations: List<Device> = emptyList(),
+        // Which one (if any) the user wants to write into the iSpindle on
+        // the next save. Null means leave POLYN at whatever's already on
+        // the device — the safe default.
+        val pushFromDeviceId: Long? = null,
         // Result of the reverse-DNS suggestion ↔ forward-DNS sanity check.
         val hostnameProbe: HostnameProbe = HostnameProbe.Idle
     ) {
@@ -117,6 +126,31 @@ class ConfigureViewModel(
     private var liveJob: Job? = null
     private var network: Network? = null
     private var client: IspindleConfigClient? = null
+
+    init {
+        // Surface this app's calibrated devices so the user can pick one
+        // whose polynomial gets written back to the iSpindle on save.
+        val app = appContext as? IspindleApp
+        if (app != null) {
+            viewModelScope.launch {
+                app.repository.devices.collect { all ->
+                    _state.update { ui ->
+                        val calibrated = all.filter { it.calDegree > 0 }
+                        // If the user previously selected a device that no
+                        // longer has calibration, drop the selection.
+                        val stillValid = ui.pushFromDeviceId?.takeIf { id ->
+                            calibrated.any { it.id == id }
+                        }
+                        ui.copy(pushableCalibrations = calibrated, pushFromDeviceId = stillValid)
+                    }
+                }
+            }
+        }
+    }
+
+    fun selectPushSource(deviceId: Long?) {
+        _state.update { it.copy(pushFromDeviceId = deviceId) }
+    }
 
     fun updateForm(transform: (ConfigForm) -> ConfigForm) {
         _state.update { it.copy(form = transform(it.form)) }
@@ -324,7 +358,17 @@ class ConfigureViewModel(
         }
         liveJob?.cancel()
         _state.update { it.copy(phase = Phase.Saving) }
-        val baseline = ui.firmwareFields
+        // Build the baseline. If the user picked a device whose calibration
+        // should be written into POLYN, render the polynomial as a tinyexpr
+        // expression and overlay it on the firmware fields. Without this
+        // override, the existing POLYN (possibly empty) round-trips unchanged.
+        val baseline = ui.firmwareFields.toMutableMap()
+        val pushSource = ui.pushFromDeviceId?.let { id ->
+            ui.pushableCalibrations.firstOrNull { it.id == id }
+        }
+        if (pushSource != null) {
+            baseline["POLYN"] = Polynomial.fromDevice(pushSource).toTinyExpr()
+        }
         viewModelScope.launch {
             runCatching { c.saveConfig(form, baseline) }
                 .onFailure {
