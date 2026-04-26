@@ -80,6 +80,10 @@ class ConfigureViewModel(
         val firmwarePolynomial: String? = null,
         val parsedCoeffs: DoubleArray? = null,
         val polynomialImported: Boolean = false,
+        // Snapshot of every form field on the iSpindle, captured at
+        // connect-time and echoed back unchanged in /wifisave so the
+        // firmware doesn't blank fields we don't explicitly resend.
+        val firmwareFields: Map<String, String> = emptyMap(),
         // Result of the reverse-DNS suggestion ↔ forward-DNS sanity check.
         val hostnameProbe: HostnameProbe = HostnameProbe.Idle
     ) {
@@ -180,10 +184,16 @@ class ConfigureViewModel(
     private suspend fun loadPolynomial() {
         val c = client ?: return
         try {
-            val raw = c.getCurrentPolynomial()
+            val fields = c.getCurrentFormFields()
+            val raw = fields["POLYN"]?.takeIf { it.isNotBlank() }
             val parsed = raw?.let { CubicParser.parse(it) }
             _state.update {
-                it.copy(firmwarePolynomial = raw, parsedCoeffs = parsed, polynomialImported = false)
+                it.copy(
+                    firmwareFields = fields,
+                    firmwarePolynomial = raw,
+                    parsedCoeffs = parsed,
+                    polynomialImported = false
+                )
             }
         } catch (t: Throwable) {
             Log.w(TAG, "polynomial fetch failed: ${t.message}")
@@ -314,8 +324,9 @@ class ConfigureViewModel(
         }
         liveJob?.cancel()
         _state.update { it.copy(phase = Phase.Saving) }
+        val baseline = ui.firmwareFields
         viewModelScope.launch {
-            runCatching { c.saveConfig(form) }
+            runCatching { c.saveConfig(form, baseline) }
                 .onFailure {
                     Log.w(TAG, "saveConfig threw (often expected — device reboots): ${it.message}")
                 }

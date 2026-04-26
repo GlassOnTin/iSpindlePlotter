@@ -69,6 +69,31 @@ class IspindleConfigClient(private val network: Network) {
     }
 
     /**
+     * Scrapes every `<input id="..." ... value="...">` from the /wifi
+     * page so we can echo non-edited fields back unchanged in /wifisave.
+     *
+     * The firmware (WiFiManagerKT.cpp:790-808) iterates every registered
+     * parameter and writes whatever `server->arg(id)` returns — including
+     * missing parameters, which come back as empty strings. Without this
+     * baseline, every save would wipe POLYN, name, vfact (battery cal),
+     * token, and any other field we didn't explicitly resend.
+     */
+    suspend fun getCurrentFormFields(): Map<String, String> {
+        val body = rawGet("/wifi")
+        val tagRegex = Regex("""<input\b[^>]*?>""", RegexOption.IGNORE_CASE)
+        val idRegex = Regex("""\bid="([^"]+)"""", RegexOption.IGNORE_CASE)
+        val valueRegex = Regex("""\bvalue="([^"]*)"""", RegexOption.IGNORE_CASE)
+        val out = LinkedHashMap<String, String>()
+        for (m in tagRegex.findAll(body)) {
+            val tag = m.value
+            val id = idRegex.find(tag)?.groupValues?.getOrNull(1) ?: continue
+            val value = valueRegex.find(tag)?.groupValues?.getOrNull(1) ?: continue
+            out[id] = value.replace("&amp;", "&")
+        }
+        return out
+    }
+
+    /**
      * Reads the saved POLYN expression by scraping the /wifi config form.
      * The firmware renders every saved parameter as
      *   <input id="POLYN" name="POLYN" length=N placeholder="..." value="...">
@@ -115,32 +140,41 @@ class IspindleConfigClient(private val network: Network) {
     /**
      * Submits the WiFi credentials and iSpindel parameters via /wifisave.
      *
-     * The firmware reads each [WiFiManagerParameter] by ID (see
-     * iSpindel.cpp:325-345). We pass only the params we know about; unknown
-     * keys are ignored.
+     * Starts from [baseline] (every field currently saved on the device,
+     * read from /wifi via [getCurrentFormFields]) so any field we don't
+     * explicitly override is preserved. Without this, the firmware would
+     * blank POLYN, vfact, name, token and friends on every save — the bug
+     * that left the user's precalibrated cubic empty after pairing.
+     *
+     * The firmware reads each [WiFiManagerParameter] by ID
+     * (iSpindel.cpp:325-345). Unknown keys in the querystring are ignored.
      */
-    suspend fun saveConfig(form: ConfigForm): String = withContext(Dispatchers.IO) {
-        val params = buildList {
-            add("s" to form.homeSsid)
-            add("p" to form.homePassword)
-            form.deviceName?.let { add("name" to it) }
-            form.sleepSeconds?.let { add("sleep" to it.toString()) }
-            form.serverHost?.let { add("server" to it) }
-            form.serverPort?.let { add("port" to it.toString()) }
-            form.serverPath?.let { add("uri" to it) }
-            form.token?.let { add("token" to it) }
-            // The firmware reads selAPI as a DataType enum (Globals.h),
-            // where 3 = Generic HTTP — the only mode that POSTs to a user-
-            // configurable host:port matching what this app listens for.
-            // Mistakes here are silent: the iSpindle just reports to the
-            // wrong service. Default to GenericHttp unless caller overrides.
-            add("selAPI" to (form.serviceTypeIndex ?: IspindleService.GenericHttp.selApi).toString())
+    suspend fun saveConfig(form: ConfigForm, baseline: Map<String, String> = emptyMap()): String =
+        withContext(Dispatchers.IO) {
+            val params = LinkedHashMap<String, String>()
+            // Echo everything we read back, so unmodified fields survive.
+            params.putAll(baseline)
+            // Then overlay the WiFi credentials and any form values the
+            // user explicitly set. Null entries leave the baseline alone.
+            params["s"] = form.homeSsid
+            params["p"] = form.homePassword
+            form.deviceName?.let { params["name"] = it }
+            form.sleepSeconds?.let { params["sleep"] = it.toString() }
+            form.serverHost?.let { params["server"] = it }
+            form.serverPort?.let { params["port"] = it.toString() }
+            form.serverPath?.let { params["uri"] = it }
+            form.token?.let { params["token"] = it }
+            // selAPI must match this app's listener (3 = Generic HTTP);
+            // see Globals.h for the enum and earlier session for the
+            // selAPI=0 = Ubidots regression that prompted this default.
+            params["selAPI"] =
+                (form.serviceTypeIndex ?: IspindleService.GenericHttp.selApi).toString()
+
+            val q = params.entries.joinToString("&") { (k, v) ->
+                "${URLEncoder.encode(k, "UTF-8")}=${URLEncoder.encode(v, "UTF-8")}"
+            }
+            rawGet("/wifisave?$q")
         }
-        val q = params.joinToString("&") { (k, v) ->
-            "${URLEncoder.encode(k, "UTF-8")}=${URLEncoder.encode(v, "UTF-8")}"
-        }
-        rawGet("/wifisave?$q")
-    }
 
     /** Waits for the iSpindle to drop the AP and join [expectedSsid]. */
     suspend fun pollUntilJoined(
