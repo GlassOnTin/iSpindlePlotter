@@ -40,6 +40,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.ispindle.plotter.analysis.Fits
+import com.ispindle.plotter.data.Reading
 import com.ispindle.plotter.ui.MainViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.map
@@ -186,6 +188,7 @@ fun GraphScreen(
             xFormatter = xFmt,
             emptyHint = "No SG data yet — add calibration points to compute SG from tilt."
         )
+        SgEstimateLine(scoped, sgPoints)
 
         MetricCard(
             title = "Battery (V)",
@@ -197,6 +200,7 @@ fun GraphScreen(
             ),
             xFormatter = xFmt
         )
+        BatteryEstimateLine(scoped)
     }
 
     if (showTrim) {
@@ -209,6 +213,95 @@ fun GraphScreen(
                 toast = if (count > 0) "Deleted $count readings." else "Nothing to trim."
             }
         )
+    }
+}
+
+@Composable
+private fun SgEstimateLine(
+    readings: List<Reading>,
+    sgPoints: List<Pair<Double, Double>>
+) {
+    if (sgPoints.size < 4) return
+    val tStartMs = sgPoints.first().first
+    val nowMs = System.currentTimeMillis().toDouble()
+    val xs = DoubleArray(sgPoints.size) { (sgPoints[it].first - tStartMs) / 3_600_000.0 }
+    val ys = DoubleArray(sgPoints.size) { sgPoints[it].second }
+    val fit = remember(sgPoints) { Fits.fitExponentialDecay(xs, ys) }
+
+    if (fit == null) {
+        EstimateText(
+            "SG: not enough trend yet — try widening the time window or wait for more readings.",
+            isError = false
+        )
+        return
+    }
+    val latestSg = ys.last()
+    val gap = latestSg - fit.asymptote
+    val text = buildString {
+        append("Estimated FG ")
+        append("%.4f".format(fit.asymptote))
+        append(" · current %.4f · ".format(latestSg))
+        if (gap < 0.0015) {
+            append("near asymptote — fermentation looks complete")
+        } else {
+            val nowX = (nowMs - tStartMs) / 3_600_000.0
+            val tToTerminal = fit.timeToReach(fit.asymptote + 0.001)
+            val eta = tToTerminal?.minus(nowX)
+            append("ETA to FG+0.001: ${formatHoursAhead(eta)}")
+        }
+        append(" · RMS ±%.4f".format(fit.rmsResidual))
+    }
+    EstimateText(text)
+}
+
+@Composable
+private fun BatteryEstimateLine(readings: List<Reading>) {
+    if (readings.size < 2) return
+    val tStartMs = readings.first().timestampMs.toDouble()
+    val nowMs = System.currentTimeMillis().toDouble()
+    val xs = DoubleArray(readings.size) {
+        (readings[it].timestampMs - tStartMs) / 3_600_000.0
+    }
+    val ys = DoubleArray(readings.size) { readings[it].batteryV }
+    val fit = remember(readings) { Fits.fitLinear(xs, ys) } ?: return
+
+    val nowX = (nowMs - tStartMs) / 3_600_000.0
+    val slopePerDay = fit.slope * 24.0
+    val tCutoff = fit.timeToReach(3.4)
+    val etaCutoff = tCutoff?.takeIf { it > nowX }?.minus(nowX)
+    val text = buildString {
+        append("Battery: ")
+        if (slopePerDay >= 0) {
+            // Positive or zero slope: nothing to predict. Probably charging or
+            // sitting in storage rather than discharging.
+            append("trend ${"%+.3f".format(slopePerDay)} V/day (no discharge to extrapolate)")
+        } else {
+            append("%.3f V/day drop · ".format(-slopePerDay))
+            append("days to 3.4 V cutoff: ${formatHoursAhead(etaCutoff, asDays = true)}")
+        }
+        append(" · RMS ±%.3f V".format(fit.rmsResidual))
+    }
+    EstimateText(text)
+}
+
+@Composable
+private fun EstimateText(text: String, isError: Boolean = false) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        color = if (isError) MaterialTheme.colorScheme.error
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+    )
+}
+
+private fun formatHoursAhead(hours: Double?, asDays: Boolean = false): String {
+    if (hours == null || !hours.isFinite() || hours <= 0) return "—"
+    val days = hours / 24.0
+    return when {
+        asDays || hours >= 48 -> "%.1f days".format(days)
+        hours >= 1.0 -> "%.1f h".format(hours)
+        else -> "%.0f min".format(hours * 60)
     }
 }
 
