@@ -34,6 +34,16 @@ data class ChartSeries(
 )
 
 /**
+ * Right-edge axis that re-labels the same y-values via a transform.
+ * Used for the SG → potential-alcohol display: same line, two scales.
+ */
+data class SecondaryAxis(
+    val caption: String,
+    val transform: (Double) -> Double,
+    val format: (Double) -> String
+)
+
+/**
  * Very small multi-series line chart. X is a shared axis across series
  * (typically time in ms). Each series gets its own Y axis scale, but only
  * the first series' Y axis is drawn — extra series are normalised to that
@@ -46,6 +56,7 @@ fun LineChart(
     series: ChartSeries,
     modifier: Modifier = Modifier,
     xFormatter: (Double) -> String = { "%.0f".format(it) },
+    secondaryAxis: SecondaryAxis? = null,
     height: androidx.compose.ui.unit.Dp = 220.dp
 ) {
     val textMeasurer = rememberTextMeasurer()
@@ -74,7 +85,7 @@ fun LineChart(
 
     Canvas(modifier = modifier.fillMaxWidth().height(height)) {
         val paddingLeft = with(density) { 48.dp.toPx() }
-        val paddingRight = with(density) { 8.dp.toPx() }
+        val paddingRight = with(density) { (if (secondaryAxis != null) 56.dp else 8.dp).toPx() }
         val paddingTop = with(density) { 8.dp.toPx() }
         val paddingBottom = with(density) { 28.dp.toPx() }
 
@@ -107,6 +118,24 @@ fun LineChart(
             drawTextAt(
                 textMeasurer, series.format(yVal), labelColor,
                 x = 4f, y = py - 10f
+            )
+            secondaryAxis?.let { ax ->
+                drawTextAt(
+                    textMeasurer,
+                    ax.format(ax.transform(yVal)),
+                    labelColor,
+                    x = paddingLeft + plotW + 4f,
+                    y = py - 10f
+                )
+            }
+        }
+        secondaryAxis?.let { ax ->
+            drawTextAt(
+                textMeasurer,
+                ax.caption,
+                labelColor,
+                x = paddingLeft + plotW + 4f,
+                y = paddingTop - 6f
             )
         }
 

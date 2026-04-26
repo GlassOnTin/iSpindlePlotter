@@ -186,7 +186,14 @@ fun GraphScreen(
                 format = { "%.4f".format(it) }
             ),
             xFormatter = xFmt,
-            emptyHint = "No SG data yet — add calibration points to compute SG from tilt."
+            emptyHint = "No SG data yet — add calibration points to compute SG from tilt.",
+            secondaryAxis = SecondaryAxis(
+                caption = "PA%",
+                // Triple-scale-hydrometer rule of thumb: every 0.001 SG point
+                // above 1.000 ≈ 0.13125 % alcohol-by-volume potential.
+                transform = { sg -> (sg - 1.0) * 131.25 },
+                format = { pa -> "%.1f%%".format(pa) }
+            )
         )
         SgEstimateLine(scoped, sgPoints)
 
@@ -237,6 +244,9 @@ private fun SgEstimateLine(
     }
     val latestSg = ys.last()
     val gap = latestSg - fit.asymptote
+    val og = ys.max()
+    val abvNow = (og - latestSg) * 131.25
+    val abvAtFg = (og - fit.asymptote) * 131.25
     val text = buildString {
         append("Estimated FG ")
         append("%.4f".format(fit.asymptote))
@@ -249,6 +259,7 @@ private fun SgEstimateLine(
             val eta = tToTerminal?.minus(nowX)
             append("ETA to FG+0.001: ${formatHoursAhead(eta)}")
         }
+        append(" · ABV so far %.1f%% → %.1f%% at FG".format(abvNow, abvAtFg))
         append(" · RMS ±%.4f".format(fit.rmsResidual))
     }
     EstimateText(text)
@@ -411,7 +422,8 @@ private fun MetricCard(
     title: String,
     series: ChartSeries,
     xFormatter: (Double) -> String,
-    emptyHint: String? = null
+    emptyHint: String? = null,
+    secondaryAxis: SecondaryAxis? = null
 ) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -419,7 +431,7 @@ private fun MetricCard(
             if (series.points.isEmpty() && emptyHint != null) {
                 Text(emptyHint, style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
             } else {
-                LineChart(series = series, xFormatter = xFormatter)
+                LineChart(series = series, xFormatter = xFormatter, secondaryAxis = secondaryAxis)
                 Latest(series)
             }
         }
