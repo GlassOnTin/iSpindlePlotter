@@ -33,7 +33,9 @@ data class ChartSeries(
     val label: String,
     val color: Color,
     val points: List<Pair<Double, Double>>,
-    val format: (Double) -> String = { "%.2f".format(it) }
+    val format: (Double) -> String = { "%.2f".format(it) },
+    /** Skip the polyline through the data points; render dots only. */
+    val dotsOnly: Boolean = false
 )
 
 /**
@@ -44,6 +46,24 @@ data class SecondaryAxis(
     val caption: String,
     val transform: (Double) -> Double,
     val format: (Double) -> String
+)
+
+/**
+ * Optional model curve overlaid on the chart. The chart stretches its
+ * axes (time outward, value downward for an SG decay) to make room for
+ * the prediction so the user sees where the data is heading.
+ *
+ * The overlay is split into two segments at [dashAfterX] — solid up to
+ * the last observed x, dashed beyond — so the extrapolated portion is
+ * visually distinguishable from the in-sample fit.
+ */
+data class ChartOverlay(
+    val color: Color,
+    val sample: (Double) -> Double,
+    val sampleCount: Int = 96,
+    val extendXTo: Double? = null,
+    val extendYDownTo: Double? = null,
+    val dashAfterX: Double? = null
 )
 
 /**
@@ -60,6 +80,7 @@ fun LineChart(
     modifier: Modifier = Modifier,
     xFormatter: (Double) -> String = { "%.0f".format(it) },
     secondaryAxis: SecondaryAxis? = null,
+    overlay: ChartOverlay? = null,
     height: androidx.compose.ui.unit.Dp = 220.dp
 ) {
     val textMeasurer = rememberTextMeasurer()
@@ -82,8 +103,13 @@ fun LineChart(
 
     val xs = series.points.map { it.first }
     val ys = series.points.map { it.second }
-    val xMin = xs.min(); val xMax = xs.max()
-    val yMinRaw = ys.min(); val yMaxRaw = ys.max()
+    val xMin = xs.min()
+    // Extend the x-axis to the overlay's predicted finish so the user can
+    // see the model line crossing the FG threshold rather than just
+    // running off the right edge.
+    val xMax = kotlin.math.max(xs.max(), overlay?.extendXTo ?: Double.NEGATIVE_INFINITY)
+    val yMinRaw = kotlin.math.min(ys.min(), overlay?.extendYDownTo ?: Double.POSITIVE_INFINITY)
+    val yMaxRaw = ys.max()
 
     // Sticky autoscale: keep the y-axis still as new points come in.
     // Range only widens on out-of-range data, and re-snaps when the
@@ -178,23 +204,71 @@ fun LineChart(
             )
         }
 
-        // Series line
-        val path = Path()
-        series.points.forEachIndexed { idx, (x, y) ->
-            val px = xToPx(x); val py = yToPx(y)
-            if (idx == 0) path.moveTo(px, py) else path.lineTo(px, py)
+        // Optional model overlay drawn underneath the data points so the
+        // dots stay visually crisp on top.
+        overlay?.let { ov ->
+            val xStart = kotlin.math.max(xMin, xs.min())
+            val xEnd = kotlin.math.min(xMax, ov.extendXTo ?: xs.max())
+            if (xEnd > xStart && ov.sampleCount > 1) {
+                val step = (xEnd - xStart) / ov.sampleCount
+                val dataMaxX = xs.max()
+                val splitX = ov.dashAfterX ?: dataMaxX
+                val solid = Path()
+                val dashed = Path()
+                var solidStarted = false
+                var dashedStarted = false
+                // Walk from xStart to xEnd. The boundary at splitX gets a
+                // shared point on both paths so the visual seam doesn't
+                // leave a gap.
+                for (i in 0..ov.sampleCount) {
+                    val x = xStart + i * step
+                    val y = ov.sample(x)
+                    val px = xToPx(x); val py = yToPx(y)
+                    if (x <= splitX) {
+                        if (!solidStarted) { solid.moveTo(px, py); solidStarted = true }
+                        else solid.lineTo(px, py)
+                    }
+                    if (x >= splitX) {
+                        if (!dashedStarted) { dashed.moveTo(px, py); dashedStarted = true }
+                        else dashed.lineTo(px, py)
+                    }
+                }
+                val strokeW = with(density) { 1.5.dp.toPx() }
+                drawPath(solid, ov.color, style = Stroke(width = strokeW))
+                drawPath(
+                    dashed, ov.color,
+                    style = Stroke(
+                        width = strokeW,
+                        pathEffect = PathEffect.dashPathEffect(
+                            floatArrayOf(with(density) { 5.dp.toPx() }, with(density) { 4.dp.toPx() }),
+                            0f
+                        )
+                    )
+                )
+            }
         }
-        drawPath(
-            path = path,
-            color = series.color,
-            style = Stroke(width = with(density) { 2.dp.toPx() })
-        )
 
-        // Dots
+        // Polyline through observed points unless the caller asked for dots-only.
+        if (!series.dotsOnly) {
+            val path = Path()
+            series.points.forEachIndexed { idx, (x, y) ->
+                val px = xToPx(x); val py = yToPx(y)
+                if (idx == 0) path.moveTo(px, py) else path.lineTo(px, py)
+            }
+            drawPath(
+                path = path,
+                color = series.color,
+                style = Stroke(width = with(density) { 2.dp.toPx() })
+            )
+        }
+
+        // Dots — slightly larger when this is a dots-only series so the
+        // points stand out without the supporting polyline.
+        val dotRadius = with(density) { (if (series.dotsOnly) 2.0 else 2.5).dp.toPx() }
         series.points.forEach { (x, y) ->
             drawCircle(
                 color = series.color,
-                radius = with(density) { 2.5.dp.toPx() },
+                radius = dotRadius,
                 center = Offset(xToPx(x), yToPx(y))
             )
         }

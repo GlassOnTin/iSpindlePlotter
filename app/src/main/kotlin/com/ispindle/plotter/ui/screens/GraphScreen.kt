@@ -42,6 +42,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.ispindle.plotter.analysis.Fermentation
 import com.ispindle.plotter.analysis.Fits
+import com.ispindle.plotter.analysis.LogisticFit
 import com.ispindle.plotter.data.Reading
 import com.ispindle.plotter.ui.MainViewModel
 import kotlinx.coroutines.Dispatchers
@@ -51,6 +52,8 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.exp
+import kotlin.math.ln
 
 enum class TimeWindow(val label: String, val hours: Int?) {
     H24("24h", 24),
@@ -178,13 +181,15 @@ fun GraphScreen(
             val sg = r.computedGravity ?: r.reportedGravity
             if (sg != null && sg > 0.0) r.timestampMs.toDouble() to sg else null
         }
+        val sgOverlay = remember(sgPoints) { buildSgOverlay(sgPoints) }
         MetricCard(
             title = "Specific gravity",
             series = ChartSeries(
                 label = "sg",
                 color = Color(0xFF3E7B51),
                 points = sgPoints,
-                format = { "%.4f".format(it) }
+                format = { "%.4f".format(it) },
+                dotsOnly = true
             ),
             xFormatter = xFmt,
             emptyHint = "No SG data yet — add calibration points to compute SG from tilt.",
@@ -194,7 +199,8 @@ fun GraphScreen(
                 // above 1.000 ≈ 0.13125 % alcohol-by-volume potential.
                 transform = { sg -> (sg - 1.0) * 131.25 },
                 format = { pa -> "%.1f%%".format(pa) }
-            )
+            ),
+            overlay = sgOverlay
         )
         SgEstimateLine(scoped, sgPoints)
 
@@ -284,6 +290,97 @@ private fun SgEstimateLine(
             )
         }
     }
+}
+
+/**
+ * Builds a model overlay for the SG chart:
+ *   - extends the time axis to the predicted finish (now + ETA)
+ *   - extends the SG axis down to predicted FG so the curve fits in
+ *   - samples the fit (logistic where trusted, otherwise linear from the
+ *     latest reading toward predicted FG)
+ *   - dashes the segment past the latest data so the extrapolated portion
+ *     is visually distinct.
+ *
+ * Returns null when there's nothing useful to overlay (Lag with no rate,
+ * Insufficient, or Stuck/Complete where the data already covers the story).
+ */
+private fun buildSgOverlay(sgPoints: List<Pair<Double, Double>>): ChartOverlay? {
+    if (sgPoints.size < 6) return null
+    val tStartMs = sgPoints.first().first
+    val xs = DoubleArray(sgPoints.size) { (sgPoints[it].first - tStartMs) / 3_600_000.0 }
+    val ys = DoubleArray(sgPoints.size) { sgPoints[it].second }
+    val state = Fermentation.analyse(xs, ys)
+    val nowH = xs.last()
+    val nowMs = sgPoints.last().first
+    fun overlayMs(predict: (Double) -> Double, etaH: Double, fg: Double): ChartOverlay {
+        val finishMs = nowMs + etaH * 3_600_000.0
+        return ChartOverlay(
+            color = androidx.compose.ui.graphics.Color(0xFFD1495B),
+            sample = { msX ->
+                val hours = (msX - tStartMs) / 3_600_000.0
+                predict(hours)
+            },
+            sampleCount = 96,
+            extendXTo = finishMs,
+            extendYDownTo = fg - 0.0015,
+            dashAfterX = nowMs
+        )
+    }
+    return when (state) {
+        is Fermentation.State.Active -> {
+            val eta = state.etaToFinishHours ?: return null
+            val fg = state.predictedFg
+            val predict = predictorFor(state.source, xs, ys, state, fg, nowH)
+            overlayMs(predict, eta, fg)
+        }
+        is Fermentation.State.Slowing -> {
+            val eta = state.etaToFinishHours ?: return null
+            val fg = state.predictedFg
+            val predict = predictorFor(state.source, xs, ys, state, fg, nowH)
+            overlayMs(predict, eta, fg)
+        }
+        else -> null
+    }
+}
+
+private fun predictorFor(
+    source: Fermentation.PredictionSource,
+    xs: DoubleArray,
+    ys: DoubleArray,
+    state: Fermentation.State,
+    fg: Double,
+    nowH: Double
+): (Double) -> Double {
+    if (source == Fermentation.PredictionSource.Logistic) {
+        val fit = LogisticFit.fit(xs, ys)
+        if (fit != null) return { h -> fit.predict(h).coerceAtLeast(fg) }
+    }
+    // Fallback when the full-window logistic was rejected: build an analytic
+    // logistic anchored through (nowH, current) with span [fg, og] and the
+    // observed recent rate. Solving for k and tMid:
+    //   s = (current - fg) / (og - fg)
+    //   k = -rate / ((og - fg) * s * (1 - s))
+    //   tMid = nowH - ln((1-s)/s) / k
+    // This gives an S-curve that asymptotes to OG going back and FG going
+    // forward — visually correct for a fermentation, unlike a straight line.
+    val current = ys.last()
+    val og = ys.max()
+    val rate = when (state) {
+        is Fermentation.State.Active -> state.ratePerHour
+        is Fermentation.State.Slowing -> state.ratePerHour
+        else -> 0.0
+    }
+    val span = og - fg
+    val s = if (span > 1e-6) (current - fg) / span else 0.5
+    if (rate < 0.0 && span > 1e-6 && s > 1e-3 && s < 1.0 - 1e-3) {
+        val k = -rate / (span * s * (1.0 - s))
+        if (k.isFinite() && k > 0.0) {
+            val tMid = nowH - ln((1.0 - s) / s) / k
+            return { h -> fg + span / (1.0 + exp(k * (h - tMid))) }
+        }
+    }
+    // No usable rate — hold flat at the latest reading.
+    return { _ -> current }
 }
 
 private fun Fermentation.PredictionSource.label(): String = when (this) {
@@ -451,7 +548,8 @@ private fun MetricCard(
     series: ChartSeries,
     xFormatter: (Double) -> String,
     emptyHint: String? = null,
-    secondaryAxis: SecondaryAxis? = null
+    secondaryAxis: SecondaryAxis? = null,
+    overlay: ChartOverlay? = null
 ) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -459,7 +557,12 @@ private fun MetricCard(
             if (series.points.isEmpty() && emptyHint != null) {
                 Text(emptyHint, style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
             } else {
-                LineChart(series = series, xFormatter = xFormatter, secondaryAxis = secondaryAxis)
+                LineChart(
+                    series = series,
+                    xFormatter = xFormatter,
+                    secondaryAxis = secondaryAxis,
+                    overlay = overlay
+                )
                 Latest(series)
             }
         }
