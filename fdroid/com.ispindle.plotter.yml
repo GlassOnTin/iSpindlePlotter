@@ -1,0 +1,27 @@
+Categories:
+  - Science & Education
+License: MIT
+AuthorName: Ian Williams
+AuthorWebSite: https://github.com/GlassOnTin
+WebSite: https://github.com/GlassOnTin/iSpindlePlotter
+SourceCode: https://github.com/GlassOnTin/iSpindlePlotter
+IssueTracker: https://github.com/GlassOnTin/iSpindlePlotter/issues
+Changelog: https://github.com/GlassOnTin/iSpindlePlotter/releases
+
+AutoName: iSpindle Plotter
+
+RepoType: git
+Repo: https://github.com/GlassOnTin/iSpindlePlotter
+
+Builds:
+  - versionName: 0.2.0
+    versionCode: 2
+    commit: v0.2.0
+    subdir: app
+    gradle:
+      - yes
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: 0.2.0
+CurrentVersionCode: 2

@@ -1,0 +1,1 @@
+Initial release. Local-network HTTP server in a foreground service. Polynomial calibration. Per-device tilt / temperature / SG / battery charts. Room storage of all readings.
