@@ -265,6 +265,7 @@ private fun SgEstimateLine(
                 appendEtaCredible(state.etaCredibleLowHours, state.etaCredibleHighHours)
                 append(" · ABV %.1f%% → %.1f%%".format(abvNow, abvAtFg))
                 append(" · ${state.source.label()}")
+                appendMidPlateau(state.plateaus)
                 state.measurementSigma?.let { append(" · σ_meas %.4f".format(it)) }
             })
         }
@@ -281,6 +282,7 @@ private fun SgEstimateLine(
                 appendEtaCredible(state.etaCredibleLowHours, state.etaCredibleHighHours)
                 append(" · ABV %.1f%% → %.1f%%".format(abvNow, abvAtFg))
                 append(" · ${state.source.label()}")
+                appendMidPlateau(state.plateaus)
                 state.measurementSigma?.let { append(" · σ_meas %.4f".format(it)) }
             })
         }
@@ -331,7 +333,8 @@ private fun buildSgOverlay(
         fg: Double,
         bandLowFn: ((Double) -> Double)?,
         bandHighFn: ((Double) -> Double)?,
-        floor: Double
+        floor: Double,
+        plateaus: List<com.ispindle.plotter.analysis.Plateau>
     ): ChartOverlay {
         val finishMs = nowMs + etaH * 3_600_000.0
         return ChartOverlay(
@@ -345,7 +348,14 @@ private fun buildSgOverlay(
             extendYDownTo = floor,
             dashAfterX = nowMs,
             bandLow = bandLowFn,
-            bandHigh = bandHighFn
+            bandHigh = bandHighFn,
+            plateauSpans = plateaus.map {
+                PlateauSpan(
+                    xRange = (tStartMs + it.startH * 3_600_000.0)..
+                        (tStartMs + it.endH * 3_600_000.0),
+                    label = plateauLabel(it)
+                )
+            }
         )
     }
 
@@ -355,14 +365,14 @@ private fun buildSgOverlay(
             val fg = state.predictedFg
             val (predict, low, high, floor) =
                 predictorWithBand(state.source, xs, ys, state, fg, nowH, tStartMs, nowMs, eta)
-            overlayMs(predict, eta, fg, low, high, floor)
+            overlayMs(predict, eta, fg, low, high, floor, state.plateaus)
         }
         is Fermentation.State.Slowing -> {
             val eta = state.etaToFinishHours ?: return null
             val fg = state.predictedFg
             val (predict, low, high, floor) =
                 predictorWithBand(state.source, xs, ys, state, fg, nowH, tStartMs, nowMs, eta)
-            overlayMs(predict, eta, fg, low, high, floor)
+            overlayMs(predict, eta, fg, low, high, floor, state.plateaus)
         }
         else -> null
     }
@@ -494,6 +504,29 @@ private fun Fermentation.PredictionSource.label(): String = when (this) {
     Fermentation.PredictionSource.ExpDecay -> "exp"
     Fermentation.PredictionSource.Linear -> "rate-based (75% attenuation prior)"
     Fermentation.PredictionSource.Default -> "75% attenuation prior"
+}
+
+/**
+ * Short label for a plateau span on the chart. Mid plateaus get the SG
+ * value (the diagnostic detail); Lag and Tail are self-explanatory.
+ */
+private fun plateauLabel(p: com.ispindle.plotter.analysis.Plateau): String = when (p.kind) {
+    com.ispindle.plotter.analysis.Plateau.Kind.Lag -> "lag"
+    com.ispindle.plotter.analysis.Plateau.Kind.Mid -> "paused %.4f".format(p.sg)
+    com.ispindle.plotter.analysis.Plateau.Kind.Tail -> "asymptote %.4f".format(p.sg)
+}
+
+/**
+ * Annotate the estimate text when a mid-ferment plateau was detected —
+ * the diauxic-shift signature. Tail and Lag plateaus aren't called out
+ * here: Lag has its own state, Tail effectively turns into Stuck or
+ * Complete on its own. Only Mid is interesting in an Active/Slowing
+ * narrative.
+ */
+private fun StringBuilder.appendMidPlateau(plateaus: List<com.ispindle.plotter.analysis.Plateau>) {
+    val mid = plateaus.firstOrNull { it.kind == com.ispindle.plotter.analysis.Plateau.Kind.Mid }
+        ?: return
+    append(" · paused at %.4f for %.1f h".format(mid.sg, mid.durationH))
 }
 
 /** Format the 95 % credible interval on ETA as `(low–high)`. */

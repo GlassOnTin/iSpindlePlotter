@@ -50,7 +50,14 @@ object Fermentation {
             /** 2.5 % posterior quantile on time-to-target. Logistic source only. */
             val etaCredibleLowHours: Double? = null,
             /** 97.5 % posterior quantile on time-to-target. Logistic source only. */
-            val etaCredibleHighHours: Double? = null
+            val etaCredibleHighHours: Double? = null,
+            /**
+             * Detected flat segments (lag, mid-ferment diauxic shift, or
+             * tail). The single-logistic model can't reproduce a mid
+             * plateau; surfacing the detection lets the chart shade it
+             * and the estimate text annotate "stalled at X for Y h".
+             */
+            val plateaus: List<Plateau> = emptyList()
         ) : State()
 
         data class Slowing(
@@ -65,7 +72,9 @@ object Fermentation {
             /** 2.5 % posterior quantile on time-to-target. Logistic source only. */
             val etaCredibleLowHours: Double? = null,
             /** 97.5 % posterior quantile on time-to-target. Logistic source only. */
-            val etaCredibleHighHours: Double? = null
+            val etaCredibleHighHours: Double? = null,
+            /** See [Active.plateaus]. */
+            val plateaus: List<Plateau> = emptyList()
         ) : State()
 
         data class Complete(
@@ -155,6 +164,11 @@ object Fermentation {
         //    carries an FG uncertainty.
         val logistic = LogisticFit.fit(hours, sgs, sigma)
 
+        // 3b. Detect sustained flat segments (lag / diauxic shift / tail).
+        //     Independent of the logistic — the LM can't model a mid
+        //     plateau, but the chart and the estimate text can call it out.
+        val plateaus = PlateauDetector.detect(hours, sgs)
+
         // 4. Predicted FG with graceful degradation.
         val (predictedFg, source) = pickFgEstimate(
             og = og,
@@ -232,7 +246,8 @@ object Fermentation {
                 predictedFg = predictedFg, etaToFinishHours = eta, source = source,
                 predictedFgSigma = predictedFgSigma, measurementSigma = sigma,
                 etaCredibleLowHours = etaCredible.first,
-                etaCredibleHighHours = etaCredible.second
+                etaCredibleHighHours = etaCredible.second,
+                plateaus = plateaus
             )
         } else {
             State.Slowing(
@@ -240,7 +255,8 @@ object Fermentation {
                 predictedFg = predictedFg, etaToFinishHours = eta, source = source,
                 predictedFgSigma = predictedFgSigma, measurementSigma = sigma,
                 etaCredibleLowHours = etaCredible.first,
-                etaCredibleHighHours = etaCredible.second
+                etaCredibleHighHours = etaCredible.second,
+                plateaus = plateaus
             )
         }
     }

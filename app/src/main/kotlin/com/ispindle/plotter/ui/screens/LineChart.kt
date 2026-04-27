@@ -70,7 +70,17 @@ data class ChartOverlay(
      * the overlay's x range, behind the line itself.
      */
     val bandLow: ((Double) -> Double)? = null,
-    val bandHigh: ((Double) -> Double)? = null
+    val bandHigh: ((Double) -> Double)? = null,
+    /**
+     * Vertical spans (in chart x-units) to shade — used to mark detected
+     * plateau regions. Drawn behind the data and band, full chart height.
+     */
+    val plateauSpans: List<PlateauSpan> = emptyList()
+)
+
+data class PlateauSpan(
+    val xRange: ClosedFloatingPointRange<Double>,
+    val label: String? = null
 )
 
 /**
@@ -224,6 +234,42 @@ fun LineChart(
         // Optional model overlay drawn underneath the data points so the
         // dots stay visually crisp on top.
         overlay?.let { ov ->
+            // Plateau shading: vertical bands across the full plot height,
+            // drawn first so everything else lays on top. Each span also
+            // gets a small label near the top of the plot when it's wide
+            // enough to fit one.
+            for (span in ov.plateauSpans) {
+                val sx = xToPx(span.xRange.start.coerceIn(xMin, xMax))
+                val ex = xToPx(span.xRange.endInclusive.coerceIn(xMin, xMax))
+                if (ex <= sx) continue
+                drawRect(
+                    color = axisColor.copy(alpha = 0.10f),
+                    topLeft = Offset(sx, paddingTop),
+                    size = androidx.compose.ui.geometry.Size(ex - sx, plotH)
+                )
+                span.label?.let { label ->
+                    val layout = textMeasurer.measure(
+                        text = label,
+                        style = androidx.compose.ui.text.TextStyle(
+                            color = labelColor, fontSize = 10.sp
+                        )
+                    )
+                    // Only render if the band is at least as wide as the
+                    // label plus a little breathing room — otherwise the
+                    // text would overflow into neighbouring data.
+                    val bandW = ex - sx
+                    if (bandW > layout.size.width + 8f) {
+                        drawText(
+                            layout,
+                            topLeft = Offset(
+                                x = sx + (bandW - layout.size.width) / 2f,
+                                y = paddingTop + 2f
+                            )
+                        )
+                    }
+                }
+            }
+
             val xStart = kotlin.math.max(xMin, xs.min())
             val xEnd = kotlin.math.min(xMax, ov.extendXTo ?: xs.max())
             if (xEnd > xStart && ov.sampleCount > 1) {

@@ -62,6 +62,47 @@ parameters.
 - The Stuck / Complete / Lag classifiers in `Fermentation.kt` are
   unchanged — they read off rate-near-zero rather than the LM's FG.
 
+## v1.1 — plateau detection
+
+The 4-parameter logistic is structurally monotonic — one inflection,
+one descent, smooth approach to FG. Real ferments do not always follow
+that shape. Two non-monotonic features show up in the user's iSpindle
+captures:
+
+- A **lag plateau** at the start (already classified as `State.Lag`,
+  but worth shading for chart legibility).
+- A **diauxic shift** mid-ferment: yeast finishes the easy sugars
+  (glucose, then maltose) and pauses for a few hours while it re-tunes
+  enzyme expression to attack the harder ones (maltotriose). Captured
+  in `ferment_capture_2026-04-27_35h.csv` at h 27–30 (SG ≈ 1.029).
+
+The single logistic cannot reproduce the second one — it has one S-curve
+to spend, and the prior keeps it on the gross trajectory rather than
+the fine structure. Surfaced via `PlateauDetector.detect`: rolling-
+window slope test, threshold at 0.3 mSG/h, classifies runs as
+`Lag` / `Mid` / `Tail` based on their position relative to the data
+boundaries. Shipped to `Fermentation.State.Active` /
+`State.Slowing.plateaus`, shaded on the SG chart with a small label,
+and called out in the estimate text as "paused at 1.0290 for 3.0 h".
+
+**Non-changes.**
+
+- The logistic still smooths through the plateau rather than respecting
+  it. The trust gates (`notHuggingData`, attenuation ≥ 50 %) still pass
+  on the user's data, so FG and ETA come out reasonable. Visually the
+  fit is a slight under-bend across the plateau region.
+
+**Limitations to flag.**
+
+- The detector treats *any* non-descent slope as flat, so a foam crash
+  or temperature spike that rises SG briefly will be lumped in with the
+  surrounding plateau. In practice this is what we want — neither is
+  fermentation activity — but it means the reported plateau SG is a
+  mean, not necessarily where the ferment actually paused.
+- The MIN_PLATEAU_HOURS = 2.5 h floor can mask a brief diauxic micro-
+  pause. Loosening it admits noise blips (verified empirically on the
+  35 h capture: a 2 h false positive at h 13–14 disappeared at 2.5 h).
+
 ## v2 — hierarchical priors across the user's history
 
 Each completed ferment in the Room database becomes one observation
@@ -104,6 +145,52 @@ time. Two practical wins:
 - Natural regime-change detection: `lag → active → slowing → stuck`
   drops out of the filter's innovation residual rather than the
   current threshold cascade.
+
+## Deferred — biphasic logistic model
+
+The mid-plateau detector annotates the chart but doesn't change what the
+LM fits. To actually model the diauxic shift, replace the single
+logistic with a sum of two scaled sigmoids:
+
+```
+SG(t) = FG + (OG − FG) · [w · σ(k₁·(t − τ₁)) + (1 − w) · σ(k₂·(t − τ₂))]
+        where σ(x) = 1 / (1 + exp(x))
+```
+
+Recovers single-stage behaviour at `w → 1` (or `τ₂ ≈ τ₁`). Adds three
+parameters (`k₂, τ₂, w`) → 7 total. Identifiability is borderline on a
+30–40 h capture; needs a Beta prior on `w` peaked at 1 so the model
+prefers single-stage and only commits to biphasic when the data really
+demands it. Initialisation comes from the v1.1 detector: anchor `τ₁` /
+`τ₂` on the plateau midpoint when one is detected, otherwise start
+single-logistic-equivalent.
+
+**Why deferred.** Useful only when we have multiple captured ferments
+showing the biphasic shape generalises across yeast strains and worts.
+Going straight to a 7-parameter fit on one observation would over-fit
+the shoulder of any single-stage ferment.
+
+## Adjacent — fermentation segmentation and pre-filtering
+
+The single Room database for a device collects readings from every
+brew, plus calibration sessions, plus periods where the iSpindle was
+sitting in air or a propane bottle. The chart and analyser currently
+treat the whole window as one continuous time series, which is wrong
+when readings span multiple ferments or non-fermenting interludes.
+
+A "ferment segment" classifier could find spans where:
+
+- SG dropped by ≥ 5 mSG over ≥ 6 h (real fermentation activity),
+- bounded on either side by a long enough plateau or a data gap,
+
+and tag them as ferments. Then the chart could:
+
+- Skip non-fermenting interludes from the SG estimate analysis.
+- Step the user back/forward between ferments with a left/right control.
+- Run the fitter scoped to the active ferment, not the whole stream.
+
+This is independent of the model itself — it would let the existing
+v1 + v1.1 machinery operate on cleaner inputs. Not yet specced.
 
 ## Out of scope
 
