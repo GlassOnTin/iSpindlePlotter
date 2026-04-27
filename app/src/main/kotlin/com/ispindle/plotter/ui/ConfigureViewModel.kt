@@ -291,9 +291,9 @@ class ConfigureViewModel(
     /**
      * Reverse-resolves the snapshotted home IP and forward-checks the
      * result. If the round-trip yields a single IP that matches ours, we
-     * have a stable name (e.g. `Pixel-8-Pro.fritz.box`) the iSpindle can
-     * use across phone IP changes. The probe runs off-main because Java's
-     * resolver blocks on UDP.
+     * have a stable router-published name the iSpindle can use across
+     * phone IP changes. The probe runs off-main because Java's resolver
+     * blocks on UDP.
      */
     fun probeHostname() {
         val phoneIp = _state.value.homeIpSnapshot ?: NetworkUtils.preferredIpv4()

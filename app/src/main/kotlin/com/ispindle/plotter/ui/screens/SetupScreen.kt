@@ -109,17 +109,16 @@ fun SetupScreen(padding: PaddingValues, onAutoConfigure: () -> Unit = {}) {
 
         Card {
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Stable address (FritzBox)", style = MaterialTheme.typography.titleMedium)
+                Text("Stable address", style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "AVM FritzBox routers run dnsmasq and publish a DNS record for every DHCP " +
-                            "client under .fritz.box. Use that hostname instead of a raw IP and " +
-                            "the iSpindle keeps reaching the phone after DHCP renewals.",
+                    "If the iSpindle is configured with a raw IP and the phone gets a " +
+                            "different one after a DHCP renewal, the next reading is dropped. " +
+                            "Two ways to keep the link alive across IP changes:",
                     style = MaterialTheme.typography.bodySmall
                 )
-                Step(1, "Open http://fritz.box → Home Network → Network → Network Connections.")
-                Step(2, "Find this phone, edit, tick \"Always assign the same IPv4 address to this device\". This pins both IP and DNS name.")
-                Step(3, "On the Configure screen, tap \"Find hostname\". If the FritzBox publishes a unique name for the phone you can use it as the iSpindle's server address.")
-                Step(4, "If multiple devices share the name (FritzBox keeps stale entries), give the phone a distinct name on the same edit screen, delete the old entries, then re-pair the iSpindle.")
+                Step(1, "Reserve the phone's IP on your router. The setting is usually called \"DHCP reservation\", \"static lease\", or \"always assign the same IP\".")
+                Step(2, "Use a hostname instead of an IP. Many home routers publish a DNS name for every DHCP client. On the Configure screen, tap \"Find hostname\" — if the router publishes a unique name for this phone you can use that as the iSpindle's server address, and it survives IP changes.")
+                Step(3, "If \"Find hostname\" reports the name is ambiguous, the router has stale entries from previous devices. Give this phone a distinct name in the router's DHCP settings and remove the old entries, or fall back to a reserved IP.")
             }
         }
 

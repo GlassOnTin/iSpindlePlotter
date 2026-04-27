@@ -29,8 +29,10 @@ object NetworkUtils {
 
     /**
      * Asks the system resolver for the PTR (reverse DNS) of an IPv4 address.
-     * On a FritzBox / dnsmasq LAN this is how the router exposes a stable
-     * name for each DHCP client (e.g. 192.168.0.109 → Pixel-8-Pro.fritz.box).
+     * Many home routers running dnsmasq (or a similar resolver) publish a
+     * DNS name for every DHCP client; this is how we discover that name
+     * from the IP, so the iSpindle can be configured against a stable
+     * hostname rather than a raw address.
      *
      * Returns null if no PTR is registered, or if the response is just the
      * IP echoed back (which Java's resolver does when the lookup fails).
@@ -49,7 +51,7 @@ object NetworkUtils {
     /**
      * Resolves [hostname] forward to all configured IPv4 addresses. Used to
      * sanity-check that a hostname suggested by reverse DNS still points at
-     * the phone — a FritzBox can return a stale name that resolves to a
+     * the phone — a router can return a stale name that resolves to a
      * sibling device's IP if multiple clients have advertised it.
      */
     fun forwardLookupIpv4(hostname: String): List<String> {
