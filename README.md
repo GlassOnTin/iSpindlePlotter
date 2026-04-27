@@ -8,6 +8,12 @@ Android app (Kotlin / Jetpack Compose) that receives, stores, plots and
 calibrates readings from an [iSpindel](https://github.com/universam1/iSpindel)
 hydrometer — including the **MTB iSpindel PCB 4.0**.
 
+<p align="center">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1_en-US.png"
+       alt="SG chart with Bayesian logistic fit, 95% credible band, lag and mid-ferment plateau detection"
+       width="320">
+</p>
+
 > **Protocol note.** The MTB PCB 4.0 uses an ESP8266 and therefore has no
 > Bluetooth. "Pairing" with it is really a WiFi / HTTP handshake: the phone
 > runs an HTTP server, the iSpindle wakes on its interval and POSTs JSON,
@@ -29,6 +35,14 @@ or install from source below.
   battery voltage, with 24 h / 7 d / 30 d / all windows.
 - Calibration: add `(angle, known SG)` points, fit a polynomial of degree
   1–3 by ordinary least squares, see R², apply the fit to live readings.
+- Bayesian fermentation model — 4-parameter logistic SG curve fitted by
+  Levenberg–Marquardt with a Gaussian prior on attenuation (MAP), Laplace
+  approximation of the posterior, and a 95 % credible band on both the
+  predicted SG curve and the time-to-FG. See [`ROADMAP.md`](ROADMAP.md)
+  for what the fitter does today and where it's going.
+- Plateau detection — flags lag plateaus, mid-ferment diauxic shifts
+  (where yeast pauses between sugar populations), and asymptote tails
+  on the SG chart with a shaded band and inline label.
 - Room-backed storage, so readings persist across app restarts.
 
 ## Build from source

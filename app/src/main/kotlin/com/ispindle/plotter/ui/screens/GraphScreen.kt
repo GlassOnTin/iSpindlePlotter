@@ -512,8 +512,11 @@ private fun Fermentation.PredictionSource.label(): String = when (this) {
  */
 private fun plateauLabel(p: com.ispindle.plotter.analysis.Plateau): String = when (p.kind) {
     com.ispindle.plotter.analysis.Plateau.Kind.Lag -> "lag"
-    com.ispindle.plotter.analysis.Plateau.Kind.Mid -> "paused %.4f".format(p.sg)
-    com.ispindle.plotter.analysis.Plateau.Kind.Tail -> "asymptote %.4f".format(p.sg)
+    // Three decimals (1 mSG resolution) keeps the label narrow enough
+    // for typical band widths; the user can read 4 dp off the y-axis if
+    // they want more precision.
+    com.ispindle.plotter.analysis.Plateau.Kind.Mid -> "paused %.3f".format(p.sg)
+    com.ispindle.plotter.analysis.Plateau.Kind.Tail -> "asymptote %.3f".format(p.sg)
 }
 
 /**

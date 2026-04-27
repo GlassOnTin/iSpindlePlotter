@@ -254,19 +254,18 @@ fun LineChart(
                             color = labelColor, fontSize = 10.sp
                         )
                     )
-                    // Only render if the band is at least as wide as the
-                    // label plus a little breathing room — otherwise the
-                    // text would overflow into neighbouring data.
+                    // Centre the label horizontally on the band. If the
+                    // text is wider than the band it's allowed to spill
+                    // into adjacent dot space — being centred over the
+                    // shaded region preserves the visual association.
                     val bandW = ex - sx
-                    if (bandW > layout.size.width + 8f) {
-                        drawText(
-                            layout,
-                            topLeft = Offset(
-                                x = sx + (bandW - layout.size.width) / 2f,
-                                y = paddingTop + 2f
-                            )
+                    drawText(
+                        layout,
+                        topLeft = Offset(
+                            x = sx + (bandW - layout.size.width) / 2f,
+                            y = paddingTop + 2f
                         )
-                    }
+                    )
                 }
             }
 
