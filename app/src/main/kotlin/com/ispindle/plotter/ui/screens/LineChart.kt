@@ -62,9 +62,11 @@ data class ChartSeries(
 /**
  * Right-edge axis that re-labels the same y-values via a transform.
  * Used for the SG → potential-alcohol display: same line, two scales.
+ *
+ * Title-level labelling lives at the [MetricCard] level — the chart
+ * itself just draws the right-edge tick labels.
  */
 data class SecondaryAxis(
-    val caption: String,
     val transform: (Double) -> Double,
     val format: (Double) -> String
 )
@@ -221,15 +223,6 @@ fun LineChart(
                     y = py - 10f
                 )
             }
-        }
-        secondaryAxis?.let { ax ->
-            drawTextAt(
-                textMeasurer,
-                ax.caption,
-                labelColor,
-                x = paddingLeft + plotW + 4f,
-                y = paddingTop - 6f
-            )
         }
 
         // Axis

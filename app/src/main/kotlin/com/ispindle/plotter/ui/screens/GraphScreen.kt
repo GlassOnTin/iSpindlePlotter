@@ -228,7 +228,7 @@ fun GraphScreen(
         val calR2 = device?.calRSquared
         val sgOverlay = remember(sgPoints, calR2) { buildSgOverlay(sgPoints, calR2) }
         MetricCard(
-            title = "Specific gravity",
+            title = "Specific gravity / PA%",
             series = ChartSeries(
                 label = "sg",
                 color = Color(0xFF3E7B51),
@@ -239,7 +239,6 @@ fun GraphScreen(
             xFormatter = xFmt,
             emptyHint = "No SG data yet — add calibration points to compute SG from tilt.",
             secondaryAxis = SecondaryAxis(
-                caption = "PA%",
                 // Triple-scale-hydrometer rule of thumb: every 0.001 SG point
                 // above 1.000 ≈ 0.13125 % alcohol-by-volume potential.
                 transform = { sg -> (sg - 1.0) * 131.25 },
