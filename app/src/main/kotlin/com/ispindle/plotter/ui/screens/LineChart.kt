@@ -23,6 +23,10 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -96,6 +100,13 @@ fun LineChart(
     series: ChartSeries,
     modifier: Modifier = Modifier,
     xFormatter: (Double) -> String = { "%.0f".format(it) },
+    /**
+     * Treat the x-axis as epoch-ms timestamps. When true, ticks are placed
+     * at "nice" clock-aligned offsets (every 1/2/3/6/12/24/48/… h, anchored
+     * to local midnight) and labelled with date at midnight crossings,
+     * `HH:mm` otherwise. The [xFormatter] is ignored in this mode.
+     */
+    xIsTimeMs: Boolean = false,
     secondaryAxis: SecondaryAxis? = null,
     overlay: ChartOverlay? = null,
     height: androidx.compose.ui.unit.Dp = 220.dp
@@ -218,17 +229,22 @@ fun LineChart(
             strokeWidth = 1.5f
         )
 
-        // X labels at start / mid / end
-        listOf(xMin, (xMin + xMax) / 2.0, xMax).forEachIndexed { i, xVal ->
-            val px = when (i) {
-                0 -> paddingLeft
-                1 -> paddingLeft + plotW / 2f
-                else -> paddingLeft + plotW
-            }
-            drawTextAt(
-                textMeasurer, xFormatter(xVal), labelColor,
-                x = px - 30f, y = paddingTop + plotH + 6f
+        // X labels — clock-aligned for time axes, start/mid/end otherwise.
+        val (tickXs, tickStepH) = if (xIsTimeMs) clockAlignedTicks(xMin, xMax)
+            else listOf(xMin, (xMin + xMax) / 2.0, xMax) to 0.0
+        for (xVal in tickXs) {
+            val px = xToPx(xVal)
+            val label = if (xIsTimeMs) timeAxisLabel(xVal.toLong(), tickStepH)
+                else xFormatter(xVal)
+            val layout = textMeasurer.measure(
+                text = label,
+                style = androidx.compose.ui.text.TextStyle(color = labelColor, fontSize = 10.sp)
             )
+            // Centre the label on its tick, but clamp so it never spills
+            // off the canvas edges.
+            val labelX = (px - layout.size.width / 2f)
+                .coerceIn(0f, size.width - layout.size.width)
+            drawText(layout, topLeft = Offset(labelX, paddingTop + plotH + 6f))
         }
 
         // Optional model overlay drawn underneath the data points so the
@@ -424,6 +440,72 @@ private fun niceRange(min: Double, max: Double): Pair<Double, Double> {
     val niceMin = floor(min / step) * step
     val niceMax = ceil(max / step) * step
     return niceMin to niceMax
+}
+
+/**
+ * Picks a "nice" clock-friendly hour spacing for x-axis ticks given a
+ * total span in hours. Aims for roughly 4 visible ticks across the span,
+ * snapped to a value humans expect to see on a chart (every 6 h, every
+ * 12 h, every day, every two days, …). Sub-hour steps are available for
+ * narrow time windows.
+ */
+internal fun niceHourStep(spanH: Double): Double {
+    if (spanH <= 0.0 || !spanH.isFinite()) return 1.0
+    val targetSteps = 4
+    val rough = spanH / targetSteps
+    val niceSteps = doubleArrayOf(
+        0.25, 0.5, 1.0, 2.0, 3.0, 6.0, 12.0, 24.0, 48.0, 72.0, 168.0, 336.0
+    )
+    for (s in niceSteps) if (s >= rough) return s
+    return niceSteps.last()
+}
+
+/**
+ * Generates clock-aligned tick positions across `[xMin, xMax]` (epoch
+ * ms). Anchored to local midnight on or before `xMin`; step chosen by
+ * [niceHourStep]. Returns the list of ticks in ascending order plus the
+ * step in hours (used by the label formatter to decide whether `HH:mm`
+ * or full `HH:mm:ss` is appropriate — currently only `HH:mm`).
+ */
+internal fun clockAlignedTicks(xMin: Double, xMax: Double): Pair<List<Double>, Double> {
+    if (xMax <= xMin || !xMin.isFinite() || !xMax.isFinite()) return emptyList<Double>() to 1.0
+    val spanH = (xMax - xMin) / 3_600_000.0
+    val stepH = niceHourStep(spanH)
+    val stepMs = (stepH * 3_600_000.0).toLong()
+    if (stepMs <= 0L) return emptyList<Double>() to stepH
+
+    val cal = Calendar.getInstance()
+    cal.timeInMillis = xMin.toLong()
+    cal.set(Calendar.HOUR_OF_DAY, 0)
+    cal.set(Calendar.MINUTE, 0)
+    cal.set(Calendar.SECOND, 0)
+    cal.set(Calendar.MILLISECOND, 0)
+    val midnightMs = cal.timeInMillis
+
+    var k = ((xMin - midnightMs) / stepMs.toDouble()).let {
+        if (it <= 0.0) 0L else ceil(it).toLong()
+    }
+    val ticks = mutableListOf<Double>()
+    while (true) {
+        val t = midnightMs + k * stepMs
+        if (t > xMax) break
+        if (t >= xMin) ticks += t.toDouble()
+        k++
+    }
+    return ticks to stepH
+}
+
+/**
+ * Smart time-axis label: bare date (`MM-dd`) at midnight crossings so
+ * the day anchors stand out; bare time-of-day (`HH:mm`) at intra-day
+ * ticks. Compact and unambiguous on a 320 dp wide chart.
+ */
+internal fun timeAxisLabel(ms: Long, stepH: Double): String {
+    val cal = Calendar.getInstance()
+    cal.timeInMillis = ms
+    val isMidnight = cal[Calendar.HOUR_OF_DAY] == 0 && cal[Calendar.MINUTE] == 0
+    val pattern = if (isMidnight) "MM-dd" else "HH:mm"
+    return SimpleDateFormat(pattern, Locale.getDefault()).format(Date(ms))
 }
 
 private fun niceStep(raw: Double): Double {

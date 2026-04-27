@@ -800,6 +800,7 @@ private fun MetricCard(
                 LineChart(
                     series = series,
                     xFormatter = xFormatter,
+                    xIsTimeMs = true,
                     secondaryAxis = secondaryAxis,
                     overlay = overlay
                 )
