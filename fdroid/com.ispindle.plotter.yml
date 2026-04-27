@@ -16,12 +16,19 @@ Repo: https://github.com/GlassOnTin/iSpindlePlotter
 Builds:
   - versionName: 0.2.0
     versionCode: 2
-    commit: v0.2.0
+    commit: cd51270a5c618f80c3b9ab145ea6bf7b62621256
+    subdir: app
+    gradle:
+      - yes
+
+  - versionName: 0.3.0
+    versionCode: 3
+    commit: ecb8b7b6f9f0e4e024ed33d44acfd3209df0c30f
     subdir: app
     gradle:
       - yes
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 0.2.0
-CurrentVersionCode: 2
+CurrentVersion: 0.3.0
+CurrentVersionCode: 3
