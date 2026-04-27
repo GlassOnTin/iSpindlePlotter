@@ -41,6 +41,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.ispindle.plotter.analysis.Fermentation
+import com.ispindle.plotter.analysis.FermentSegment
+import com.ispindle.plotter.analysis.FermentSegmenter
 import com.ispindle.plotter.analysis.Fits
 import com.ispindle.plotter.analysis.LogisticFit
 import com.ispindle.plotter.data.Reading
@@ -75,10 +77,37 @@ fun GraphScreen(
     val readings by remember(deviceId) { vm.readingsFor(deviceId).map { it } }
         .collectAsState(initial = emptyList())
 
+    // Detect contiguous ferment episodes across the whole readings stream.
+    // When at least one ferment is detected we default the chart to the
+    // most recent one, since that's the brew the user is actively
+    // watching; "All" falls back to the TimeWindow filter.
+    val segments = remember(readings) {
+        val sgList = readings.mapNotNull { r ->
+            val sg = r.computedGravity ?: r.reportedGravity
+            if (sg != null && sg > 0.0) r.timestampMs to sg else null
+        }
+        if (sgList.size < 6) emptyList()
+        else FermentSegmenter.detect(
+            timestamps = LongArray(sgList.size) { sgList[it].first },
+            sgs = DoubleArray(sgList.size) { sgList[it].second }
+        )
+    }
+    var selectedSegmentIdx by remember(segments.size) {
+        mutableStateOf<Int?>(if (segments.isEmpty()) null else segments.lastIndex)
+    }
+
     var window by remember { mutableStateOf(TimeWindow.D7) }
     val now = System.currentTimeMillis()
-    val cutoff = window.hours?.let { now - it * 3_600_000L } ?: Long.MIN_VALUE
-    val scoped = readings.filter { it.timestampMs >= cutoff }
+    val scoped = run {
+        val sel = selectedSegmentIdx
+        if (sel != null && sel in segments.indices) {
+            val seg = segments[sel]
+            readings.filter { it.timestampMs in seg.startMs..seg.endMs }
+        } else {
+            val cutoff = window.hours?.let { now - it * 3_600_000L } ?: Long.MIN_VALUE
+            readings.filter { it.timestampMs >= cutoff }
+        }
+    }
 
     var showTrim by remember { mutableStateOf(false) }
     var toast by remember { mutableStateOf<String?>(null) }
@@ -122,11 +151,25 @@ fun GraphScreen(
             "${scoped.size} readings in window · ${readings.size} total",
             style = MaterialTheme.typography.bodySmall
         )
+        if (segments.isNotEmpty()) {
+            FermentNavRow(
+                segments = segments,
+                selectedIdx = selectedSegmentIdx,
+                onSelect = { selectedSegmentIdx = it }
+            )
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             TimeWindow.entries.forEach { w ->
                 FilterChip(
-                    selected = window == w,
-                    onClick = { window = w },
+                    selected = window == w && selectedSegmentIdx == null,
+                    onClick = {
+                        window = w
+                        // Picking a TimeWindow chip implies "show me a
+                        // time-bounded slice" rather than a specific
+                        // ferment — switch to All so the chip's effect
+                        // is actually visible.
+                        selectedSegmentIdx = null
+                    },
                     label = { Text(w.label) }
                 )
             }
@@ -228,6 +271,50 @@ fun GraphScreen(
                 showTrim = false
                 toast = if (count > 0) "Deleted $count readings." else "Nothing to trim."
             }
+        )
+    }
+}
+
+@Composable
+private fun FermentNavRow(
+    segments: List<FermentSegment>,
+    selectedIdx: Int?,
+    onSelect: (Int?) -> Unit
+) {
+    val dateFmt = remember { SimpleDateFormat("MM-dd", Locale.getDefault()) }
+    val seg = selectedIdx?.takeIf { it in segments.indices }?.let { segments[it] }
+    val label = if (seg == null) {
+        "All ferments (${segments.size})"
+    } else {
+        val range = "${dateFmt.format(Date(seg.startMs))} → ${dateFmt.format(Date(seg.endMs))}"
+        val drop = seg.ogObserved - seg.fgObserved
+        "Ferment ${selectedIdx!! + 1}/${segments.size} · $range · −%.3f SG".format(drop)
+    }
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+    ) {
+        OutlinedButton(
+            onClick = { selectedIdx?.let { if (it > 0) onSelect(it - 1) } },
+            enabled = selectedIdx != null && selectedIdx > 0,
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+        ) { Text("◀") }
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.weight(1f)
+        )
+        OutlinedButton(
+            onClick = { selectedIdx?.let { if (it < segments.lastIndex) onSelect(it + 1) } },
+            enabled = selectedIdx != null && selectedIdx < segments.lastIndex,
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+        ) { Text("▶") }
+        FilterChip(
+            selected = selectedIdx == null,
+            onClick = {
+                onSelect(if (selectedIdx == null) segments.lastIndex else null)
+            },
+            label = { Text("All") }
         )
     }
 }

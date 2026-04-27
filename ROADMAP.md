@@ -170,27 +170,50 @@ showing the biphasic shape generalises across yeast strains and worts.
 Going straight to a 7-parameter fit on one observation would over-fit
 the shoulder of any single-stage ferment.
 
-## Adjacent — fermentation segmentation and pre-filtering
+## v1.2 — fermentation segmentation and pre-filtering
 
-The single Room database for a device collects readings from every
-brew, plus calibration sessions, plus periods where the iSpindle was
-sitting in air or a propane bottle. The chart and analyser currently
-treat the whole window as one continuous time series, which is wrong
-when readings span multiple ferments or non-fermenting interludes.
+The Room database for a device collects readings from every brew, plus
+calibration sessions, plus periods where the iSpindle was sitting in
+air or a propane bottle. v1 / v1.1 treated the whole window as one
+continuous time series, which mis-frames the model and the chart when
+readings span multiple ferments or non-fermenting interludes.
 
-A "ferment segment" classifier could find spans where:
+`FermentSegmenter.detect` (`analysis/FermentSegmenter.kt`) walks the
+readings and cuts on:
 
-- SG dropped by ≥ 5 mSG over ≥ 6 h (real fermentation activity),
-- bounded on either side by a long enough plateau or a data gap,
+- a time gap > 8 h between consecutive readings, OR
+- a single-step SG rise > 5 mSG that *also* lands at a SG higher than
+  anything seen in the last 6 h. The second clause is what
+  distinguishes "fresh wort poured in" (sustained new high) from "brief
+  noise excursion that recovered to baseline" (rise lands at a level
+  the SG was already at minutes earlier).
 
-and tag them as ferments. Then the chart could:
+Each candidate span is then promoted to a `FermentSegment` only if
+duration ≥ 6 h, max−min SG ≥ 5 mSG, and the first-half median lies at
+least drop/4 above the second-half median (real downward trend, not
+a temperature-driven excursion that happens to span the drop floor).
 
-- Skip non-fermenting interludes from the SG estimate analysis.
-- Step the user back/forward between ferments with a left/right control.
-- Run the fitter scoped to the active ferment, not the whole stream.
+Threaded into the Graph screen as a navigation row above the
+TimeWindow chips: `◀ Ferment k/N · MM-dd → MM-dd · −X SG ▶ [All]`.
+Selecting a ferment scopes the entire chart and the Bayesian analyser
+to that segment's time range; tapping a TimeWindow chip falls back to
+"All" (since chip + segment scoping would conflict). Default is the
+most recent ferment, since that's the brew the user is actively
+watching.
 
-This is independent of the model itself — it would let the existing
-v1 + v1.1 machinery operate on cleaner inputs. Not yet specced.
+**Limitations.**
+
+- Conservative criteria mean short ferments (< 6 h, e.g., a quick
+  cider top-up) and low-attenuation ferments (< 5 mSG drop, e.g., kombucha 2F)
+  will be missed and the user falls back to All.
+- A new ferment with OG below the previous ferment's recent SG range
+  and no time gap will fail the rise-confirmation check (the SG was
+  already that high in the past 6 h). In practice batches are
+  separated by hours of cleaning so the time-gap criterion catches
+  this.
+- Segment boundaries are heuristic — there's no user override for
+  "this is one ferment, don't split here" or "split here". Manual
+  trim-before still exists as the escape hatch.
 
 ## Out of scope
 
