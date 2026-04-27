@@ -45,7 +45,6 @@ import com.ispindle.plotter.analysis.FermentSegment
 import com.ispindle.plotter.analysis.FermentSegmenter
 import com.ispindle.plotter.analysis.Fits
 import com.ispindle.plotter.analysis.LogisticFit
-import com.ispindle.plotter.analysis.Smoothing
 import com.ispindle.plotter.data.Reading
 import com.ispindle.plotter.ui.MainViewModel
 import kotlinx.coroutines.Dispatchers
@@ -251,15 +250,32 @@ fun GraphScreen(
         SgEstimateLine(scoped, sgPoints, calR2)
 
         val rawBatteryPoints = scoped.map { it.timestampMs.toDouble() to it.batteryV }
-        // Battery ADC throws ~30 mV blips between consecutive readings;
-        // a rolling median over ~9 samples kills them without touching
-        // the underlying discharge trend.
-        val smoothBatteryPoints = remember(rawBatteryPoints) {
-            // 15-wide median rejects up to 7 consecutive outlier readings;
-            // 11-wide mean smooths the residual ADC quantisation steps.
-            // Effective window ~25 min at 60 s sample interval, well below
-            // any real change rate of cell voltage.
-            Smoothing.robustSmooth(rawBatteryPoints, medianWindow = 15, meanWindow = 11)
+        // The cell really does sit at each ADC-quantised voltage step
+        // for hours at a time, so any moving-window smoother leaves
+        // visible plateaus and abrupt transitions. Fit a model curve
+        // instead — a straight line at this stage of discharge is a
+        // well-determined fit; the rendered line is what the OLS thinks
+        // the underlying voltage trajectory is, ignoring quantisation
+        // and ADC noise entirely. Raw points still show as faint dots
+        // so the noise envelope is visible.
+        val batteryFit = remember(rawBatteryPoints) {
+            if (rawBatteryPoints.size < 2) null
+            else {
+                val tStart = rawBatteryPoints.first().first
+                val xs = DoubleArray(rawBatteryPoints.size) {
+                    (rawBatteryPoints[it].first - tStart) / 3_600_000.0
+                }
+                val ys = DoubleArray(rawBatteryPoints.size) { rawBatteryPoints[it].second }
+                Fits.fitLinear(xs, ys)?.let { it to tStart }
+            }
+        }
+        val modelBatteryPoints = batteryFit?.let { (fit, tStart) ->
+            val first = rawBatteryPoints.first().first
+            val last = rawBatteryPoints.last().first
+            listOf(
+                first to fit.predict((first - tStart) / 3_600_000.0),
+                last to fit.predict((last - tStart) / 3_600_000.0)
+            )
         }
         MetricCard(
             title = "Battery (V)",
@@ -267,12 +283,12 @@ fun GraphScreen(
                 label = "battery",
                 color = Color(0xFF7A5C8A),
                 points = rawBatteryPoints,
-                smoothPoints = smoothBatteryPoints,
+                smoothPoints = modelBatteryPoints,
                 format = { "%.2fV".format(it) }
             ),
             xFormatter = xFmt
         )
-        BatteryEstimateLine(scoped)
+        BatteryEstimateLine(scoped, batteryFit?.first)
     }
 
     if (showTrim) {
@@ -644,15 +660,10 @@ private fun StringBuilder.appendEtaCredible(low: Double?, high: Double?) {
 }
 
 @Composable
-private fun BatteryEstimateLine(readings: List<Reading>) {
-    if (readings.size < 2) return
+private fun BatteryEstimateLine(readings: List<Reading>, fit: Fits.Linear?) {
+    if (readings.size < 2 || fit == null) return
     val tStartMs = readings.first().timestampMs.toDouble()
     val nowMs = System.currentTimeMillis().toDouble()
-    val xs = DoubleArray(readings.size) {
-        (readings[it].timestampMs - tStartMs) / 3_600_000.0
-    }
-    val ys = DoubleArray(readings.size) { readings[it].batteryV }
-    val fit = remember(readings) { Fits.fitLinear(xs, ys) } ?: return
 
     val nowX = (nowMs - tStartMs) / 3_600_000.0
     val slopePerDay = fit.slope * 24.0
