@@ -45,6 +45,7 @@ import com.ispindle.plotter.analysis.FermentSegment
 import com.ispindle.plotter.analysis.FermentSegmenter
 import com.ispindle.plotter.analysis.Fits
 import com.ispindle.plotter.analysis.LogisticFit
+import com.ispindle.plotter.analysis.Smoothing
 import com.ispindle.plotter.data.Reading
 import com.ispindle.plotter.ui.MainViewModel
 import kotlinx.coroutines.Dispatchers
@@ -249,12 +250,24 @@ fun GraphScreen(
         )
         SgEstimateLine(scoped, sgPoints, calR2)
 
+        val rawBatteryPoints = scoped.map { it.timestampMs.toDouble() to it.batteryV }
+        // Battery ADC throws ~30 mV blips between consecutive readings;
+        // a rolling median over ~9 samples kills them without touching
+        // the underlying discharge trend.
+        val smoothBatteryPoints = remember(rawBatteryPoints) {
+            // 15-wide median rejects up to 7 consecutive outlier readings;
+            // 11-wide mean smooths the residual ADC quantisation steps.
+            // Effective window ~25 min at 60 s sample interval, well below
+            // any real change rate of cell voltage.
+            Smoothing.robustSmooth(rawBatteryPoints, medianWindow = 15, meanWindow = 11)
+        }
         MetricCard(
             title = "Battery (V)",
             series = ChartSeries(
                 label = "battery",
                 color = Color(0xFF7A5C8A),
-                points = scoped.map { it.timestampMs.toDouble() to it.batteryV },
+                points = rawBatteryPoints,
+                smoothPoints = smoothBatteryPoints,
                 format = { "%.2fV".format(it) }
             ),
             xFormatter = xFmt

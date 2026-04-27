@@ -39,7 +39,13 @@ data class ChartSeries(
     val points: List<Pair<Double, Double>>,
     val format: (Double) -> String = { "%.2f".format(it) },
     /** Skip the polyline through the data points; render dots only. */
-    val dotsOnly: Boolean = false
+    val dotsOnly: Boolean = false,
+    /**
+     * When non-null, the polyline is drawn through these points instead
+     * of [points]. Use for a smoothed trace over noisy raw data — the
+     * dots still come from [points] so the underlying density is visible.
+     */
+    val smoothPoints: List<Pair<Double, Double>>? = null
 )
 
 /**
@@ -351,10 +357,12 @@ fun LineChart(
             }
         }
 
-        // Polyline through observed points unless the caller asked for dots-only.
+        // Polyline through observed points (or the smoothed series when
+        // provided) unless the caller asked for dots-only.
         if (!series.dotsOnly) {
+            val polyPoints = series.smoothPoints ?: series.points
             val path = Path()
-            series.points.forEachIndexed { idx, (x, y) ->
+            polyPoints.forEachIndexed { idx, (x, y) ->
                 val px = xToPx(x); val py = yToPx(y)
                 if (idx == 0) path.moveTo(px, py) else path.lineTo(px, py)
             }
@@ -366,11 +374,21 @@ fun LineChart(
         }
 
         // Dots — slightly larger when this is a dots-only series so the
-        // points stand out without the supporting polyline.
-        val dotRadius = with(density) { (if (series.dotsOnly) 2.0 else 2.5).dp.toPx() }
+        // points stand out without the supporting polyline. When a
+        // smoothed line is present the raw dots are drawn smaller and
+        // semi-transparent so the trend dominates visually.
+        val hasSmoothLine = !series.dotsOnly && series.smoothPoints != null
+        val dotRadius = with(density) {
+            (when {
+                series.dotsOnly -> 2.0
+                hasSmoothLine -> 1.2
+                else -> 2.5
+            }).dp.toPx()
+        }
+        val dotColor = if (hasSmoothLine) series.color.copy(alpha = 0.45f) else series.color
         series.points.forEach { (x, y) ->
             drawCircle(
-                color = series.color,
+                color = dotColor,
                 radius = dotRadius,
                 center = Offset(xToPx(x), yToPx(y))
             )
