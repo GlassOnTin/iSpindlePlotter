@@ -444,20 +444,21 @@ private fun niceRange(min: Double, max: Double): Pair<Double, Double> {
 
 /**
  * Picks a "nice" clock-friendly hour spacing for x-axis ticks given a
- * total span in hours. Aims for roughly 4 visible ticks across the span,
- * snapped to a value humans expect to see on a chart (every 6 h, every
- * 12 h, every day, every two days, …). Sub-hour steps are available for
- * narrow time windows.
+ * total span in hours. The step is chosen so the implied tick count
+ * (`span / step`) is as close to 4 as possible, snapped to a value
+ * humans expect on a chart (every 30 min, every 6 h, every 12 h, every
+ * day, every two days, weekly, fortnightly).
+ *
+ * "Closest to 4" rather than "smallest step ≥ span/4" — the latter
+ * happily picks a 24 h step on a 50 h span and shows only 2 ticks; this
+ * version picks 12 h there (≈ 4 ticks, with noon/midnight markers).
  */
 internal fun niceHourStep(spanH: Double): Double {
     if (spanH <= 0.0 || !spanH.isFinite()) return 1.0
-    val targetSteps = 4
-    val rough = spanH / targetSteps
     val niceSteps = doubleArrayOf(
         0.25, 0.5, 1.0, 2.0, 3.0, 6.0, 12.0, 24.0, 48.0, 72.0, 168.0, 336.0
     )
-    for (s in niceSteps) if (s >= rough) return s
-    return niceSteps.last()
+    return niceSteps.minByOrNull { abs(spanH / it - 4.0) } ?: 1.0
 }
 
 /**
