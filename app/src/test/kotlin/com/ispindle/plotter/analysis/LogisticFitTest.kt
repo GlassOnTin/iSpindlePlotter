@@ -14,7 +14,11 @@ class LogisticFitTest {
         val og = 1.060; val fg = 1.012; val k = 0.20; val tMid = 36.0
         val xs = DoubleArray(120) { it * 0.5 + 0.0 }
         val ys = DoubleArray(120) { fg + (og - fg) / (1.0 + exp(k * (xs[it] - tMid))) }
-        val r = LogisticFit.fit(xs, ys)!!
+        // Pure-MLE test: explicitly disable the v1 attenuation prior so
+        // the fit is a pure data least-squares against the synthetic
+        // logistic. The MAP fit (default) is exercised separately in
+        // LogisticFitBayesianTest.
+        val r = LogisticFit.fit(xs, ys, attenuationPrior = null)!!
         assertEquals(og, r.og, tol)
         assertEquals(fg, r.fg, tol)
         assertEquals(k, r.k, 0.05)
@@ -29,7 +33,7 @@ class LogisticFitTest {
             val ideal = fg + (og - fg) / (1.0 + exp(k * (xs[it] - tMid)))
             ideal + 0.0005 * kotlin.math.sin(it * 0.7)  // ±0.5 SG-points jitter
         }
-        val r = LogisticFit.fit(xs, ys)!!
+        val r = LogisticFit.fit(xs, ys, attenuationPrior = null)!!
         assertEquals(og, r.og, 0.002)
         assertEquals(fg, r.fg, 0.003)
         assertTrue(r.rmsResidual < 1e-3)

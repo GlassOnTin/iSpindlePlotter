@@ -1,19 +1,22 @@
 package com.ispindle.plotter.analysis
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Drives the analyser over the exported capture from a real fermentation
- * (770 points, 13.7 hours, lag → active onset). The dataset shows SG flat
- * at ~1.0524 for ~9 h then dropping to ~1.0475 by hour 13. The analyser
- * should call this Active (not "near asymptote — fermentation looks
- * complete", which is what the old single-exponential fit was reporting).
+ * Drives the analyser over two snapshots of the same real fermentation:
+ *  - `ferment_capture_2026-04-26.csv` — 13.7 h in, lag → active onset.
+ *  - `ferment_capture_2026-04-27_31h.csv` — 31.0 h in, mid active phase.
+ *
+ * Both must produce sensible classifications without claiming "near
+ * asymptote — fermentation looks complete", which is what the old single-
+ * exponential fit was reporting.
  */
 class RealCaptureTest {
 
     @Test fun `early-active capture classifies as Active or Lag, never Complete`() {
-        val (hours, sgs) = loadCapture()
+        val (hours, sgs) = loadCapture("ferment_capture_2026-04-26.csv")
         assertTrue("loaded ${hours.size} points", hours.size > 100)
         val state = Fermentation.analyse(hours, sgs)
         // Either Active (after the knee at ~h9) or Lag (if we treat the
@@ -48,9 +51,43 @@ class RealCaptureTest {
         }
     }
 
-    private fun loadCapture(): Pair<DoubleArray, DoubleArray> {
-        val rsrc = javaClass.classLoader!!
-            .getResourceAsStream("ferment_capture_2026-04-26.csv")!!
+    /**
+     * Mid-active extension of the same ferment, captured 31 h in
+     * (1753 points, OG ≈ 1.0527, current ≈ 1.0271). The lag plateau
+     * (h0–h9) and ~21 h of active descent are both visible; the
+     * asymptote is not.
+     *
+     * Pre-fix, the LM converged to FG ≈ 1.0255 (51 % attenuation —
+     * snug-fitting the recent tail and ignoring the lag plateau). The
+     * analyser's `notHuggingData` gate rejected that fit and fell back to
+     * the 75 %-prior with a `Linear`/rate-based source. Post-fix, the FG
+     * ceiling at 70 % attenuation forces the LM to a curve that respects
+     * both the lag and the descent, and the resulting fit is trusted.
+     */
+    @Test fun `mid-active 31h capture trusts logistic source and respects lag plateau`() {
+        val (hours, sgs) = loadCapture("ferment_capture_2026-04-27_31h.csv")
+        assertTrue("loaded ${hours.size} points", hours.size > 1500)
+        val state = Fermentation.analyse(hours, sgs)
+        assertTrue("expected Active; got $state", state is Fermentation.State.Active)
+        state as Fermentation.State.Active
+        assertEquals(
+            "source should be Logistic (regression — pre-fix this fell to Linear)",
+            Fermentation.PredictionSource.Logistic, state.source
+        )
+        assertTrue(
+            "OG ${state.og} should be near observed max ~1.0527",
+            state.og in 1.050..1.055
+        )
+        assertTrue(
+            "predicted FG ${state.predictedFg} should sit in 70-90 % atten band",
+            state.predictedFg in 1.012..1.020
+        )
+        val eta = state.etaToFinishHours
+        assertTrue("ETA $eta should be set and in (5, 40) h", eta != null && eta in 5.0..40.0)
+    }
+
+    private fun loadCapture(name: String): Pair<DoubleArray, DoubleArray> {
+        val rsrc = javaClass.classLoader!!.getResourceAsStream(name)!!
         val lines = rsrc.bufferedReader().readLines()
         val header = lines.first().split(',')
         val tIdx = header.indexOf("timestamp_ms")

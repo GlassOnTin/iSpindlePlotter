@@ -54,6 +54,7 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.exp
 import kotlin.math.ln
+import kotlin.random.Random
 
 enum class TimeWindow(val label: String, val hours: Int?) {
     H24("24h", 24),
@@ -261,6 +262,7 @@ private fun SgEstimateLine(
                 append(" · %.4f now · ".format(state.current))
                 append("rate %.3f SG/h · ".format(state.ratePerHour))
                 append("ETA ${formatHoursAhead(state.etaToFinishHours)}")
+                appendEtaCredible(state.etaCredibleLowHours, state.etaCredibleHighHours)
                 append(" · ABV %.1f%% → %.1f%%".format(abvNow, abvAtFg))
                 append(" · ${state.source.label()}")
                 state.measurementSigma?.let { append(" · σ_meas %.4f".format(it)) }
@@ -276,6 +278,7 @@ private fun SgEstimateLine(
                 append(" · %.4f now · ".format(state.current))
                 append("rate %.3f SG/h · ".format(state.ratePerHour))
                 append("ETA ${formatHoursAhead(state.etaToFinishHours)}")
+                appendEtaCredible(state.etaCredibleLowHours, state.etaCredibleHighHours)
                 append(" · ABV %.1f%% → %.1f%%".format(abvNow, abvAtFg))
                 append(" · ${state.source.label()}")
                 state.measurementSigma?.let { append(" · σ_meas %.4f".format(it)) }
@@ -321,31 +324,16 @@ private fun buildSgOverlay(
     val state = Fermentation.analyse(xs, ys, calRSquared)
     val nowH = xs.last()
     val nowMs = sgPoints.last().first
+
     fun overlayMs(
         predict: (Double) -> Double,
         etaH: Double,
         fg: Double,
-        fgSigma: Double?
+        bandLowFn: ((Double) -> Double)?,
+        bandHighFn: ((Double) -> Double)?,
+        floor: Double
     ): ChartOverlay {
         val finishMs = nowMs + etaH * 3_600_000.0
-        // Band tapers from zero width at the last data point to ±2σ_FG at
-        // the predicted finish, since uncertainty about the future is what
-        // grows — the line through the data is already constrained by it.
-        val sigma = fgSigma
-        val low: ((Double) -> Double)? = sigma?.let {
-            { msX ->
-                val hours = (msX - tStartMs) / 3_600_000.0
-                val taper = ((msX - nowMs) / (finishMs - nowMs)).coerceIn(0.0, 1.0)
-                predict(hours) - 2.0 * sigma * taper
-            }
-        }
-        val high: ((Double) -> Double)? = sigma?.let {
-            { msX ->
-                val hours = (msX - tStartMs) / 3_600_000.0
-                val taper = ((msX - nowMs) / (finishMs - nowMs)).coerceIn(0.0, 1.0)
-                predict(hours) + 2.0 * sigma * taper
-            }
-        }
         return ChartOverlay(
             color = androidx.compose.ui.graphics.Color(0xFFD1495B),
             sample = { msX ->
@@ -354,27 +342,111 @@ private fun buildSgOverlay(
             },
             sampleCount = 96,
             extendXTo = finishMs,
-            extendYDownTo = (sigma?.let { fg - 2 * it } ?: (fg - 0.0015)),
+            extendYDownTo = floor,
             dashAfterX = nowMs,
-            bandLow = low,
-            bandHigh = high
+            bandLow = bandLowFn,
+            bandHigh = bandHighFn
         )
     }
+
     return when (state) {
         is Fermentation.State.Active -> {
             val eta = state.etaToFinishHours ?: return null
             val fg = state.predictedFg
-            val predict = predictorFor(state.source, xs, ys, state, fg, nowH)
-            overlayMs(predict, eta, fg, state.predictedFgSigma)
+            val (predict, low, high, floor) =
+                predictorWithBand(state.source, xs, ys, state, fg, nowH, tStartMs, nowMs, eta)
+            overlayMs(predict, eta, fg, low, high, floor)
         }
         is Fermentation.State.Slowing -> {
             val eta = state.etaToFinishHours ?: return null
             val fg = state.predictedFg
-            val predict = predictorFor(state.source, xs, ys, state, fg, nowH)
-            overlayMs(predict, eta, fg, state.predictedFgSigma)
+            val (predict, low, high, floor) =
+                predictorWithBand(state.source, xs, ys, state, fg, nowH, tStartMs, nowMs, eta)
+            overlayMs(predict, eta, fg, low, high, floor)
         }
         else -> null
     }
+}
+
+/**
+ * Bundle of (point predictor, lower-band, upper-band, y-floor) for an
+ * SG overlay. Band functions take the chart's millisecond x-axis and
+ * return the SG at that point.
+ */
+private data class OverlayCurves(
+    val predict: (Double) -> Double,
+    val bandLow: ((Double) -> Double)?,
+    val bandHigh: ((Double) -> Double)?,
+    val floor: Double
+)
+
+/**
+ * Build the predictor and the 95 % credible band for the SG overlay.
+ *
+ * When `source == Logistic`, refits the logistic so we can pull samples
+ * from the Laplace approximation: 256 parameter draws evaluated on a
+ * dense time grid, with 2.5 % / 50 % / 97.5 % quantiles taken at each
+ * grid point. The band reads off the per-grid quantile arrays via
+ * linear interpolation in `t`.
+ *
+ * When the logistic source isn't available (or the fit doesn't carry a
+ * covariance), falls back to the older single-anchor analytical S-curve
+ * with no band.
+ */
+private fun predictorWithBand(
+    source: Fermentation.PredictionSource,
+    xs: DoubleArray,
+    ys: DoubleArray,
+    state: Fermentation.State,
+    fg: Double,
+    nowH: Double,
+    tStartMs: Double,
+    nowMs: Double,
+    etaH: Double
+): OverlayCurves {
+    val finishH = nowH + etaH
+
+    if (source == Fermentation.PredictionSource.Logistic) {
+        val fit = LogisticFit.fit(xs, ys)
+        if (fit?.covariance != null) {
+            // Dense time grid spanning the whole chart x-extent, in
+            // hours from the same anchor as the data array.
+            val gridSize = 96
+            val t0 = xs.first()
+            val grid = DoubleArray(gridSize) {
+                t0 + (finishH - t0) * it.toDouble() / (gridSize - 1)
+            }
+            val rng = Random(0x5E1ED)
+            val bands = fit.predictiveBand(
+                times = grid,
+                rng = rng,
+                nSamples = 256,
+                quantiles = doubleArrayOf(0.025, 0.5, 0.975)
+            )
+            val lows = bands[0]
+            val highs = bands[2]
+
+            // Linear interpolation lookup from chart-time (ms) → SG.
+            fun interp(arr: DoubleArray): (Double) -> Double = { msX ->
+                val h = (msX - tStartMs) / 3_600_000.0
+                val u = (h - t0) / (finishH - t0)
+                val pos = (u * (gridSize - 1)).coerceIn(0.0, (gridSize - 1).toDouble())
+                val i0 = pos.toInt().coerceAtMost(gridSize - 2)
+                val frac = pos - i0
+                arr[i0] + frac * (arr[i0 + 1] - arr[i0])
+            }
+            val predict: (Double) -> Double = { h -> fit.predict(h).coerceAtLeast(fg) }
+            // Floor the chart's y-extent to the lowest sampled value or
+            // a small margin below the MAP FG, whichever is lower.
+            val sampledFloor = lows.min()
+            val floor = kotlin.math.min(sampledFloor, fg - 0.0015)
+            return OverlayCurves(predict, interp(lows), interp(highs), floor)
+        }
+    }
+
+    // Fallback: older deterministic single-anchor S-curve with no band.
+    val predict = predictorFor(source, xs, ys, state, fg, nowH)
+    return OverlayCurves(predict, null, null, fg - 0.0015)
 }
 
 private fun predictorFor(
@@ -422,6 +494,17 @@ private fun Fermentation.PredictionSource.label(): String = when (this) {
     Fermentation.PredictionSource.ExpDecay -> "exp"
     Fermentation.PredictionSource.Linear -> "rate-based (75% attenuation prior)"
     Fermentation.PredictionSource.Default -> "75% attenuation prior"
+}
+
+/** Format the 95 % credible interval on ETA as `(low–high)`. */
+private fun StringBuilder.appendEtaCredible(low: Double?, high: Double?) {
+    if (low == null || high == null) return
+    val lo = formatHoursAhead(low)
+    val hi = formatHoursAhead(high)
+    // Squelch when both endpoints round to the same display value — e.g.
+    // very tight posterior or very large dataset.
+    if (lo == hi) return
+    append(" (95 %% CI %s–%s)".format(lo, hi))
 }
 
 @Composable

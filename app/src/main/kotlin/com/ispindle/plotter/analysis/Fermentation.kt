@@ -2,6 +2,7 @@ package com.ispindle.plotter.analysis
 
 import kotlin.math.abs
 import kotlin.math.max
+import kotlin.random.Random
 
 /**
  * Phase classifier and predictive model for an in-flight fermentation.
@@ -45,7 +46,11 @@ object Fermentation {
             val etaToFinishHours: Double?,
             val source: PredictionSource,
             val predictedFgSigma: Double? = null,
-            val measurementSigma: Double? = null
+            val measurementSigma: Double? = null,
+            /** 2.5 % posterior quantile on time-to-target. Logistic source only. */
+            val etaCredibleLowHours: Double? = null,
+            /** 97.5 % posterior quantile on time-to-target. Logistic source only. */
+            val etaCredibleHighHours: Double? = null
         ) : State()
 
         data class Slowing(
@@ -56,7 +61,11 @@ object Fermentation {
             val etaToFinishHours: Double?,
             val source: PredictionSource,
             val predictedFgSigma: Double? = null,
-            val measurementSigma: Double? = null
+            val measurementSigma: Double? = null,
+            /** 2.5 % posterior quantile on time-to-target. Logistic source only. */
+            val etaCredibleLowHours: Double? = null,
+            /** 97.5 % posterior quantile on time-to-target. Logistic source only. */
+            val etaCredibleHighHours: Double? = null
         ) : State()
 
         data class Complete(
@@ -192,6 +201,19 @@ object Fermentation {
             else -> linearEta(current, terminalSg, recentRate)
         }?.takeIf { it.isFinite() && it >= 0.0 }
 
+        // 7b. ETA credible interval — propagated from the Laplace
+        //     posterior over the 4 logistic params. Only meaningful when
+        //     source == Logistic; nulls otherwise.
+        val etaCredible: Pair<Double?, Double?> = if (source == PredictionSource.Logistic && logistic != null) {
+            val rng = Random(BAYESIAN_SEED)
+            val q = logistic.etaQuantiles(terminalSg, rng)
+            if (q != null && q.size >= 3) {
+                val low = (q[0] - now).takeIf { it.isFinite() && it >= 0.0 }
+                val high = (q[2] - now).takeIf { it.isFinite() && it >= 0.0 }
+                low to high
+            } else null to null
+        } else null to null
+
         // 8. FG uncertainty: from the LM covariance when we trust the
         //    logistic, or from the prior's spread (≈±0.003 SG, the std of
         //    typical attenuation outcomes 60–90 % across mainstream beer
@@ -208,16 +230,28 @@ object Fermentation {
             State.Active(
                 og = og, current = current, ratePerHour = rate,
                 predictedFg = predictedFg, etaToFinishHours = eta, source = source,
-                predictedFgSigma = predictedFgSigma, measurementSigma = sigma
+                predictedFgSigma = predictedFgSigma, measurementSigma = sigma,
+                etaCredibleLowHours = etaCredible.first,
+                etaCredibleHighHours = etaCredible.second
             )
         } else {
             State.Slowing(
                 og = og, current = current, ratePerHour = rate,
                 predictedFg = predictedFg, etaToFinishHours = eta, source = source,
-                predictedFgSigma = predictedFgSigma, measurementSigma = sigma
+                predictedFgSigma = predictedFgSigma, measurementSigma = sigma,
+                etaCredibleLowHours = etaCredible.first,
+                etaCredibleHighHours = etaCredible.second
             )
         }
     }
+
+    /**
+     * Fixed seed for the Bayesian Monte Carlo passes so the displayed
+     * ETA quantiles don't flicker between recompositions for the same
+     * dataset. Re-running on different data produces different draws
+     * (the Hessian and MAP move), but a stable input → stable output.
+     */
+    private const val BAYESIAN_SEED: Int = 0x5E1ED
 
     private fun pickFgEstimate(
         og: Double,
