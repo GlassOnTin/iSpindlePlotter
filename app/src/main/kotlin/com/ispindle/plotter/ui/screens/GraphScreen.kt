@@ -284,7 +284,13 @@ fun GraphScreen(
                 color = Color(0xFF7A5C8A),
                 points = rawBatteryPoints,
                 smoothPoints = modelBatteryPoints,
-                format = { "%.2fV".format(it) }
+                format = { "%.2fV".format(it) },
+                // Half an ADC quantum (~10 mV LSB on the iSpindle) of
+                // Gaussian jitter breaks up the visible 4.13/4.14/4.15 V
+                // bands in the dot cloud without shifting the apparent
+                // voltage. Deterministic per (x, y) so the cloud is
+                // stable across recompositions.
+                dotJitterY = 0.005
             ),
             xFormatter = xFmt
         )

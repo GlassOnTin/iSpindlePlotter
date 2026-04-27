@@ -81,4 +81,32 @@ class LineChartTimeTicksTest {
         assertEquals(0, clockAlignedTicks(0.0, 0.0).first.size)
         assertEquals(0, clockAlignedTicks(100.0, 50.0).first.size)
     }
+
+    @Test fun `gaussianJitter is deterministic per point`() {
+        // Same (x, y) → same offset.
+        val a = gaussianJitter(1.0, 4.16, 0.005)
+        val b = gaussianJitter(1.0, 4.16, 0.005)
+        assertEquals("same input → same output", a, b, 0.0)
+
+        // Different (x, y) → different offsets (statistically; pin one pair).
+        val c = gaussianJitter(2.0, 4.16, 0.005)
+        assertTrue("neighbouring x at same y should produce a different draw", a != c)
+
+        // Sigma=0 disables.
+        assertEquals(0.0, gaussianJitter(1.0, 4.16, 0.0), 0.0)
+    }
+
+    @Test fun `gaussianJitter respects sigma`() {
+        // Empirical σ over 1000 distinct points should land within 25 % of
+        // the requested σ (stochastic but the samples are independent).
+        val sigma = 0.005
+        val draws = (0 until 1000).map { gaussianJitter(it.toDouble(), 4.16, sigma) }
+        val mean = draws.average()
+        val variance = draws.sumOf { (it - mean) * (it - mean) } / draws.size
+        val empirical = kotlin.math.sqrt(variance)
+        assertTrue(
+            "empirical σ $empirical should be within 25 % of target $sigma",
+            kotlin.math.abs(empirical - sigma) < sigma * 0.25
+        )
+    }
 }

@@ -45,7 +45,18 @@ data class ChartSeries(
      * of [points]. Use for a smoothed trace over noisy raw data — the
      * dots still come from [points] so the underlying density is visible.
      */
-    val smoothPoints: List<Pair<Double, Double>>? = null
+    val smoothPoints: List<Pair<Double, Double>>? = null,
+    /**
+     * Add Gaussian noise of σ = [dotJitterY] to each dot's y-position at
+     * render time. Used to break up horizontal "bands" that ADC-quantised
+     * data forms — each dot's offset is deterministic in (x, y) so the
+     * cloud doesn't shimmer between recompositions.
+     *
+     * Pick σ ≈ half the quantisation step (e.g. 5 mV for a 10 mV ADC)
+     * so the cloud spreads within one quantum without displacing the
+     * apparent value. Null disables.
+     */
+    val dotJitterY: Double? = null
 )
 
 /**
@@ -386,11 +397,13 @@ fun LineChart(
             }).dp.toPx()
         }
         val dotColor = if (hasSmoothLine) series.color.copy(alpha = 0.45f) else series.color
+        val jitterY = series.dotJitterY
         series.points.forEach { (x, y) ->
+            val drawY = if (jitterY != null) y + gaussianJitter(x, y, jitterY) else y
             drawCircle(
                 color = dotColor,
                 radius = dotRadius,
-                center = Offset(xToPx(x), yToPx(y))
+                center = Offset(xToPx(x), yToPx(drawY))
             )
         }
     }
@@ -525,6 +538,27 @@ internal fun timeAxisLabel(ms: Long, stepH: Double): String {
     val isMidnight = cal[Calendar.HOUR_OF_DAY] == 0 && cal[Calendar.MINUTE] == 0
     val pattern = if (isMidnight) "MM-dd" else "HH:mm"
     return SimpleDateFormat(pattern, Locale.getDefault()).format(Date(ms))
+}
+
+/**
+ * Deterministic Gaussian jitter for a (x, y) point. The same input
+ * always returns the same Gaussian draw — repaint the chart and the
+ * dot cloud is stable, but neighbouring quantised points get
+ * independent offsets and don't form a visible band.
+ *
+ * Seeds the RNG via a SplitMix64 mixer rather than feeding the raw
+ * bit-pattern XOR to [java.util.Random] directly: that constructor
+ * truncates the seed to 48 bits internally, so two doubles that differ
+ * only in their high bits (e.g. 1.0 vs 2.0) collide and produce
+ * identical jitter. The mixer spreads bits across all 64 positions.
+ */
+internal fun gaussianJitter(x: Double, y: Double, sigma: Double): Double {
+    if (sigma <= 0.0 || !sigma.isFinite()) return 0.0
+    var z = x.toBits() xor y.toBits().rotateLeft(31)
+    z = z xor (z ushr 30); z *= -0x40a7b892e9b376a7L  // 0xbf58476d1ce4e5b9
+    z = z xor (z ushr 27); z *= -0x6b2fb644ecceee15L  // 0x94d049bb133111eb
+    z = z xor (z ushr 31)
+    return java.util.Random(z).nextGaussian() * sigma
 }
 
 private fun niceStep(raw: Double): Double {
