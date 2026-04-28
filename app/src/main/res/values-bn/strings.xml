@@ -13,7 +13,6 @@
 
     <!-- ── Navigation labels ─────────────────────────────────────────── -->
     <string name="nav_home">হোম</string>
-    <string name="nav_devices">ডিভাইস</string>
     <string name="nav_setup">সেটআপ গাইড</string>
     <string name="nav_graph">গ্রাফ</string>
     <string name="nav_calibrate">ক্যালিব্রেট</string>
@@ -69,7 +68,6 @@
 
     <!-- ── GraphScreen ────────────────────────────────────────────────── -->
     <string name="graph_readings_in_window">উইন্ডোতে %1$d রিডিং · মোট %2$d</string>
-    <string name="graph_btn_trim_before">এর আগে ছাঁটাই…</string>
     <string name="graph_btn_export_csv">CSV রফতানি করুন…</string>
     <string name="graph_btn_import_csv">CSV আমদানি করুন…</string>
     <string name="graph_import_read_failed">ফাইল পড়া যায়নি।</string>
@@ -118,7 +116,9 @@
     <string name="graph_dur_em_dash">—</string>
     <string name="graph_dur_days">%1$s দিন</string>
     <string name="graph_dur_hours">%1$s ঘ.</string>
-    <string name="graph_dur_min">%1$s মি</string>
+    <string name="graph_dur_min">%1$s মি</string>    <string name="graph_sg_cursor_at">%1$s এর স্ন্যাপশট</string>    <string name="graph_sg_cursor_snapshot">%1$s তে · SG %2$s · হ্রাস %3$s · এখন পর্যন্ত ABV %4$s%%</string>
+    <string name="graph_btn_live">লাইভ</string>
+
     <string name="graph_plateau_lag">ল্যাগ</string>
     <string name="graph_plateau_paused">থামা %1$s</string>
     <string name="graph_plateau_asymptote">অ্যাসিম্পটোট %1$s</string>
@@ -133,14 +133,6 @@
     <string name="graph_battery_drop_per_day">%1$s V/দিন পতন · </string>
     <string name="graph_battery_days_to_cutoff">৩.৪ V কাটঅফ পর্যন্ত দিন: %1$s</string>
     <string name="graph_battery_rms">RMS ±%1$s V</string>
-    <string name="graph_trim_delete_description">এই তারিখ ও স্থানীয় সময়ের আগে রেকর্ড করা সকল রিডিং মুছুন।</string>
-    <string name="graph_trim_time_of_day">দিনের সময় (স্থানীয়)</string>
-    <string name="graph_trim_counting">গণনা হচ্ছে…</string>
-    <string name="graph_trim_nothing_to_delete">মুছার কিছু নেই</string>
-    <string name="graph_trim_delete_one">১টি রিডিং মুছুন</string>
-    <string name="graph_trim_delete_n">%1$d টি রিডিং মুছুন</string>
-    <string name="graph_trimmed_nothing">ছাঁটাইয়ের কিছু নেই।</string>
-    <string name="graph_deleted_n_readings">%1$d টি রিডিং মুছে গেছে।</string>
 
     <!-- ── CalibrationScreen ──────────────────────────────────────────── -->
     <string name="cal_add_point_title">ক্যালিব্রেশন পয়েন্ট যোগ করুন</string>

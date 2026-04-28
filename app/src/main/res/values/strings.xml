@@ -13,7 +13,6 @@
 
     <!-- ── Navigation labels ────────────────────────────────────────── -->
     <string name="nav_home">Home</string>
-    <string name="nav_devices">Devices</string>
     <string name="nav_setup">Setup Guide</string>
     <string name="nav_graph">Graph</string>
     <string name="nav_calibrate">Calibrate</string>
@@ -69,7 +68,6 @@
 
     <!-- ── GraphScreen ───────────────────────────────────────────────── -->
     <string name="graph_readings_in_window">%1$d readings in window · %2$d total</string>
-    <string name="graph_btn_trim_before">Trim before…</string>
     <string name="graph_btn_export_csv">Export CSV…</string>
     <string name="graph_btn_import_csv">Import CSV…</string>
     <string name="graph_nothing_to_export">Nothing to export.</string>
@@ -126,6 +124,10 @@
     <string name="graph_dur_days">%1$s days</string>
     <string name="graph_dur_hours">%1$s h</string>
     <string name="graph_dur_min">%1$s min</string>
+    <!-- Cursor snapshot (chart is being scrubbed) -->
+    <string name="graph_sg_cursor_at">Snapshot at %1$s</string>
+    <string name="graph_sg_cursor_snapshot">At %1$s · SG %2$s · drop %3$s · %4$s%% ABV so far</string>
+    <string name="graph_btn_live">Live</string>
     <!-- Plateau labels rendered inside the SG chart band -->
     <string name="graph_plateau_lag">lag</string>
     <string name="graph_plateau_paused">paused %1$s</string>
@@ -137,6 +139,8 @@
     <string name="graph_guidance_slowing">Most of the attenuation has happened. Resist the urge to cold-crash before SG stabilises — yeast is still cleaning up flavour compounds. For lagers, raising temperature 2–3 °C now supports a diacetyl rest.</string>
     <string name="graph_guidance_conditioning">SG has reached the iSpindle\'s noise floor, but the ferment isn\'t biologically over. Yeast is reducing diacetyl/acetaldehyde and finishing slow sugars. Verify SG stable for 24–48 h before packaging. Cold-crash now if you want clarity.</string>
     <string name="graph_guidance_stuck">Fermentation has plateaued above the expected FG. Common causes: temperature drop, low yeast viability, or unfermentable sugars. Try raising temperature 2–3 °C, gently rousing the yeast, or pitching a fresh starter.</string>
+    <string name="graph_guidance_paused_mid">Mid-ferment pause at SG %1$s for %2$s h, well above predicted FG. Most likely a diauxic shift — the yeast is finishing the easy sugars (glucose, maltose) before tackling the harder ones (maltotriose). Hold temperature steady; descent usually resumes within 24–48 h. If the SG hasn\'t resumed dropping after that, raise temperature 2–3 °C or gently rouse the yeast before assuming it\'s stuck.</string>
+    <string name="graph_guidance_paused_late">Late-ferment pause at SG %1$s for %2$s h, close to predicted FG. SG is settling onto its asymptote rather than stalling — the yeast is on the harder sugars and starting to clean up flavour compounds (diacetyl, acetaldehyde). Give it 24–48 h; if SG holds, the state will switch to Conditioning. Resist cold-crashing until then.</string>
     <!-- Battery estimate -->
     <string name="graph_battery_prefix">Battery: </string>
     <string name="graph_battery_no_discharge">trend %1$s V/day (no discharge to extrapolate)</string>
@@ -144,14 +148,6 @@
     <string name="graph_battery_days_to_cutoff">days to 3.4 V cutoff: %1$s</string>
     <string name="graph_battery_rms">RMS ±%1$s V</string>
     <!-- Trim dialog -->
-    <string name="graph_trim_delete_description">Delete every reading recorded before this date and local time.</string>
-    <string name="graph_trim_time_of_day">Time of day (local)</string>
-    <string name="graph_trim_counting">Counting…</string>
-    <string name="graph_trim_nothing_to_delete">Nothing to delete</string>
-    <string name="graph_trim_delete_one">Delete 1 reading</string>
-    <string name="graph_trim_delete_n">Delete %1$d readings</string>
-    <string name="graph_trimmed_nothing">Nothing to trim.</string>
-    <string name="graph_deleted_n_readings">Deleted %1$d readings.</string>
 
     <!-- ── CalibrationScreen ─────────────────────────────────────────── -->
     <string name="cal_add_point_title">Add calibration point</string>

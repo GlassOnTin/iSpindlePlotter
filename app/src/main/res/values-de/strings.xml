@@ -13,7 +13,6 @@
 
     <!-- ── Navigation labels ────────────────────────────────────────── -->
     <string name="nav_home">Start</string>
-    <string name="nav_devices">Geräte</string>
     <string name="nav_setup">Einrichtung</string>
     <string name="nav_graph">Diagramm</string>
     <string name="nav_calibrate">Kalibrierung</string>
@@ -69,7 +68,6 @@
 
     <!-- ── GraphScreen ───────────────────────────────────────────────── -->
     <string name="graph_readings_in_window">%1$d Messwerte im Fenster · %2$d gesamt</string>
-    <string name="graph_btn_trim_before">Kürzen bis…</string>
     <string name="graph_btn_export_csv">CSV exportieren…</string>
     <string name="graph_btn_import_csv">CSV importieren…</string>
     <string name="graph_import_read_failed">Datei konnte nicht gelesen werden.</string>
@@ -125,7 +123,9 @@
     <string name="graph_dur_em_dash">—</string>
     <string name="graph_dur_days">%1$s Tage</string>
     <string name="graph_dur_hours">%1$s h</string>
-    <string name="graph_dur_min">%1$s min</string>
+    <string name="graph_dur_min">%1$s min</string>    <string name="graph_sg_cursor_at">Schnappschuss um %1$s</string>    <string name="graph_sg_cursor_snapshot">Um %1$s · SG %2$s · Abfall %3$s · ABV bisher %4$s%%</string>
+    <string name="graph_btn_live">Live</string>
+
     <string name="graph_plateau_lag">Lag-Phase</string>
     <string name="graph_plateau_paused">pausiert %1$s</string>
     <string name="graph_plateau_asymptote">Asymptote %1$s</string>
@@ -142,14 +142,6 @@
     <string name="graph_battery_days_to_cutoff">Tage bis 3,4-V-Grenzwert: %1$s</string>
     <string name="graph_battery_rms">RMS ±%1$s V</string>
     <!-- Trim dialog -->
-    <string name="graph_trim_delete_description">Alle Messwerte löschen, die vor diesem Datum und dieser Ortszeit aufgezeichnet wurden.</string>
-    <string name="graph_trim_time_of_day">Tageszeit (Ortszeit)</string>
-    <string name="graph_trim_counting">Zähle…</string>
-    <string name="graph_trim_nothing_to_delete">Nichts zu löschen</string>
-    <string name="graph_trim_delete_one">1 Messwert löschen</string>
-    <string name="graph_trim_delete_n">%1$d Messwerte löschen</string>
-    <string name="graph_trimmed_nothing">Nichts zu kürzen.</string>
-    <string name="graph_deleted_n_readings">%1$d Messwerte gelöscht.</string>
 
     <!-- ── CalibrationScreen ─────────────────────────────────────────── -->
     <string name="cal_add_point_title">Kalibrierungspunkt hinzufügen</string>

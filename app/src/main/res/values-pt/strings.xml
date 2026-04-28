@@ -13,7 +13,6 @@
 
     <!-- ── Navigation labels ─────────────────────────────────────────── -->
     <string name="nav_home">Início</string>
-    <string name="nav_devices">Dispositivos</string>
     <string name="nav_setup">Guia de configuração</string>
     <string name="nav_graph">Gráfico</string>
     <string name="nav_calibrate">Calibrar</string>
@@ -69,7 +68,6 @@
 
     <!-- ── GraphScreen ────────────────────────────────────────────────── -->
     <string name="graph_readings_in_window">%1$d leituras na janela · %2$d no total</string>
-    <string name="graph_btn_trim_before">Cortar antes de…</string>
     <string name="graph_btn_export_csv">Exportar CSV…</string>
     <string name="graph_btn_import_csv">Importar CSV…</string>
     <string name="graph_import_read_failed">Não foi possível ler o arquivo.</string>
@@ -118,7 +116,9 @@
     <string name="graph_dur_em_dash">—</string>
     <string name="graph_dur_days">%1$s dias</string>
     <string name="graph_dur_hours">%1$s h</string>
-    <string name="graph_dur_min">%1$s min</string>
+    <string name="graph_dur_min">%1$s min</string>    <string name="graph_sg_cursor_at">Instantâneo em %1$s</string>    <string name="graph_sg_cursor_snapshot">Em %1$s · DG %2$s · queda %3$s · ABV até agora %4$s%%</string>
+    <string name="graph_btn_live">Ao vivo</string>
+
     <string name="graph_plateau_lag">latência</string>
     <string name="graph_plateau_paused">pausa %1$s</string>
     <string name="graph_plateau_asymptote">assíntota %1$s</string>
@@ -133,14 +133,6 @@
     <string name="graph_battery_drop_per_day">%1$s V/dia de queda · </string>
     <string name="graph_battery_days_to_cutoff">dias até corte em 3,4 V: %1$s</string>
     <string name="graph_battery_rms">RMS ±%1$s V</string>
-    <string name="graph_trim_delete_description">Excluir todas as leituras registradas antes desta data e hora local.</string>
-    <string name="graph_trim_time_of_day">Hora do dia (local)</string>
-    <string name="graph_trim_counting">Contando…</string>
-    <string name="graph_trim_nothing_to_delete">Nada para excluir</string>
-    <string name="graph_trim_delete_one">Excluir 1 leitura</string>
-    <string name="graph_trim_delete_n">Excluir %1$d leituras</string>
-    <string name="graph_trimmed_nothing">Nada para cortar.</string>
-    <string name="graph_deleted_n_readings">%1$d leituras excluídas.</string>
 
     <!-- ── CalibrationScreen ──────────────────────────────────────────── -->
     <string name="cal_add_point_title">Adicionar ponto de calibração</string>

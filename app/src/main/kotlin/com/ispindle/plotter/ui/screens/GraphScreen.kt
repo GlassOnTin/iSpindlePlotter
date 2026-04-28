@@ -15,26 +15,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimeInput
-import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -132,7 +123,6 @@ fun GraphScreen(
         }
     }
 
-    var showTrim by remember { mutableStateOf(false) }
     var toast by remember { mutableStateOf<String?>(null) }
     val csvLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("text/csv")
@@ -221,18 +211,11 @@ fun GraphScreen(
                 )
             }
         }
-        // Three actions don't fit on one row at default phone widths —
-        // FlowRow lets the buttons reflow to a second line rather than
-        // wrapping the third button's text inside its own pill.
         @OptIn(ExperimentalLayoutApi::class)
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            OutlinedButton(
-                onClick = { showTrim = true },
-                enabled = readings.isNotEmpty()
-            ) { Text(stringResource(R.string.graph_btn_trim_before), maxLines = 1) }
             OutlinedButton(
                 onClick = {
                     val stamp = SimpleDateFormat("yyyyMMdd-HHmm", Locale.US).format(Date())
@@ -271,6 +254,13 @@ fun GraphScreen(
         }
         val calR2 = device?.calRSquared
         val sgOverlay = remember(sgPoints, calR2) { buildSgOverlay(ctx, sgPoints, calR2) }
+        // Scrubbing cursor — when set, the SG description shows a snapshot
+        // of values at that point in time. Reset whenever the underlying
+        // segment / window changes so a stale cursor X can't survive into
+        // a different time range.
+        var sgCursorX by remember(scoped.firstOrNull()?.timestampMs, scoped.lastOrNull()?.timestampMs) {
+            mutableStateOf<Double?>(null)
+        }
         MetricCard(
             title = stringResource(R.string.graph_section_specific_gravity),
             series = ChartSeries(
@@ -288,9 +278,11 @@ fun GraphScreen(
                 transform = { sg -> (sg - 1.0) * 131.25 },
                 format = { pa -> "%.1f%%".format(pa) }
             ),
-            overlay = sgOverlay
+            overlay = sgOverlay,
+            cursorX = sgCursorX,
+            onCursorChange = { sgCursorX = it }
         )
-        SgEstimateLine(scoped, sgPoints, calR2)
+        SgEstimateLine(scoped, sgPoints, calR2, sgCursorX, onClearCursor = { sgCursorX = null })
 
         MetricCard(
             title = stringResource(R.string.graph_section_tilt_angle),
@@ -370,18 +362,6 @@ fun GraphScreen(
         BatteryEstimateLine(scoped, batteryFit?.first)
     }
 
-    if (showTrim) {
-        TrimBeforeDialog(
-            vm = vm,
-            deviceId = deviceId,
-            onDismiss = { showTrim = false },
-            onTrimmed = { count ->
-                showTrim = false
-                toast = if (count > 0) ctx.getString(R.string.graph_deleted_n_readings, count)
-                        else ctx.getString(R.string.graph_trimmed_nothing)
-            }
-        )
-    }
 }
 
 @Composable
@@ -440,20 +420,104 @@ private fun FermentNavRow(
 private fun SgEstimateLine(
     readings: List<Reading>,
     sgPoints: List<Pair<Double, Double>>,
-    calRSquared: Double? = null
+    calRSquared: Double? = null,
+    cursorX: Double? = null,
+    onClearCursor: (() -> Unit)? = null
 ) {
     if (sgPoints.size < 6) return
-    val ctx = LocalContext.current
-    val tStartMs = sgPoints.first().first
-    val xs = DoubleArray(sgPoints.size) { (sgPoints[it].first - tStartMs) / 3_600_000.0 }
-    val ys = DoubleArray(sgPoints.size) { sgPoints[it].second }
-    val state = remember(sgPoints, calRSquared) { Fermentation.analyse(xs, ys, calRSquared) }
 
+    val tStartMs = sgPoints.first().first
+    val xs = remember(sgPoints) {
+        DoubleArray(sgPoints.size) { (sgPoints[it].first - tStartMs) / 3_600_000.0 }
+    }
+    val ys = remember(sgPoints) { DoubleArray(sgPoints.size) { sgPoints[it].second } }
+
+    // Build the timeline once on the full dataset. Cursor lookups index
+    // into it instead of re-running the classifier on truncated data —
+    // that's what stops the description flickering between Slowing and
+    // Conditioning as the cursor crosses noisy threshold boundaries.
+    // Phases are monotonic (Lag → Active → Slowing → Conditioning|Stuck);
+    // mid-ferment pauses stay as plateau overlays.
+    val timeline = remember(sgPoints, calRSquared) {
+        Fermentation.buildTimeline(xs, ys, calRSquared)
+    }
+
+    if (cursorX != null) {
+        val endIdx = sgPoints.indexOfLast { it.first <= cursorX }
+        if (endIdx < 0 || timeline == null) {
+            // Cursor moved earlier than the dataset has any data, or the
+            // dataset is below the classifier's minimum. Show a brief
+            // raw snapshot instead of an empty card.
+            val nearest = sgPoints.minByOrNull { kotlin.math.abs(it.first - cursorX) }
+            if (nearest != null) {
+                val og = sgPoints.maxOf { it.second }
+                val sgAt = nearest.second
+                val drop = og - sgAt
+                val abv = drop * 131.25
+                val timeStr = SimpleDateFormat("MM-dd HH:mm", Locale.getDefault())
+                    .format(Date(nearest.first.toLong()))
+                CursorHeader(timeStr, onClearCursor)
+                EstimateText(
+                    stringResource(
+                        R.string.graph_sg_cursor_snapshot,
+                        timeStr,
+                        "%.4f".format(sgAt),
+                        "%.4f".format(drop),
+                        "%.1f".format(abv)
+                    )
+                )
+            }
+            return
+        }
+
+        val cursorH = (sgPoints[endIdx].first - tStartMs) / 3_600_000.0
+        val cursorTimeStr = SimpleDateFormat("MM-dd HH:mm", Locale.getDefault())
+            .format(Date(sgPoints[endIdx].first.toLong()))
+        val state = remember(timeline, endIdx) {
+            Fermentation.stateAt(timeline, xs, ys, cursorH)
+        }
+        CursorHeader(cursorTimeStr, onClearCursor)
+        StateDescription(state, showCitation = false)
+        return
+    }
+
+    val state = remember(timeline) {
+        if (timeline != null) Fermentation.stateAt(timeline, xs, ys, timeline.lastH)
+        else Fermentation.analyse(xs, ys, calRSquared)
+    }
+    StateDescription(state, showCitation = true)
+}
+
+@Composable
+private fun CursorHeader(
+    timeStr: String,
+    onClearCursor: (() -> Unit)?
+) {
+    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        Text(
+            text = stringResource(R.string.graph_sg_cursor_at, timeStr),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 4.dp, vertical = 2.dp)
+        )
+        if (onClearCursor != null) {
+            TextButton(onClick = onClearCursor) {
+                Text(stringResource(R.string.graph_btn_live))
+            }
+        }
+    }
+}
+
+@Composable
+private fun StateDescription(
+    state: Fermentation.State,
+    showCitation: Boolean
+) {
+    val ctx = LocalContext.current
     val phaseActive = stringResource(R.string.graph_phase_active)
     val phaseSlowing = stringResource(R.string.graph_phase_slowing)
-    val phaseConditioning = stringResource(R.string.graph_phase_conditioning)
-    val phaseLag = stringResource(R.string.graph_phase_lag)
-    val phaseStuck = stringResource(R.string.graph_phase_stuck)
 
     when (state) {
         is Fermentation.State.Insufficient -> EstimateText(
@@ -532,31 +596,53 @@ private fun SgEstimateLine(
         }
     }
 
-    // Stage-specific brewing guidance — what the brewer should be
-    // thinking about right now given the current phase.
-    val guidanceRes: Int? = when (state) {
-        is Fermentation.State.Insufficient -> R.string.graph_guidance_insufficient
-        is Fermentation.State.Lag -> R.string.graph_guidance_lag
-        is Fermentation.State.Active -> R.string.graph_guidance_active
-        is Fermentation.State.Slowing -> R.string.graph_guidance_slowing
-        is Fermentation.State.Conditioning -> R.string.graph_guidance_conditioning
-        is Fermentation.State.Stuck -> R.string.graph_guidance_stuck
+    // Pause-aware guidance: when the cursor (or live state) sits inside
+    // an ongoing non-lag plateau, replace the generic Active/Slowing
+    // advice with the diauxic-shift / stuck-ferment guidance — that's
+    // the relevant action context, not "hold temperature steady".
+    val ongoingPause: com.ispindle.plotter.analysis.Plateau? = when (state) {
+        is Fermentation.State.Active -> state.currentPause
+        is Fermentation.State.Slowing -> state.currentPause
+        else -> null
     }
-    if (guidanceRes != null) {
+    val guidanceText: String? = when {
+        // Pause inside Active phase: peak descent hasn't passed yet, so a
+        // flat segment here is mid-ferment (diauxic shift territory).
+        ongoingPause != null && state is Fermentation.State.Active -> stringResource(
+            R.string.graph_guidance_paused_mid,
+            "%.4f".format(ongoingPause.sg),
+            "%.1f".format(ongoingPause.durationH)
+        )
+        // Pause inside Slowing phase: rate has already dropped below the
+        // active threshold, SG is closing on FG — this is the asymptote
+        // settle, not a stall.
+        ongoingPause != null && state is Fermentation.State.Slowing -> stringResource(
+            R.string.graph_guidance_paused_late,
+            "%.4f".format(ongoingPause.sg),
+            "%.1f".format(ongoingPause.durationH)
+        )
+        state is Fermentation.State.Insufficient -> stringResource(R.string.graph_guidance_insufficient)
+        state is Fermentation.State.Lag -> stringResource(R.string.graph_guidance_lag)
+        state is Fermentation.State.Active -> stringResource(R.string.graph_guidance_active)
+        state is Fermentation.State.Slowing -> stringResource(R.string.graph_guidance_slowing)
+        state is Fermentation.State.Conditioning -> stringResource(R.string.graph_guidance_conditioning)
+        state is Fermentation.State.Stuck -> stringResource(R.string.graph_guidance_stuck)
+        else -> null
+    }
+    if (guidanceText != null) {
         Text(
-            text = stringResource(guidanceRes),
+            text = guidanceText,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
         )
     }
 
-    // Academic reference for the parametric model used in OG/FG/ETA
-    // inference. Shown as a small caption under the guidance so anyone
-    // reading the chart can find the model in the literature.
-    if (state is Fermentation.State.Active ||
-        state is Fermentation.State.Slowing ||
-        state is Fermentation.State.Conditioning
+    if (showCitation && (
+            state is Fermentation.State.Active ||
+                state is Fermentation.State.Slowing ||
+                state is Fermentation.State.Conditioning
+            )
     ) {
         Text(
             text = stringResource(R.string.graph_model_prefix) + AttenuationFit.ReferenceCitation,
@@ -904,15 +990,24 @@ private fun StringBuilder.appendMidPlateau(
     ctx: Context,
     plateaus: List<com.ispindle.plotter.analysis.Plateau>
 ) {
-    val mid = plateaus.firstOrNull { it.kind == com.ispindle.plotter.analysis.Plateau.Kind.Mid }
-        ?: return
-    append(
-        ctx.getString(
-            R.string.graph_sg_paused_at,
-            "%.4f".format(mid.sg),
-            "%.1f".format(mid.durationH)
+    // Lag is covered by State.Lag's own description, so skip it. Mid AND
+    // Tail both count as "this is a pause worth mentioning" — Tail is
+    // PlateauDetector's label for any plateau that touches the end of
+    // the dataset, which includes ongoing pauses on a still-active
+    // ferment. Excluding Tail would silently drop the description of
+    // whatever pause the cursor is currently sitting in.
+    val pauses = plateaus.filter {
+        it.kind != com.ispindle.plotter.analysis.Plateau.Kind.Lag
+    }
+    for (p in pauses) {
+        append(
+            ctx.getString(
+                R.string.graph_sg_paused_at,
+                "%.4f".format(p.sg),
+                "%.1f".format(p.durationH)
+            )
         )
-    )
+    }
 }
 
 /** Format the 95 % credible interval on ETA as `(low–high)`. */
@@ -983,107 +1078,6 @@ private fun formatHoursAhead(ctx: Context, hours: Double?, asDays: Boolean = fal
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TrimBeforeDialog(
-    vm: MainViewModel,
-    deviceId: Long,
-    onDismiss: () -> Unit,
-    onTrimmed: (Int) -> Unit
-) {
-    val scope = rememberCoroutineScope()
-    val now = System.currentTimeMillis()
-    val datePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = now - 24 * 3_600_000L
-    )
-    val cal = remember { java.util.Calendar.getInstance() }
-    val timePickerState = rememberTimePickerState(
-        initialHour = cal.get(java.util.Calendar.HOUR_OF_DAY),
-        initialMinute = 0,
-        is24Hour = true
-    )
-    var preview by remember { mutableIntStateOf(-1) }
-
-    // The DatePicker exposes UTC midnight on the selected date, but users
-    // think in local time when they pick "trim before 14:00 yesterday".
-    // Recombine the date (extracted as UTC LocalDate) with the local-time
-    // hour/minute, then convert back through the device's zone to epoch ms.
-    val cutoffMs = remember(
-        datePickerState.selectedDateMillis,
-        timePickerState.hour,
-        timePickerState.minute
-    ) {
-        val utcMidnight = datePickerState.selectedDateMillis ?: return@remember null
-        val date = java.time.Instant.ofEpochMilli(utcMidnight)
-            .atZone(java.time.ZoneOffset.UTC)
-            .toLocalDate()
-        date.atTime(timePickerState.hour, timePickerState.minute)
-            .atZone(java.time.ZoneId.systemDefault())
-            .toInstant()
-            .toEpochMilli()
-    }
-
-    LaunchedEffect(cutoffMs) {
-        preview = cutoffMs?.let { vm.readingCountBefore(deviceId, it) } ?: 0
-    }
-
-    DatePickerDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(
-                enabled = cutoffMs != null && preview > 0,
-                onClick = {
-                    val ts = cutoffMs ?: return@TextButton
-                    scope.launch {
-                        val deleted = vm.deleteReadingsBefore(deviceId, ts)
-                        onTrimmed(deleted)
-                    }
-                },
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error
-                )
-            ) {
-                Text(
-                    when (preview) {
-                        -1 -> stringResource(R.string.graph_trim_counting)
-                        0 -> stringResource(R.string.graph_trim_nothing_to_delete)
-                        1 -> stringResource(R.string.graph_trim_delete_one)
-                        else -> stringResource(R.string.graph_trim_delete_n, preview)
-                    }
-                )
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
-        }
-    ) {
-        Column(
-            modifier = Modifier.verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                stringResource(R.string.graph_trim_delete_description),
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
-            )
-            DatePicker(state = datePickerState, showModeToggle = false)
-            Text(
-                stringResource(R.string.graph_trim_time_of_day),
-                style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.padding(horizontal = 24.dp)
-            )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                TimeInput(state = timePickerState)
-            }
-        }
-    }
-}
-
 @Composable
 private fun MetricCard(
     title: String,
@@ -1094,7 +1088,9 @@ private fun MetricCard(
     overlay: ChartOverlay? = null,
     yBands: List<YBand> = emptyList(),
     fixedYRange: ClosedFloatingPointRange<Double>? = null,
-    yTickStep: Double? = null
+    yTickStep: Double? = null,
+    cursorX: Double? = null,
+    onCursorChange: ((Double?) -> Unit)? = null
 ) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1110,7 +1106,9 @@ private fun MetricCard(
                     overlay = overlay,
                     yBands = yBands,
                     fixedYRange = fixedYRange,
-                    yTickStep = yTickStep
+                    yTickStep = yTickStep,
+                    cursorX = cursorX,
+                    onCursorChange = onCursorChange
                 )
                 Latest(series)
             }

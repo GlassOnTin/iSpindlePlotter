@@ -38,12 +38,6 @@ class MainViewModel(private val repo: Repository) : ViewModel() {
 
     suspend fun readingCount(deviceId: Long): Int = repo.readingCount(deviceId)
 
-    suspend fun readingCountBefore(deviceId: Long, cutoffMs: Long): Int =
-        repo.readingCountBefore(deviceId, cutoffMs)
-
-    suspend fun deleteReadingsBefore(deviceId: Long, cutoffMs: Long): Int =
-        repo.deleteReadingsBefore(deviceId, cutoffMs)
-
     /**
      * Builds an RFC4180-ish CSV of every reading for [deviceId]. Header
      * names are stable so receivers can parse by column name. Timestamps

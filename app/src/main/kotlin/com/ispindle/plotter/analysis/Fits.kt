@@ -68,6 +68,51 @@ object Fits {
         return Linear(intercept, slope, rmsResidual, n, slopeSigma)
     }
 
+    // ---- Theil-Sen robust slope ------------------------------------------------
+
+    /**
+     * Theil-Sen slope: the median of all pairwise slopes (yⱼ − yᵢ) / (xⱼ − xᵢ).
+     *
+     * Robust to up to ~29 % outliers. Compared with OLS, adding or
+     * removing a single sample at the edge of a window changes only the
+     * median of the pairwise-slope set, not its mean — so detectors that
+     * gate on "rate is near zero" don't flicker as the analysis window
+     * grows one sample at a time across noisy data.
+     *
+     * O(n²) time and memory; fine for the short windows the classifier
+     * uses (≲ 50 points). Returns null if fewer than two pairs have
+     * distinct x.
+     */
+    fun theilSenSlope(xs: DoubleArray, ys: DoubleArray): Double? {
+        require(xs.size == ys.size)
+        val n = xs.size
+        if (n < 2) return null
+        val slopes = ArrayList<Double>(n * (n - 1) / 2)
+        for (i in 0 until n - 1) {
+            for (j in i + 1 until n) {
+                val dx = xs[j] - xs[i]
+                if (dx != 0.0) slopes.add((ys[j] - ys[i]) / dx)
+            }
+        }
+        if (slopes.isEmpty()) return null
+        slopes.sort()
+        val m = slopes.size
+        return if (m % 2 == 1) slopes[m / 2]
+        else (slopes[m / 2 - 1] + slopes[m / 2]) / 2.0
+    }
+
+    /**
+     * Median of [values]. Returns null on empty input. Sorts a copy, so the
+     * caller's array is unchanged.
+     */
+    fun median(values: DoubleArray): Double? {
+        if (values.isEmpty()) return null
+        val sorted = values.copyOf().also { it.sort() }
+        val m = sorted.size
+        return if (m % 2 == 1) sorted[m / 2]
+        else (sorted[m / 2 - 1] + sorted[m / 2]) / 2.0
+    }
+
     // ---- Exponential decay: y = c + a·exp(-k·x) -------------------------------
 
     data class Exponential(

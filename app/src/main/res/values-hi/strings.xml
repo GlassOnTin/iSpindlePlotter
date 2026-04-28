@@ -13,7 +13,6 @@
 
     <!-- ── Navigation labels ─────────────────────────────────────────── -->
     <string name="nav_home">होम</string>
-    <string name="nav_devices">डिवाइस</string>
     <string name="nav_setup">सेटअप गाइड</string>
     <string name="nav_graph">ग्राफ़</string>
     <string name="nav_calibrate">कैलिब्रेट</string>
@@ -69,7 +68,6 @@
 
     <!-- ── GraphScreen ────────────────────────────────────────────────── -->
     <string name="graph_readings_in_window">विंडो में %1$d रीडिंग · कुल %2$d</string>
-    <string name="graph_btn_trim_before">इससे पहले ट्रिम करें…</string>
     <string name="graph_btn_export_csv">CSV निर्यात करें…</string>
     <string name="graph_btn_import_csv">CSV आयात करें…</string>
     <string name="graph_import_read_failed">फ़ाइल पढ़ी नहीं जा सकी।</string>
@@ -118,7 +116,9 @@
     <string name="graph_dur_em_dash">—</string>
     <string name="graph_dur_days">%1$s दिन</string>
     <string name="graph_dur_hours">%1$s घं</string>
-    <string name="graph_dur_min">%1$s मि</string>
+    <string name="graph_dur_min">%1$s मि</string>    <string name="graph_sg_cursor_at">%1$s का स्नैपशॉट</string>    <string name="graph_sg_cursor_snapshot">%1$s पर · SG %2$s · गिरावट %3$s · अब तक ABV %4$s%%</string>
+    <string name="graph_btn_live">लाइव</string>
+
     <string name="graph_plateau_lag">लैग</string>
     <string name="graph_plateau_paused">रुका %1$s</string>
     <string name="graph_plateau_asymptote">स्पर्शोन्मुख %1$s</string>
@@ -133,14 +133,6 @@
     <string name="graph_battery_drop_per_day">%1$s V/दिन गिरावट · </string>
     <string name="graph_battery_days_to_cutoff">3.4 V कटऑफ तक दिन: %1$s</string>
     <string name="graph_battery_rms">RMS ±%1$s V</string>
-    <string name="graph_trim_delete_description">इस तिथि और स्थानीय समय से पहले की सभी रीडिंग हटाएं।</string>
-    <string name="graph_trim_time_of_day">दिन का समय (स्थानीय)</string>
-    <string name="graph_trim_counting">गिन रहे हैं…</string>
-    <string name="graph_trim_nothing_to_delete">हटाने के लिए कुछ नहीं</string>
-    <string name="graph_trim_delete_one">1 रीडिंग हटाएं</string>
-    <string name="graph_trim_delete_n">%1$d रीडिंग हटाएं</string>
-    <string name="graph_trimmed_nothing">ट्रिम करने के लिए कुछ नहीं।</string>
-    <string name="graph_deleted_n_readings">%1$d रीडिंग हटाई गईं।</string>
 
     <!-- ── CalibrationScreen ──────────────────────────────────────────── -->
     <string name="cal_add_point_title">कैलिब्रेशन पॉइंट जोड़ें</string>

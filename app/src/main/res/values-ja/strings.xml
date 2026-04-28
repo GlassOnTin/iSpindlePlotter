@@ -13,7 +13,6 @@
 
     <!-- ── Navigation labels ────────────────────────────────────────── -->
     <string name="nav_home">ホーム</string>
-    <string name="nav_devices">デバイス</string>
     <string name="nav_setup">セットアップ</string>
     <string name="nav_graph">グラフ</string>
     <string name="nav_calibrate">キャリブレーション</string>
@@ -69,7 +68,6 @@
 
     <!-- ── GraphScreen ───────────────────────────────────────────────── -->
     <string name="graph_readings_in_window">ウィンドウ内 %1$d件 · 合計 %2$d件</string>
-    <string name="graph_btn_trim_before">以前をトリム…</string>
     <string name="graph_btn_export_csv">CSVエクスポート…</string>
     <string name="graph_btn_import_csv">CSVをインポート…</string>
     <string name="graph_import_read_failed">ファイルを読み込めませんでした。</string>
@@ -123,7 +121,9 @@
     <string name="graph_dur_em_dash">—</string>
     <string name="graph_dur_days">%1$s 日</string>
     <string name="graph_dur_hours">%1$s 時間</string>
-    <string name="graph_dur_min">%1$s 分</string>
+    <string name="graph_dur_min">%1$s 分</string>    <string name="graph_sg_cursor_at">%1$s 時点のスナップショット</string>    <string name="graph_sg_cursor_snapshot">%1$s 時点 · SG %2$s · 低下 %3$s · これまでの ABV %4$s%%</string>
+    <string name="graph_btn_live">ライブ</string>
+
     <string name="graph_plateau_lag">ラグ</string>
     <string name="graph_plateau_paused">停止 %1$s</string>
     <string name="graph_plateau_asymptote">漸近 %1$s</string>
@@ -140,14 +140,6 @@
     <string name="graph_battery_days_to_cutoff">3.4 Vまでの日数: %1$s</string>
     <string name="graph_battery_rms">RMS ±%1$s V</string>
     <!-- Trim dialog -->
-    <string name="graph_trim_delete_description">この日付と現地時間より前に記録されたすべての計測値を削除します。</string>
-    <string name="graph_trim_time_of_day">時刻 (現地時間)</string>
-    <string name="graph_trim_counting">数えています…</string>
-    <string name="graph_trim_nothing_to_delete">削除するものがありません</string>
-    <string name="graph_trim_delete_one">1件の計測値を削除</string>
-    <string name="graph_trim_delete_n">%1$d件の計測値を削除</string>
-    <string name="graph_trimmed_nothing">トリムするものがありません。</string>
-    <string name="graph_deleted_n_readings">%1$d件の計測値を削除しました。</string>
 
     <!-- ── CalibrationScreen ─────────────────────────────────────────── -->
     <string name="cal_add_point_title">キャリブレーションポイントを追加</string>

@@ -13,7 +13,6 @@
 
     <!-- ── Navigation labels ────────────────────────────────────────── -->
     <string name="nav_home">Главная</string>
-    <string name="nav_devices">Устройства</string>
     <string name="nav_setup">Руководство</string>
     <string name="nav_graph">График</string>
     <string name="nav_calibrate">Калибровка</string>
@@ -69,7 +68,6 @@
 
     <!-- ── GraphScreen ───────────────────────────────────────────────── -->
     <string name="graph_readings_in_window">%1$d показаний в окне · %2$d всего</string>
-    <string name="graph_btn_trim_before">Обрезать до…</string>
     <string name="graph_btn_export_csv">Экспорт CSV…</string>
     <string name="graph_btn_import_csv">Импорт CSV…</string>
     <string name="graph_import_read_failed">Не удалось прочитать файл.</string>
@@ -123,7 +121,9 @@
     <string name="graph_dur_em_dash">—</string>
     <string name="graph_dur_days">%1$s дн.</string>
     <string name="graph_dur_hours">%1$s ч</string>
-    <string name="graph_dur_min">%1$s мин</string>
+    <string name="graph_dur_min">%1$s мин</string>    <string name="graph_sg_cursor_at">Снимок в %1$s</string>    <string name="graph_sg_cursor_snapshot">В %1$s · SG %2$s · падение %3$s · ABV пока %4$s%%</string>
+    <string name="graph_btn_live">Сейчас</string>
+
     <string name="graph_plateau_lag">лаг</string>
     <string name="graph_plateau_paused">пауза %1$s</string>
     <string name="graph_plateau_asymptote">асимптота %1$s</string>
@@ -140,14 +140,6 @@
     <string name="graph_battery_days_to_cutoff">дней до порога 3,4 В: %1$s</string>
     <string name="graph_battery_rms">RMS ±%1$s В</string>
     <!-- Trim dialog -->
-    <string name="graph_trim_delete_description">Удалить все показания, записанные до этой даты и местного времени.</string>
-    <string name="graph_trim_time_of_day">Время дня (местное)</string>
-    <string name="graph_trim_counting">Подсчёт…</string>
-    <string name="graph_trim_nothing_to_delete">Нечего удалять</string>
-    <string name="graph_trim_delete_one">Удалить 1 показание</string>
-    <string name="graph_trim_delete_n">Удалить %1$d показаний</string>
-    <string name="graph_trimmed_nothing">Нечего обрезать.</string>
-    <string name="graph_deleted_n_readings">Удалено %1$d показаний.</string>
 
     <!-- ── CalibrationScreen ─────────────────────────────────────────── -->
     <string name="cal_add_point_title">Добавить точку калибровки</string>

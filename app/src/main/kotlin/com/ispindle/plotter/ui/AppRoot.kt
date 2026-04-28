@@ -3,7 +3,6 @@ package com.ispindle.plotter.ui
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Help
-import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -28,7 +27,6 @@ import com.ispindle.plotter.IspindleApp
 import com.ispindle.plotter.R
 import com.ispindle.plotter.ui.screens.CalibrationScreen
 import com.ispindle.plotter.ui.screens.ConfigureScreen
-import com.ispindle.plotter.ui.screens.DevicesScreen
 import com.ispindle.plotter.ui.screens.GraphScreen
 import com.ispindle.plotter.ui.screens.HomeScreen
 import com.ispindle.plotter.ui.screens.SetupScreen
@@ -37,7 +35,6 @@ private data class TopTab(val dest: Dest, val icon: androidx.compose.ui.graphics
 
 private val topTabs = listOf(
     TopTab(Dest.Home, Icons.Default.Home),
-    TopTab(Dest.Devices, Icons.Default.Devices),
     TopTab(Dest.Setup, Icons.AutoMirrored.Filled.Help)
 )
 
@@ -93,11 +90,9 @@ fun AppRoot(app: IspindleApp, vm: MainViewModel) {
             startDestination = Dest.Home.route
         ) {
             composable(Dest.Home.route) {
-                HomeScreen(vm = vm, serverState = app.httpServer.state, padding = padding)
-            }
-            composable(Dest.Devices.route) {
-                DevicesScreen(
+                HomeScreen(
                     vm = vm,
+                    serverState = app.httpServer.state,
                     padding = padding,
                     onOpenGraph = { navController.navigate(Dest.Graph.of(it)) },
                     onOpenCalibrate = { navController.navigate(Dest.Calibrate.of(it)) }

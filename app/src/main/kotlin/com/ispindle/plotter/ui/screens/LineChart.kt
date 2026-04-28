@@ -1,6 +1,8 @@
 package com.ispindle.plotter.ui.screens
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -8,8 +10,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -17,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextMeasurer
@@ -161,12 +166,23 @@ fun LineChart(
      * ticks across the visible range.
      */
     yTickStep: Double? = null,
+    /**
+     * When non-null, render a vertical scrubbing cursor at this x-data
+     * position. Pair with [onCursorChange] to make the chart interactive.
+     */
+    cursorX: Double? = null,
+    /**
+     * If supplied, the chart accepts tap and drag gestures and emits the
+     * scrubbed data x. Pass null to leave the chart static.
+     */
+    onCursorChange: ((Double?) -> Unit)? = null,
     height: androidx.compose.ui.unit.Dp = 220.dp
 ) {
     val textMeasurer = rememberTextMeasurer()
     val density = LocalDensity.current
     val axisColor = MaterialTheme.colorScheme.outline
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val cursorColor = MaterialTheme.colorScheme.primary
 
     if (series.points.size < 2) {
         Box(
@@ -220,7 +236,52 @@ fun LineChart(
         }
     }
 
-    Canvas(modifier = modifier.fillMaxWidth().height(height)) {
+    val secondary = secondaryAxis != null
+    // Pointer input lives on the wrapper Box, not on the Canvas, so it
+    // doesn't compete with the canvas' own draw modifiers and can be
+    // cleanly toggled by passing onCursorChange = null.
+    //
+    // The onCursorChange callback is funnelled through rememberUpdatedState
+    // so the long-lived gesture coroutine (keyed on Unit, kept alive across
+    // recompositions) always invokes the *current* lambda. Without this
+    // indirection, the coroutine captures whichever lambda existed when
+    // pointerInput was first installed; if the underlying MutableState is
+    // re-keyed (e.g. when a new reading arrives and `remember(timestamps)`
+    // creates a fresh state in GraphScreen), the captured lambda becomes a
+    // dead writer to a discarded state — clicks fire, but the visible
+    // cursor never updates.
+    val onCursorChangeUpdated by rememberUpdatedState(onCursorChange)
+    val outerModifier = if (onCursorChange != null) {
+        modifier.fillMaxWidth().height(height)
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val paddingLeftPx = 48.dp.toPx()
+                    val paddingRightPx = (if (secondary) 56.dp else 8.dp).toPx()
+                    val plotW = size.width - paddingLeftPx - paddingRightPx
+                    if (plotW <= 0f) return@awaitEachGesture
+                    fun pxToData(px: Float): Double {
+                        val cx = px.coerceIn(paddingLeftPx, paddingLeftPx + plotW)
+                        val t = ((cx - paddingLeftPx) / plotW).toDouble()
+                        return xMin + t * (xMax - xMin)
+                    }
+                    val first = awaitFirstDown(requireUnconsumed = false)
+                    onCursorChangeUpdated?.invoke(pxToData(first.position.x))
+                    first.consume()
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull() ?: break
+                        if (change.pressed) {
+                            onCursorChangeUpdated?.invoke(pxToData(change.position.x))
+                            change.consume()
+                        }
+                        if (event.changes.none { it.pressed }) break
+                    }
+                }
+            }
+    } else modifier.fillMaxWidth().height(height)
+
+    Box(modifier = outerModifier) {
+    Canvas(modifier = Modifier.fillMaxWidth().height(height)) {
         val paddingLeft = with(density) { 48.dp.toPx() }
         val paddingRight = with(density) { (if (secondaryAxis != null) 56.dp else 8.dp).toPx() }
         val paddingTop = with(density) { 8.dp.toPx() }
@@ -471,6 +532,28 @@ fun LineChart(
                 center = Offset(xToPx(x), yToPx(drawY))
             )
         }
+
+        // Scrubbing cursor — drawn last so it sits on top of data + overlay.
+        if (cursorX != null && cursorX in xMin..xMax) {
+            val cx = xToPx(cursorX)
+            drawLine(
+                color = cursorColor,
+                start = Offset(cx, paddingTop),
+                end = Offset(cx, paddingTop + plotH),
+                strokeWidth = 2f
+            )
+            // Snap-marker at the data's value at the cursor — pick the
+            // nearest sample by x.
+            val nearest = series.points.minByOrNull { abs(it.first - cursorX) }
+            if (nearest != null) {
+                drawCircle(
+                    color = cursorColor,
+                    radius = 6f,
+                    center = Offset(xToPx(nearest.first), yToPx(nearest.second))
+                )
+            }
+        }
+    }
     }
 }
 

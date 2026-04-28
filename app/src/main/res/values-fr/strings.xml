@@ -13,7 +13,6 @@
 
     <!-- ── Navigation labels ────────────────────────────────────────── -->
     <string name="nav_home">Accueil</string>
-    <string name="nav_devices">Appareils</string>
     <string name="nav_setup">Guide de conf.</string>
     <string name="nav_graph">Graphique</string>
     <string name="nav_calibrate">Calibration</string>
@@ -69,7 +68,6 @@
 
     <!-- ── GraphScreen ───────────────────────────────────────────────── -->
     <string name="graph_readings_in_window">%1$d relevés dans la fenêtre · %2$d au total</string>
-    <string name="graph_btn_trim_before">Rogner avant…</string>
     <string name="graph_btn_export_csv">Exporter CSV…</string>
     <string name="graph_btn_import_csv">Importer CSV…</string>
     <string name="graph_import_read_failed">Impossible de lire le fichier.</string>
@@ -125,7 +123,9 @@
     <string name="graph_dur_em_dash">—</string>
     <string name="graph_dur_days">%1$s jours</string>
     <string name="graph_dur_hours">%1$s h</string>
-    <string name="graph_dur_min">%1$s min</string>
+    <string name="graph_dur_min">%1$s min</string>    <string name="graph_sg_cursor_at">Instantané à %1$s</string>    <string name="graph_sg_cursor_snapshot">À %1$s · SG %2$s · baisse %3$s · ABV jusqu\'ici %4$s%%</string>
+    <string name="graph_btn_live">En direct</string>
+
     <string name="graph_plateau_lag">latence</string>
     <string name="graph_plateau_paused">pause %1$s</string>
     <string name="graph_plateau_asymptote">asymptote %1$s</string>
@@ -142,14 +142,6 @@
     <string name="graph_battery_days_to_cutoff">jours avant seuil 3,4 V : %1$s</string>
     <string name="graph_battery_rms">RMS ±%1$s V</string>
     <!-- Trim dialog -->
-    <string name="graph_trim_delete_description">Supprimer tous les relevés enregistrés avant cette date et heure locale.</string>
-    <string name="graph_trim_time_of_day">Heure du jour (locale)</string>
-    <string name="graph_trim_counting">Comptage…</string>
-    <string name="graph_trim_nothing_to_delete">Rien à supprimer</string>
-    <string name="graph_trim_delete_one">Supprimer 1 relevé</string>
-    <string name="graph_trim_delete_n">Supprimer %1$d relevés</string>
-    <string name="graph_trimmed_nothing">Rien à rogner.</string>
-    <string name="graph_deleted_n_readings">%1$d relevés supprimés.</string>
 
     <!-- ── CalibrationScreen ─────────────────────────────────────────── -->
     <string name="cal_add_point_title">Ajouter un point de calibration</string>

@@ -1,0 +1,7 @@
+SG chart is now interactive: tap or drag to drop a cursor and the description below updates with the state at that point in time. Tap "Live" to clear the cursor.
+
+Phase classification is now a proper state machine: Lag → Active → Slowing → Conditioning, with each transition irreversible. Mid-ferment pauses (diauxic shifts) stay as plateau overlays rather than flipping the state. The Conditioning gate uses Theil-Sen slope and a windowed median SG so it no longer flickers as the cursor crosses noisy thresholds.
+
+When the cursor sits inside an ongoing pause, the guidance text swaps in pause-specific advice — diauxic-shift hold-and-wait copy for mid-ferment pauses, asymptote-settle copy for late-ferment pauses.
+
+UX streamlined: the Devices tab is merged into Home (server card, latest reading, and per-device Graph/Calibrate/Rename/Delete now all live on one screen). The "Trim before…" button on the Graph page is gone — CSV export already covers that workflow.

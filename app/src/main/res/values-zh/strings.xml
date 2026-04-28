@@ -13,7 +13,6 @@
 
     <!-- ── Navigation labels ─────────────────────────────────────────── -->
     <string name="nav_home">主页</string>
-    <string name="nav_devices">设备</string>
     <string name="nav_setup">设置指南</string>
     <string name="nav_graph">图表</string>
     <string name="nav_calibrate">校准</string>
@@ -69,7 +68,6 @@
 
     <!-- ── GraphScreen ────────────────────────────────────────────────── -->
     <string name="graph_readings_in_window">窗口内 %1$d 条读数 · 共 %2$d 条</string>
-    <string name="graph_btn_trim_before">删除之前数据…</string>
     <string name="graph_btn_export_csv">导出 CSV…</string>
     <string name="graph_btn_import_csv">导入 CSV…</string>
     <string name="graph_import_read_failed">无法读取文件。</string>
@@ -118,7 +116,9 @@
     <string name="graph_dur_em_dash">—</string>
     <string name="graph_dur_days">%1$s 天</string>
     <string name="graph_dur_hours">%1$s 小时</string>
-    <string name="graph_dur_min">%1$s 分钟</string>
+    <string name="graph_dur_min">%1$s 分钟</string>    <string name="graph_sg_cursor_at">%1$s 时的快照</string>    <string name="graph_sg_cursor_snapshot">在 %1$s · 比重 %2$s · 下降 %3$s · 当前 ABV %4$s%%</string>
+    <string name="graph_btn_live">实时</string>
+
     <string name="graph_plateau_lag">停滞期</string>
     <string name="graph_plateau_paused">暂停 %1$s</string>
     <string name="graph_plateau_asymptote">渐近线 %1$s</string>
@@ -133,14 +133,6 @@
     <string name="graph_battery_drop_per_day">%1$s V/天下降 · </string>
     <string name="graph_battery_days_to_cutoff">距 3.4 V 截止的天数：%1$s</string>
     <string name="graph_battery_rms">均方根误差 ±%1$s V</string>
-    <string name="graph_trim_delete_description">删除此日期和本地时间之前记录的所有读数。</string>
-    <string name="graph_trim_time_of_day">当天时间（本地）</string>
-    <string name="graph_trim_counting">正在统计…</string>
-    <string name="graph_trim_nothing_to_delete">没有可删除的内容</string>
-    <string name="graph_trim_delete_one">删除 1 条读数</string>
-    <string name="graph_trim_delete_n">删除 %1$d 条读数</string>
-    <string name="graph_trimmed_nothing">没有需要修剪的内容。</string>
-    <string name="graph_deleted_n_readings">已删除 %1$d 条读数。</string>
 
     <!-- ── CalibrationScreen ──────────────────────────────────────────── -->
     <string name="cal_add_point_title">添加校准点</string>

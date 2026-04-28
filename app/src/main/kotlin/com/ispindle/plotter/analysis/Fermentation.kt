@@ -58,7 +58,16 @@ object Fermentation {
              * surfacing the detection lets the chart shade it and the
              * estimate text annotate "stalled at X for Y h".
              */
-            val plateaus: List<Plateau> = emptyList()
+            val plateaus: List<Plateau> = emptyList(),
+            /**
+             * The pause this state's time T is currently *inside*, clipped
+             * so durationH ends at T (ongoing-so-far). Null when T is not
+             * within any non-lag plateau. Drives the brewing guidance to
+             * pivot from generic active-phase advice ("hold temperature")
+             * to pause-specific advice ("could be a diauxic shift; if SG
+             * hasn't resumed in 24–48 h, raise temperature or rouse").
+             */
+            val currentPause: Plateau? = null
         ) : State()
 
         data class Slowing(
@@ -75,7 +84,9 @@ object Fermentation {
             /** 97.5 % posterior quantile on time-to-target. Logistic source only. */
             val etaCredibleHighHours: Double? = null,
             /** See [Active.plateaus]. */
-            val plateaus: List<Plateau> = emptyList()
+            val plateaus: List<Plateau> = emptyList(),
+            /** See [Active.currentPause]. */
+            val currentPause: Plateau? = null
         ) : State()
 
         /**
@@ -198,23 +209,36 @@ object Fermentation {
         // A data plateau much higher than this is the signature of a
         // stuck ferment, not a finished one.
         val priorFg = max(0.998, 1.000 + 0.25 * (og - 1.000))
-        val rateNearZero = recentRate != null && abs(recentRate) < 0.0001
+
+        // Robust gate stats: Theil-Sen slope and a windowed median over the
+        // 6-hour tail. Both are insensitive to a single outlying reading
+        // wandering in or out of the window as the analysis range grows
+        // sample by sample, which avoids the Conditioning state flickering
+        // on and off when scrubbing the cursor across a noisy slowing
+        // region. The OLS [recentRate] is still the displayed rate (so the
+        // user sees the same number they always did) — robust stats only
+        // drive the binary rate-near-zero / current-SG gates.
+        val robustRate = if (tailIdx.size >= 3) Fits.theilSenSlope(tailHours, tailSgs)
+            else recentRate
+        val medianTailSg = if (tailIdx.isNotEmpty()) Fits.median(tailSgs) ?: current
+            else current
+        val rateNearZero = robustRate != null && abs(robustRate) < 0.0001
         val flatTail = flatTailDuration(hours, sgs)
 
         // 5. Complete? Data plateau AND that plateau is at-or-below the
         //    prior FG (i.e. we've plausibly attenuated as expected).
         if (rateNearZero &&
             drop > STUCK_DROP_THRESHOLD &&
-            current <= priorFg + 0.003
+            medianTailSg <= priorFg + 0.003
         ) {
-            return State.Conditioning(og = og, fg = current, plateaus = plateaus)
+            return State.Conditioning(og = og, fg = medianTailSg, plateaus = plateaus)
         }
 
         // 6. Stuck? Data plateau but well above the prior FG — fermentation
         //    has stalled with sugar still in the wort.
         if (rateNearZero &&
             drop > STUCK_DROP_THRESHOLD &&
-            current > priorFg + STUCK_FG_GAP &&
+            medianTailSg > priorFg + STUCK_FG_GAP &&
             flatTail >= 6.0
         ) {
             return State.Stuck(
@@ -347,5 +371,378 @@ object Fermentation {
             }
         }
         return refT - hours.first()
+    }
+
+    // ── Timeline / state machine ────────────────────────────────────────────
+    //
+    // The classifier above answers "what state is the ferment in *now*?".
+    // The state machine below answers "what state was it in at any point in
+    // the dataset?" — so the chart-cursor scrubbing UI can label past
+    // points without re-running the analyser on a truncated window (which
+    // would flicker between Slowing and Conditioning every time a noisy
+    // sample crossed a binary threshold).
+    //
+    // Phases progress monotonically:
+    //
+    //     Lag → Active → Slowing → Conditioning   (or → Stuck)
+    //
+    // Mid-ferment plateaus (diauxic shifts, brief stalls) are detected
+    // separately by [PlateauDetector] and surfaced as overlays — they're
+    // *not* phase transitions. There's exactly one Active onset, one
+    // Slowing onset, and one Conditioning (or Stuck) onset per ferment;
+    // there can be many paused episodes inside any of those.
+
+    enum class Phase { Lag, Active, Slowing, Conditioning, Stuck }
+
+    /** Tunables for the phase-machine walk-back. */
+    private const val MIN_SLOWING_HOLD_HOURS = 3.0
+    private const val MIN_CONDITIONING_HOLD_HOURS = 6.0
+    private const val MIN_STUCK_HOLD_HOURS = 6.0
+    /** Magnitude below which the rolling rate counts as "near zero". */
+    private const val NEAR_ZERO_RATE = 0.00012
+
+    /**
+     * Frozen snapshot of a ferment's phase progression plus everything
+     * needed to recompose a [State] at any cursor position. Computed
+     * once on the full dataset; the cursor uses [stateAt] to look up an
+     * arbitrary T without re-running the analyser.
+     */
+    data class Timeline(
+        val og: Double,
+        val priorFg: Double,
+        val firstH: Double,
+        val lastH: Double,
+        /** First hour the SG had dropped > LAG_DROP from OG. null if still in lag. */
+        val activeOnsetH: Double?,
+        /**
+         * First hour of the *final* slowed run (rate ≥ -ACTIVE_RATE) that
+         * persists until the end of data. Null if the live state hasn't
+         * reached Slowing yet.
+         */
+        val slowingOnsetH: Double?,
+        /** First hour of the final near-zero-rate-and-near-priorFg run. */
+        val conditioningOnsetH: Double?,
+        /** First hour of the final near-zero-rate-but-above-priorFg run. */
+        val stuckOnsetH: Double?,
+        val gompertz: AttenuationFit.Result?,
+        val plateaus: List<Plateau>,
+        val predictedFg: Double,
+        val predictedFgSigma: Double?,
+        val source: PredictionSource,
+        val sigma: Double,
+        val recentRate: Double?,
+        /** End-of-data ETA quantiles from the Gompertz Bayesian draws. */
+        val etaCredibleLowHours: Double?,
+        val etaCredibleHighHours: Double?
+    ) {
+        fun phaseAt(hoursFromStart: Double): Phase {
+            // Latest entered onset wins. Stuck and Conditioning are
+            // mutually exclusive — only one is non-null.
+            if (stuckOnsetH != null && hoursFromStart >= stuckOnsetH) return Phase.Stuck
+            if (conditioningOnsetH != null && hoursFromStart >= conditioningOnsetH) return Phase.Conditioning
+            if (slowingOnsetH != null && hoursFromStart >= slowingOnsetH) return Phase.Slowing
+            if (activeOnsetH != null && hoursFromStart >= activeOnsetH) return Phase.Active
+            return Phase.Lag
+        }
+    }
+
+    /**
+     * Build a [Timeline] from the full dataset. Returns null when the
+     * dataset is below the minimum size/duration the live classifier
+     * needs (caller should fall through to State.Insufficient).
+     */
+    fun buildTimeline(
+        hours: DoubleArray,
+        sgs: DoubleArray,
+        calRSquared: Double? = null
+    ): Timeline? {
+        require(hours.size == sgs.size)
+        val n = hours.size
+        if (n < MIN_POINTS) return null
+        if (hours.last() - hours.first() < MIN_HOURS) return null
+
+        val og = sgs.max()
+        val current = sgs.last()
+        val priorFg = max(0.998, 1.000 + 0.25 * (og - 1.000))
+
+        val sigmaData = NoiseModel.estimateDataNoise(hours, sgs)
+        val sigmaCal = calRSquared?.let { NoiseModel.fromCalibrationRSquared(it) }
+        val sigma = NoiseModel.combine(sigmaData, sigmaCal)
+
+        val recentRate = endRate(hours, sgs, sigma)
+        val gompertz = AttenuationFit.fit(hours, sgs, sigma)
+        val plateaus = PlateauDetector.detect(hours, sgs)
+        val (predictedFg, source) = pickFgEstimate(og, gompertz, current, recentRate)
+        val priorFgSigma = 0.06 * (og - 1.000).coerceAtLeast(0.005)
+        val predictedFgSigma = when (source) {
+            PredictionSource.Gompertz -> gompertz?.fgSigma
+            else -> priorFgSigma
+        }
+
+        val activeOnsetH = (0 until n).firstOrNull { (og - sgs[it]) > LAG_DROP }
+            ?.let { hours[it] }
+
+        // Rolling stats — OLS slope and median over a 6-hour window
+        // ending at each sample. Cheap to precompute (≈ O(n × window))
+        // and the walk-back needs them at every point.
+        val rollingRate = DoubleArray(n) { Double.NaN }
+        val rollingMedianSg = DoubleArray(n) { sgs[it] }
+        for (i in 0 until n) {
+            val ws = lookupWindowStart(hours, i, RECENT_WINDOW_HOURS)
+            val len = i - ws + 1
+            if (len < 3) continue
+            val winH = DoubleArray(len) { hours[ws + it] }
+            val winSg = DoubleArray(len) { sgs[ws + it] }
+            rollingRate[i] = Fits.fitLinear(winH, winSg)?.slope ?: Double.NaN
+            rollingMedianSg[i] = Fits.median(winSg) ?: sgs[i]
+        }
+
+        // Walk-back from end to find the start of each *final* run that
+        // persists till end-of-data. Only assign onsets that the live
+        // state has actually reached — past slowing-then-resumed-active
+        // episodes (mid-ferment pauses) get filtered out because the
+        // walk-back stops at the first re-acceleration.
+        val drop = og - current
+        val endRate = rollingRate[n - 1].takeIf { it.isFinite() }
+        val endMedSg = rollingMedianSg[n - 1]
+        val endIsFlat = endRate != null && abs(endRate) < NEAR_ZERO_RATE
+        val endIsSlow = endRate != null && endRate > ACTIVE_RATE
+        val endAtFg = endMedSg <= priorFg + 0.003
+        val endAboveFg = endMedSg > priorFg + STUCK_FG_GAP
+        val haveDescent = drop > STUCK_DROP_THRESHOLD
+
+        val conditioningOnsetH = if (haveDescent && endIsFlat && endAtFg) {
+            walkBackOnset(hours, n - 1, rollingRate, rollingMedianSg, MIN_CONDITIONING_HOLD_HOURS) { rate, sg ->
+                abs(rate) < NEAR_ZERO_RATE && sg <= priorFg + 0.003
+            }
+        } else null
+
+        val stuckOnsetH = if (haveDescent && endIsFlat && endAboveFg && conditioningOnsetH == null) {
+            walkBackOnset(hours, n - 1, rollingRate, rollingMedianSg, MIN_STUCK_HOLD_HOURS) { rate, sg ->
+                abs(rate) < NEAR_ZERO_RATE && sg > priorFg + STUCK_FG_GAP
+            }
+        } else null
+
+        // Slowing onset: when the rate first dropped below the active
+        // threshold for the run that persists to end-of-data. Conditioning
+        // is a subset of Slowing (slow rate ⊃ near-zero rate), so the
+        // walk-back naturally places slowingOnsetH ≤ conditioningOnsetH.
+        val slowingOnsetH = if (
+            haveDescent && activeOnsetH != null &&
+            (endIsSlow || conditioningOnsetH != null || stuckOnsetH != null)
+        ) {
+            walkBackOnset(hours, n - 1, rollingRate, rollingMedianSg, MIN_SLOWING_HOLD_HOURS) { rate, _ ->
+                rate > ACTIVE_RATE
+            }?.coerceAtLeast(activeOnsetH)
+        } else null
+
+        val terminalSg = predictedFg + 0.001
+        val etaCredible: Pair<Double?, Double?> = if (source == PredictionSource.Gompertz && gompertz != null) {
+            val rng = Random(BAYESIAN_SEED)
+            val q = gompertz.etaQuantiles(terminalSg, rng)
+            if (q != null && q.size >= 3) {
+                val low = (q[0] - hours.last()).takeIf { it.isFinite() && it >= 0.0 }
+                val high = (q[2] - hours.last()).takeIf { it.isFinite() && it >= 0.0 }
+                low to high
+            } else null to null
+        } else null to null
+
+        return Timeline(
+            og = og,
+            priorFg = priorFg,
+            firstH = hours.first(),
+            lastH = hours.last(),
+            activeOnsetH = activeOnsetH,
+            slowingOnsetH = slowingOnsetH,
+            conditioningOnsetH = conditioningOnsetH,
+            stuckOnsetH = stuckOnsetH,
+            gompertz = gompertz,
+            plateaus = plateaus,
+            predictedFg = predictedFg,
+            predictedFgSigma = predictedFgSigma,
+            source = source,
+            sigma = sigma,
+            recentRate = recentRate,
+            etaCredibleLowHours = etaCredible.first,
+            etaCredibleHighHours = etaCredible.second
+        )
+    }
+
+    /**
+     * Reconstruct a [State] at an arbitrary time T, using [timeline]'s
+     * frozen onsets for the phase label and the data plus global
+     * Gompertz fit for the per-state numbers (current SG, rate, ETA, …).
+     *
+     * Used by the chart-cursor scrubbing UI. Pass [hoursFromStart] =
+     * timeline.lastH for the same answer the live analyser produces.
+     */
+    fun stateAt(
+        timeline: Timeline,
+        hours: DoubleArray,
+        sgs: DoubleArray,
+        hoursFromStart: Double
+    ): State {
+        val n = hours.size
+        val tClamped = hoursFromStart.coerceIn(timeline.firstH, timeline.lastH)
+        val phase = timeline.phaseAt(tClamped)
+        val idxAtT = lookupIndexAt(hours, tClamped)
+        val sgAtT = sgs[idxAtT]
+        val durationH = tClamped - timeline.firstH
+
+        // Local rate over the 6 h window ending at T (OLS, same definition
+        // as the live recentRate). Falls back to the global rate near the
+        // start of the dataset where the window doesn't fit.
+        val rateAtT = localRate(hours, sgs, idxAtT) ?: timeline.recentRate ?: 0.0
+
+        // ETA = how long the global Gompertz curve says the wort has left
+        // until the terminal SG, measured from T. For non-Gompertz
+        // sources, fall back to a linear extrapolation from local rate.
+        val terminalSg = timeline.predictedFg + 0.001
+        val etaAtT: Double? = when (timeline.source) {
+            PredictionSource.Gompertz -> timeline.gompertz?.timeToReach(terminalSg)
+                ?.minus(tClamped)
+                ?.takeIf { it.isFinite() && it >= 0.0 }
+            else -> linearEta(sgAtT, terminalSg, rateAtT)
+        }
+
+        // Plateaus visible at T: any pause whose onset has happened by T.
+        // An ongoing pause (endH > T) is reported with its duration up
+        // *to* T, not its eventual full duration — so a cursor sitting
+        // inside a pause shows "paused for 3 h so far", not "paused for
+        // 5 h" derived from data the cursor hasn't reached yet.
+        val plateausUpToT = timeline.plateaus
+            .filter { it.startH <= tClamped }
+            .map { if (it.endH > tClamped) it.copy(endH = tClamped) else it }
+        // The pause the cursor is currently inside, if any. Used to swap
+        // in stuck-ferment guidance instead of generic active advice
+        // when scrubbing into a paused region. Lag plateaus don't count
+        // here — State.Lag covers that case with its own description.
+        val currentPause = timeline.plateaus
+            .firstOrNull {
+                it.kind != Plateau.Kind.Lag &&
+                    it.startH <= tClamped && it.endH > tClamped
+            }
+            ?.copy(endH = tClamped)
+
+        return when (phase) {
+            Phase.Lag -> State.Lag(
+                og = timeline.og,
+                current = sgAtT,
+                durationHours = durationH
+            )
+            Phase.Active -> State.Active(
+                og = timeline.og,
+                current = sgAtT,
+                ratePerHour = rateAtT,
+                predictedFg = timeline.predictedFg,
+                etaToFinishHours = etaAtT,
+                source = timeline.source,
+                predictedFgSigma = timeline.predictedFgSigma,
+                measurementSigma = timeline.sigma,
+                etaCredibleLowHours = timeline.etaCredibleLowHours,
+                etaCredibleHighHours = timeline.etaCredibleHighHours,
+                plateaus = plateausUpToT,
+                currentPause = currentPause
+            )
+            Phase.Slowing -> State.Slowing(
+                og = timeline.og,
+                current = sgAtT,
+                ratePerHour = rateAtT,
+                predictedFg = timeline.predictedFg,
+                etaToFinishHours = etaAtT,
+                source = timeline.source,
+                predictedFgSigma = timeline.predictedFgSigma,
+                measurementSigma = timeline.sigma,
+                etaCredibleLowHours = timeline.etaCredibleLowHours,
+                etaCredibleHighHours = timeline.etaCredibleHighHours,
+                plateaus = plateausUpToT,
+                currentPause = currentPause
+            )
+            Phase.Conditioning -> State.Conditioning(
+                og = timeline.og,
+                fg = sgAtT,
+                plateaus = plateausUpToT
+            )
+            Phase.Stuck -> {
+                val flatHours = if (timeline.stuckOnsetH != null)
+                    (tClamped - timeline.stuckOnsetH).coerceAtLeast(0.0)
+                else 0.0
+                State.Stuck(
+                    og = timeline.og,
+                    current = sgAtT,
+                    expectedFg = timeline.priorFg,
+                    flatHours = flatHours
+                )
+            }
+        }
+    }
+
+    /**
+     * Walk back from [endIdx] while [predicate] holds for the rolling
+     * (rate, medianSG) at each point. Returns the timestamp at which
+     * the run started, or null if the run is shorter than [minHoldHours].
+     */
+    private fun walkBackOnset(
+        hours: DoubleArray,
+        endIdx: Int,
+        rollingRate: DoubleArray,
+        rollingMedianSg: DoubleArray,
+        minHoldHours: Double,
+        predicate: (rate: Double, sg: Double) -> Boolean
+    ): Double? {
+        var earliestIdx = endIdx
+        for (i in endIdx downTo 0) {
+            val rate = rollingRate[i]
+            if (rate.isNaN()) continue
+            if (predicate(rate, rollingMedianSg[i])) earliestIdx = i else break
+        }
+        if (earliestIdx == endIdx) return null
+        if (hours[endIdx] - hours[earliestIdx] < minHoldHours) return null
+        return hours[earliestIdx]
+    }
+
+    private fun lookupWindowStart(hours: DoubleArray, endIdx: Int, windowHours: Double): Int {
+        val cutoff = hours[endIdx] - windowHours
+        for (i in endIdx downTo 0) if (hours[i] < cutoff) return i + 1
+        return 0
+    }
+
+    private fun lookupIndexAt(hours: DoubleArray, t: Double): Int {
+        val idx = hours.indexOfLast { it <= t }
+        return if (idx < 0) 0 else idx
+    }
+
+    private fun localRate(hours: DoubleArray, sgs: DoubleArray, endIdx: Int): Double? {
+        val ws = lookupWindowStart(hours, endIdx, RECENT_WINDOW_HOURS)
+        val len = endIdx - ws + 1
+        if (len < 3) return null
+        val winH = DoubleArray(len) { hours[ws + it] }
+        val winSg = DoubleArray(len) { sgs[ws + it] }
+        return Fits.fitLinear(winH, winSg)?.slope
+    }
+
+    /**
+     * The 6-hour-tail OLS slope at end-of-data with the same 3σ outlier
+     * rejection that [analyse] uses. Factored out so [buildTimeline] can
+     * share it.
+     */
+    private fun endRate(hours: DoubleArray, sgs: DoubleArray, sigma: Double): Double? {
+        val tailStart = hours.last() - RECENT_WINDOW_HOURS
+        val tailIdx = hours.indices.filter { hours[it] >= tailStart }
+        val tailHours = DoubleArray(tailIdx.size) { hours[tailIdx[it]] }
+        val tailSgs = DoubleArray(tailIdx.size) { sgs[tailIdx[it]] }
+        val initial = if (tailIdx.size >= 3) Fits.fitLinear(tailHours, tailSgs) else null
+        val refined = if (initial != null && tailIdx.size >= 5) {
+            val keep = tailHours.indices.filter { i ->
+                abs(tailSgs[i] - initial.predict(tailHours[i])) <= 3.0 * sigma
+            }
+            if (keep.size >= 3 && keep.size < tailHours.size) {
+                Fits.fitLinear(
+                    DoubleArray(keep.size) { tailHours[keep[it]] },
+                    DoubleArray(keep.size) { tailSgs[keep[it]] }
+                ) ?: initial
+            } else initial
+        } else initial
+        return refined?.slope
     }
 }

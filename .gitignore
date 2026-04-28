@@ -15,3 +15,6 @@ local.properties
 *.jar
 !gradle/wrapper/gradle-wrapper.jar
 .kotlin/
+
+# Local exports / debug captures dropped in the repo root
+/ispindle--*.csv
