@@ -6,6 +6,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -219,11 +221,18 @@ fun GraphScreen(
                 )
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Three actions don't fit on one row at default phone widths —
+        // FlowRow lets the buttons reflow to a second line rather than
+        // wrapping the third button's text inside its own pill.
+        @OptIn(ExperimentalLayoutApi::class)
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             OutlinedButton(
                 onClick = { showTrim = true },
                 enabled = readings.isNotEmpty()
-            ) { Text(stringResource(R.string.graph_btn_trim_before)) }
+            ) { Text(stringResource(R.string.graph_btn_trim_before), maxLines = 1) }
             OutlinedButton(
                 onClick = {
                     val stamp = SimpleDateFormat("yyyyMMdd-HHmm", Locale.US).format(Date())
@@ -232,7 +241,7 @@ fun GraphScreen(
                     csvLauncher.launch("ispindle-${safeLabel}-${stamp}.csv")
                 },
                 enabled = readings.isNotEmpty()
-            ) { Text(stringResource(R.string.graph_btn_export_csv)) }
+            ) { Text(stringResource(R.string.graph_btn_export_csv), maxLines = 1) }
             OutlinedButton(
                 onClick = {
                     // Some Android device file pickers refuse the strict
@@ -242,7 +251,7 @@ fun GraphScreen(
                     // read.
                     csvImportLauncher.launch(arrayOf("text/csv", "text/*", "*/*"))
                 }
-            ) { Text(stringResource(R.string.graph_btn_import_csv)) }
+            ) { Text(stringResource(R.string.graph_btn_import_csv), maxLines = 1) }
         }
         toast?.let {
             Text(it, style = MaterialTheme.typography.labelSmall,

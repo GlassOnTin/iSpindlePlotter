@@ -1,0 +1,1 @@
+Cosmetic: the three Graph-page action buttons (Trim, Export, Import) now reflow to a second line on narrow screens instead of squeezing the third button's text into a wrap inside its own pill. Switched the Row to FlowRow with maxLines=1 on each label.
