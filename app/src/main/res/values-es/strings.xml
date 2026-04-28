@@ -118,6 +118,12 @@
     <string name="graph_plateau_lag">latencia</string>
     <string name="graph_plateau_paused">pausa %1$s</string>
     <string name="graph_plateau_asymptote">asíntota %1$s</string>
+    <string name="graph_guidance_insufficient">Espera más lecturas — el modelo necesita al menos 6 puntos abarcando 2 h para ajustarse. Verifica que la iSpindle esté enviando datos.</string>
+    <string name="graph_guidance_lag">La levadura se está multiplicando. La actividad visible (krausen, burbujas en el airlock) suele aparecer en 12–48 h. Si la densidad no baja tras 72 h, revisa la viabilidad de la levadura y la temperatura.</string>
+    <string name="graph_guidance_active">Mantén la temperatura de fermentación estable. No abras el fermentador — el krausen y la capa de CO₂ protegen el mosto. El tiempo de latencia λ ya es identificable; la ETA se afina a medida que avanza el descenso.</string>
+    <string name="graph_guidance_slowing">La mayor parte de la atenuación ha sucedido. Evita el cold-crash antes de que la DG se estabilice — la levadura aún limpia compuestos aromáticos. Para lagers, subir la temperatura 2–3 °C ahora facilita un reposo de diacetilo.</string>
+    <string name="graph_guidance_conditioning">La DG llegó al ruido de fondo de la iSpindle, pero la fermentación sigue activa biológicamente. La levadura reduce diacetilo/acetaldehído y consume azúcares lentos. Verifica estabilidad 24–48 h antes de envasar. Cold-crash ahora si buscas claridad.</string>
+    <string name="graph_guidance_stuck">La fermentación se estancó sobre la FG esperada. Causas comunes: caída de temperatura, baja viabilidad de la levadura, azúcares no fermentables. Sube la temperatura 2–3 °C, agita suavemente la levadura o inocula un starter fresco.</string>
     <string name="graph_battery_prefix">Batería: </string>
     <string name="graph_battery_no_discharge">tendencia %1$s V/día (sin descarga para extrapolar)</string>
     <string name="graph_battery_drop_per_day">%1$s V/día de caída · </string>

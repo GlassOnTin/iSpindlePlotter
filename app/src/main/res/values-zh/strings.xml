@@ -118,6 +118,12 @@
     <string name="graph_plateau_lag">停滞期</string>
     <string name="graph_plateau_paused">暂停 %1$s</string>
     <string name="graph_plateau_asymptote">渐近线 %1$s</string>
+    <string name="graph_guidance_insufficient">请等待更多数据 — 模型至少需要 6 个点跨越 2 小时才能拟合。检查 iSpindle 是否正常上报。</string>
+    <string name="graph_guidance_lag">酵母正在繁殖。一般 12–48 小时内会出现可见活动（krausen 泡盖、发酵栓气泡）。若 72 小时后比重仍未下降，请检查酵母活力和温度。</string>
+    <string name="graph_guidance_active">保持发酵温度稳定。不要开盖 — krausen 和 CO₂ 层保护麦汁。模型的滞后时间 λ 现已可识别；随着下降继续，ETA 会更精确。</string>
+    <string name="graph_guidance_slowing">大部分衰减已完成。在比重稳定前不要急于降温结晶 — 酵母仍在清理风味化合物。拉格啤酒现在升温 2–3 °C 可支持双乙酰静置。</string>
+    <string name="graph_guidance_conditioning">比重已达到 iSpindle 的噪声底，但发酵在生物学上尚未结束。酵母正在还原双乙酰/乙醛并发酵慢糖。装瓶前请确认比重 24–48 小时稳定。如需清澈，可现在降温结晶。</string>
+    <string name="graph_guidance_stuck">发酵停滞在预期 FG 之上。常见原因：温度下降、酵母活力不足、不可发酵糖。可尝试升温 2–3 °C、轻轻搅动酵母或添加新的活化液。</string>
     <string name="graph_battery_prefix">电池：</string>
     <string name="graph_battery_no_discharge">趋势 %1$s V/天（无放电可推算）</string>
     <string name="graph_battery_drop_per_day">%1$s V/天下降 · </string>

@@ -118,6 +118,12 @@
     <string name="graph_plateau_lag">ركود</string>
     <string name="graph_plateau_paused">توقف %1$s</string>
     <string name="graph_plateau_asymptote">خط مقارب %1$s</string>
+    <string name="graph_guidance_insufficient">انتظر المزيد من القراءات — يحتاج النموذج إلى 6 نقاط على الأقل على مدى ساعتين للتركيب. تحقق من أن iSpindle ترسل البيانات.</string>
+    <string name="graph_guidance_lag">الخميرة تتكاثر. النشاط المرئي (الكراوزن، فقاعات الغطاء المائي) يبدأ عادة خلال 12–48 ساعة. إذا لم تنخفض الكثافة بعد 72 ساعة، تحقق من حيوية الخميرة ودرجة الحرارة.</string>
+    <string name="graph_guidance_active">حافظ على ثبات درجة حرارة التخمر. لا تفتح المخمر — الكراوزن وطبقة CO₂ تحمي عصير الشعير. زمن التأخر λ أصبح قابلاً للتعريف الآن؛ يتحسن تقدير ETA مع استمرار الهبوط.</string>
+    <string name="graph_guidance_slowing">تم معظم التخفيف. لا تستعجل التبريد المفاجئ قبل استقرار الكثافة — الخميرة لا تزال تنظف مركبات النكهة. بالنسبة للاجر، رفع الحرارة 2–3 °م الآن يدعم راحة الدياسيتيل.</string>
+    <string name="graph_guidance_conditioning">وصلت الكثافة إلى حد ضوضاء iSpindle، لكن التخمر لم ينته بيولوجياً. الخميرة تخفض الدياسيتيل/الأسيتالديهايد وتنهي السكريات البطيئة. تحقق من ثبات الكثافة لمدة 24–48 ساعة قبل التعبئة. يمكنك التبريد الآن للوضوح.</string>
+    <string name="graph_guidance_stuck">توقف التخمر فوق FG المتوقعة. الأسباب الشائعة: انخفاض الحرارة، ضعف حيوية الخميرة، سكريات غير قابلة للتخمر. جرب رفع الحرارة 2–3 °م، تحريك الخميرة بلطف، أو إضافة بادئة جديدة.</string>
     <string name="graph_battery_prefix">البطارية: </string>
     <string name="graph_battery_no_discharge">الاتجاه %1$s V/يوم (لا تفريغ للاستقراء)</string>
     <string name="graph_battery_drop_per_day">انخفاض %1$s V/يوم · </string>

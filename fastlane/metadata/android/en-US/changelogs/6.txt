@@ -1,0 +1,3 @@
+Per-stage brewing guidance under the SG estimate. The Lag / Active / Slowing / Conditioning / Stuck classifier now drives a short paragraph of stage-appropriate advice — what to keep an eye on, what to resist, what to try if a ferment plateaus high. Localised in all 10 supported languages.
+
+The SG chart with model overlay now leads the Graph page, ahead of tilt and temperature, since it's the headline view for an active ferment.

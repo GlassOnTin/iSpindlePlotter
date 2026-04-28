@@ -125,6 +125,12 @@
     <string name="graph_plateau_lag">latence</string>
     <string name="graph_plateau_paused">pause %1$s</string>
     <string name="graph_plateau_asymptote">asymptote %1$s</string>
+    <string name="graph_guidance_insufficient">Attendez plus de relevés — le modèle a besoin d\'au moins 6 points sur 2 h pour s\'ajuster. Vérifiez que l\'iSpindle envoie bien des données.</string>
+    <string name="graph_guidance_lag">Les levures se multiplient. Une activité visible (krausen, bulles dans le barboteur) apparaît généralement entre 12 et 48 h. Si la densité ne baisse pas après 72 h, vérifiez la viabilité de l\'inoculation et la température.</string>
+    <string name="graph_guidance_active">Maintenez la température de fermentation stable. N\'ouvrez pas le fermenteur — le krausen et la couche de CO₂ protègent le moût. Le temps de latence λ est maintenant identifiable ; l\'ETA se précise au fil de la descente.</string>
+    <string name="graph_guidance_slowing">L\'essentiel de l\'atténuation est faite. Évitez le cold-crash avant stabilisation — les levures finissent de nettoyer les composés aromatiques. Pour les lagers, monter la température de 2–3 °C favorise un repos diacétyle.</string>
+    <string name="graph_guidance_conditioning">La densité a atteint le plancher de bruit de l\'iSpindle, mais la fermentation n\'est pas terminée biologiquement. Les levures réduisent le diacétyle et l\'acétaldéhyde et finissent les sucres lents. Vérifiez la stabilité de la densité sur 24–48 h avant le conditionnement. Faites un cold-crash maintenant si vous voulez de la clarté.</string>
+    <string name="graph_guidance_stuck">La fermentation plafonne au-dessus de la FG attendue. Causes courantes : baisse de température, faible viabilité des levures, sucres non fermentescibles. Essayez de remonter la température de 2–3 °C, de remuer doucement les levures, ou d\'inoculer un starter frais.</string>
     <!-- Battery estimate -->
     <string name="graph_battery_prefix">Batterie : </string>
     <string name="graph_battery_no_discharge">tendance %1$s V/jour (pas de décharge à extrapoler)</string>

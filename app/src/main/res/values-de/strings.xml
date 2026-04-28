@@ -125,6 +125,12 @@
     <string name="graph_plateau_lag">Lag-Phase</string>
     <string name="graph_plateau_paused">pausiert %1$s</string>
     <string name="graph_plateau_asymptote">Asymptote %1$s</string>
+    <string name="graph_guidance_insufficient">Warten Sie auf weitere Messwerte — das Modell benötigt mindestens 6 Punkte über 2 h. Prüfen Sie, ob die iSpindle Daten sendet.</string>
+    <string name="graph_guidance_lag">Die Hefe vermehrt sich. Sichtbare Aktivität (Krausen, Gärröhrchen-Blasen) beginnt meist nach 12–48 h. Wenn die Dichte nach 72 h nicht fällt, prüfen Sie Hefevitalität und Temperatur.</string>
+    <string name="graph_guidance_active">Halten Sie die Gärtemperatur konstant. Öffnen Sie den Fermenter nicht — Krausen und CO₂-Schicht schützen die Würze. Die Lag-Zeit λ ist jetzt identifizierbar; die ETA wird mit dem weiteren Abfall genauer.</string>
+    <string name="graph_guidance_slowing">Der Großteil der Vergärung ist abgeschlossen. Widerstehen Sie dem Cold-Crash vor SG-Stabilisierung — die Hefe baut noch Aromakomponenten ab. Bei Lagerbieren unterstützt eine Temperaturerhöhung um 2–3 °C jetzt eine Diacetylrast.</string>
+    <string name="graph_guidance_conditioning">Die Dichte hat die Rauschschwelle der iSpindle erreicht, aber die Gärung ist biologisch nicht zu Ende. Die Hefe reduziert Diacetyl/Acetaldehyd und vergärt langsame Zucker. Vor der Abfüllung 24–48 h Stabilität prüfen. Cold-Crash jetzt für Klarheit.</string>
+    <string name="graph_guidance_stuck">Die Gärung steht über der erwarteten FG. Häufige Ursachen: Temperaturabfall, geringe Hefevitalität, unvergärbare Zucker. Probieren Sie 2–3 °C wärmer zu stellen, die Hefe sanft aufzurühren oder einen frischen Starter zuzugeben.</string>
     <!-- Battery estimate -->
     <string name="graph_battery_prefix">Batterie: </string>
     <string name="graph_battery_no_discharge">Trend %1$s V/Tag (keine Entladung zum Extrapolieren)</string>

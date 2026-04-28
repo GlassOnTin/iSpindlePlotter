@@ -126,6 +126,13 @@
     <string name="graph_plateau_lag">lag</string>
     <string name="graph_plateau_paused">paused %1$s</string>
     <string name="graph_plateau_asymptote">asymptote %1$s</string>
+    <!-- Per-stage brewing guidance shown under the SG estimate line -->
+    <string name="graph_guidance_insufficient">Wait for more readings — the model needs at least 6 points spanning 2 h to fit. Check the iSpindle is reporting in.</string>
+    <string name="graph_guidance_lag">Yeast is multiplying. Visible activity (krausen, airlock bubbles) usually starts within 12–48 h. If no SG drop after 72 h, check pitch viability and temperature.</string>
+    <string name="graph_guidance_active">Hold fermentation temperature steady. Don\'t open the fermenter — the krausen and CO₂ blanket protect the wort. The model\'s lag time λ is now identifiable; ETA refines as the descent continues.</string>
+    <string name="graph_guidance_slowing">Most of the attenuation has happened. Resist the urge to cold-crash before SG stabilises — yeast is still cleaning up flavour compounds. For lagers, raising temperature 2–3 °C now supports a diacetyl rest.</string>
+    <string name="graph_guidance_conditioning">SG has reached the iSpindle\'s noise floor, but the ferment isn\'t biologically over. Yeast is reducing diacetyl/acetaldehyde and finishing slow sugars. Verify SG stable for 24–48 h before packaging. Cold-crash now if you want clarity.</string>
+    <string name="graph_guidance_stuck">Fermentation has plateaued above the expected FG. Common causes: temperature drop, low yeast viability, or unfermentable sugars. Try raising temperature 2–3 °C, gently rousing the yeast, or pitching a fresh starter.</string>
     <!-- Battery estimate -->
     <string name="graph_battery_prefix">Battery: </string>
     <string name="graph_battery_no_discharge">trend %1$s V/day (no discharge to extrapolate)</string>

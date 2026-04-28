@@ -123,6 +123,12 @@
     <string name="graph_plateau_lag">ラグ</string>
     <string name="graph_plateau_paused">停止 %1$s</string>
     <string name="graph_plateau_asymptote">漸近 %1$s</string>
+    <string name="graph_guidance_insufficient">計測値を待っています — モデルには 2 時間以上にわたる 6 点以上のデータが必要です。iSpindle が報告しているか確認してください。</string>
+    <string name="graph_guidance_lag">酵母が増殖中です。可視活動（クラウゼン、エアロックの泡）は通常 12–48 時間で始まります。72 時間後も比重が下がらない場合、ピッチング量と温度を確認してください。</string>
+    <string name="graph_guidance_active">発酵温度を一定に保ってください。発酵槽を開けないこと — クラウゼンと CO₂ 層が麦汁を保護します。モデルの遅延時間 λ が識別可能になりました。下降の進行に合わせて ETA も精度が上がります。</string>
+    <string name="graph_guidance_slowing">減衰の大部分は完了しました。比重が安定する前にコールドクラッシュしないこと — 酵母はまだ風味成分を整えています。ラガーでは温度を 2–3 °C 上げるとダイアセチル休止が促進されます。</string>
+    <string name="graph_guidance_conditioning">比重が iSpindle のノイズフロアに達しましたが、生物学的には発酵終了ではありません。酵母がダイアセチル/アセトアルデヒドを還元し、遅い糖を消費しています。瓶詰め前に 24–48 時間の安定性を確認してください。透明度を求めるなら今コールドクラッシュを。</string>
+    <string name="graph_guidance_stuck">発酵が予測 FG 以上で停滞しています。よくある原因：温度低下、酵母活力不足、発酵不能糖。温度を 2–3 °C 上げる、酵母を優しく撹拌する、新しいスターターを追加するのを試してください。</string>
     <!-- Battery estimate -->
     <string name="graph_battery_prefix">バッテリー: </string>
     <string name="graph_battery_no_discharge">トレンド %1$s V/日 (放電なし)</string>

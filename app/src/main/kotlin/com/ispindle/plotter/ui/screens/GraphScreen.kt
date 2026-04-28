@@ -221,28 +221,8 @@ fun GraphScreen(
             return@Column
         }
 
-        MetricCard(
-            title = stringResource(R.string.graph_section_tilt_angle),
-            series = ChartSeries(
-                label = "angle",
-                color = Color(0xFF2D5F9E),
-                points = scoped.map { it.timestampMs.toDouble() to it.angle },
-                format = { "%.1f°".format(it) }
-            ),
-            xFormatter = xFmt
-        )
-
-        MetricCard(
-            title = stringResource(R.string.graph_section_temperature),
-            series = ChartSeries(
-                label = "temp",
-                color = Color(0xFFB84A47),
-                points = scoped.map { it.timestampMs.toDouble() to it.temperatureC },
-                format = { "%.1f°C".format(it) }
-            ),
-            xFormatter = xFmt
-        )
-
+        // SG with the model overlay leads — it's the headline chart for
+        // brewers actively watching a ferment.
         val sgPoints = scoped.mapNotNull { r ->
             val sg = r.computedGravity ?: r.reportedGravity
             if (sg != null && sg > 0.0) r.timestampMs.toDouble() to sg else null
@@ -269,6 +249,28 @@ fun GraphScreen(
             overlay = sgOverlay
         )
         SgEstimateLine(scoped, sgPoints, calR2)
+
+        MetricCard(
+            title = stringResource(R.string.graph_section_tilt_angle),
+            series = ChartSeries(
+                label = "angle",
+                color = Color(0xFF2D5F9E),
+                points = scoped.map { it.timestampMs.toDouble() to it.angle },
+                format = { "%.1f°".format(it) }
+            ),
+            xFormatter = xFmt
+        )
+
+        MetricCard(
+            title = stringResource(R.string.graph_section_temperature),
+            series = ChartSeries(
+                label = "temp",
+                color = Color(0xFFB84A47),
+                points = scoped.map { it.timestampMs.toDouble() to it.temperatureC },
+                format = { "%.1f°C".format(it) }
+            ),
+            xFormatter = xFmt
+        )
 
         val rawBatteryPoints = scoped.map { it.timestampMs.toDouble() to it.batteryV }
         // The cell really does sit at each ADC-quantised voltage step
@@ -488,9 +490,28 @@ private fun SgEstimateLine(
         }
     }
 
+    // Stage-specific brewing guidance — what the brewer should be
+    // thinking about right now given the current phase.
+    val guidanceRes: Int? = when (state) {
+        is Fermentation.State.Insufficient -> R.string.graph_guidance_insufficient
+        is Fermentation.State.Lag -> R.string.graph_guidance_lag
+        is Fermentation.State.Active -> R.string.graph_guidance_active
+        is Fermentation.State.Slowing -> R.string.graph_guidance_slowing
+        is Fermentation.State.Conditioning -> R.string.graph_guidance_conditioning
+        is Fermentation.State.Stuck -> R.string.graph_guidance_stuck
+    }
+    if (guidanceRes != null) {
+        Text(
+            text = stringResource(guidanceRes),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
+        )
+    }
+
     // Academic reference for the parametric model used in OG/FG/ETA
-    // inference. Shown as a small caption under the prediction text so
-    // anyone reading the chart can find the model in the literature.
+    // inference. Shown as a small caption under the guidance so anyone
+    // reading the chart can find the model in the literature.
     if (state is Fermentation.State.Active ||
         state is Fermentation.State.Slowing ||
         state is Fermentation.State.Conditioning
