@@ -18,11 +18,13 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ispindle.plotter.R
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -107,6 +109,19 @@ data class PlateauSpan(
 )
 
 /**
+ * Coloured horizontal band painted behind everything else. Used to mark
+ * out reference y-value zones — e.g. lithium battery state-of-charge
+ * regions on a voltage chart (full / nominal / low / critical).
+ *
+ * The band is clipped to the chart's plot area, so a band that extends
+ * past the visible y-range simply runs off the top or bottom edge.
+ */
+data class YBand(
+    val range: ClosedFloatingPointRange<Double>,
+    val color: Color
+)
+
+/**
  * Very small multi-series line chart. X is a shared axis across series
  * (typically time in ms). Each series gets its own Y axis scale, but only
  * the first series' Y axis is drawn — extra series are normalised to that
@@ -128,6 +143,24 @@ fun LineChart(
     xIsTimeMs: Boolean = false,
     secondaryAxis: SecondaryAxis? = null,
     overlay: ChartOverlay? = null,
+    /**
+     * Coloured horizontal background bands — drawn behind the gridlines,
+     * data, and overlay. Use for reference zones (e.g. lithium SoC
+     * regions on a voltage chart).
+     */
+    yBands: List<YBand> = emptyList(),
+    /**
+     * Locks the y-axis to a fixed range, bypassing the sticky autoscale.
+     * Useful for charts that should always show a full reference scale
+     * (e.g. battery voltage 3.0 – 4.2 V) regardless of where the data sits.
+     */
+    fixedYRange: ClosedFloatingPointRange<Double>? = null,
+    /**
+     * Forces y-axis tick spacing to a specific value (in y-units), placed
+     * on multiples of the step. When null, falls back to 5 evenly-spaced
+     * ticks across the visible range.
+     */
+    yTickStep: Double? = null,
     height: androidx.compose.ui.unit.Dp = 220.dp
 ) {
     val textMeasurer = rememberTextMeasurer()
@@ -141,7 +174,7 @@ fun LineChart(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "Not enough data yet (${series.points.size} pts)",
+                text = stringResource(R.string.graph_not_enough_data, series.points.size),
                 color = labelColor
             )
         }
@@ -172,10 +205,19 @@ fun LineChart(
     // Range only widens on out-of-range data, and re-snaps when the
     // visible data span has shrunk to a small fraction of the cached
     // range (e.g. after the user trims pre-fermentation noise).
+    //
+    // When the caller has supplied a [fixedYRange] (e.g. lithium voltage
+    // window) we use it directly and skip the sticky-autoscale state.
     val rangeState = remember(series.label) { mutableStateOf<Pair<Double, Double>?>(null) }
-    val (yMin, yMax) = stickyRange(rangeState.value, yMinRaw, yMaxRaw)
+    val (yMin, yMax) = if (fixedYRange != null) {
+        fixedYRange.start to fixedYRange.endInclusive
+    } else {
+        stickyRange(rangeState.value, yMinRaw, yMaxRaw)
+    }
     LaunchedEffect(series.label, yMin, yMax) {
-        if (rangeState.value != yMin to yMax) rangeState.value = yMin to yMax
+        if (fixedYRange == null && rangeState.value != yMin to yMax) {
+            rangeState.value = yMin to yMax
+        }
     }
 
     Canvas(modifier = modifier.fillMaxWidth().height(height)) {
@@ -197,11 +239,41 @@ fun LineChart(
             return paddingTop + plotH - (t.toFloat() * plotH)
         }
 
+        // Coloured background y-bands — drawn first so gridlines, data,
+        // and overlay all sit on top.
+        for (band in yBands) {
+            val lo = band.range.start.coerceIn(yMin, yMax)
+            val hi = band.range.endInclusive.coerceIn(yMin, yMax)
+            if (hi <= lo) continue
+            val topPx = yToPx(hi)
+            val botPx = yToPx(lo)
+            drawRect(
+                color = band.color,
+                topLeft = Offset(paddingLeft, topPx),
+                size = androidx.compose.ui.geometry.Size(plotW, botPx - topPx)
+            )
+        }
+
         // Gridlines + Y labels
-        val yTicks = 5
         val dashed = PathEffect.dashPathEffect(floatArrayOf(6f, 6f), 0f)
-        for (i in 0..yTicks) {
-            val yVal = yMin + (yMax - yMin) * i / yTicks
+        val yTickValues: List<Double> = if (yTickStep != null && yTickStep > 0.0) {
+            // Anchor ticks at multiples of yTickStep that fall in [yMin, yMax].
+            val first = kotlin.math.ceil(yMin / yTickStep) * yTickStep
+            val out = mutableListOf<Double>()
+            var v = first
+            // Tiny epsilon to keep a tick at exactly yMax (e.g. 4.20 V) when
+            // floating-point drift would otherwise drop it.
+            val eps = yTickStep * 1e-6
+            while (v <= yMax + eps) {
+                out += v
+                v += yTickStep
+            }
+            out
+        } else {
+            val n = 5
+            (0..n).map { yMin + (yMax - yMin) * it / n }
+        }
+        for (yVal in yTickValues) {
             val py = yToPx(yVal)
             drawLine(
                 color = axisColor.copy(alpha = 0.3f),

@@ -15,6 +15,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -24,6 +25,7 @@ import androidx.navigation.navArgument
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.platform.LocalContext
 import com.ispindle.plotter.IspindleApp
+import com.ispindle.plotter.R
 import com.ispindle.plotter.ui.screens.CalibrationScreen
 import com.ispindle.plotter.ui.screens.ConfigureScreen
 import com.ispindle.plotter.ui.screens.DevicesScreen
@@ -46,16 +48,21 @@ fun AppRoot(app: IspindleApp, vm: MainViewModel) {
     val backStack by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
 
+    val graphLabel = stringResource(R.string.nav_graph)
+    val calibrateLabel = stringResource(R.string.nav_calibrate)
+    val appName = stringResource(R.string.app_name)
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = {
-                    val label = topTabs.firstOrNull { it.dest.route == currentRoute }?.dest?.label
+                    val label = topTabs.firstOrNull { it.dest.route == currentRoute }
+                        ?.dest?.labelResId?.let { stringResource(it) }
                         ?: when {
-                            currentRoute?.startsWith("graph") == true -> "Graph"
-                            currentRoute?.startsWith("calibrate") == true -> "Calibrate"
-                            else -> "iSpindle Plotter"
+                            currentRoute?.startsWith("graph") == true -> graphLabel
+                            currentRoute?.startsWith("calibrate") == true -> calibrateLabel
+                            else -> appName
                         }
                     Text(label)
                 }
@@ -64,6 +71,7 @@ fun AppRoot(app: IspindleApp, vm: MainViewModel) {
         bottomBar = {
             NavigationBar {
                 topTabs.forEach { tab ->
+                    val tabLabel = stringResource(tab.dest.labelResId)
                     NavigationBarItem(
                         selected = currentRoute == tab.dest.route,
                         onClick = {
@@ -73,8 +81,8 @@ fun AppRoot(app: IspindleApp, vm: MainViewModel) {
                                 restoreState = true
                             }
                         },
-                        icon = { Icon(tab.icon, contentDescription = tab.dest.label) },
-                        label = { Text(tab.dest.label) }
+                        icon = { Icon(tab.icon, contentDescription = tabLabel) },
+                        label = { Text(tabLabel) }
                     )
                 }
             }

@@ -1,5 +1,6 @@
 package com.ispindle.plotter.ui.screens
 
+import android.content.Context
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -39,12 +40,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.ispindle.plotter.R
 import com.ispindle.plotter.analysis.Fermentation
 import com.ispindle.plotter.analysis.FermentSegment
 import com.ispindle.plotter.analysis.FermentSegmenter
 import com.ispindle.plotter.analysis.Fits
-import com.ispindle.plotter.analysis.LogisticFit
+import com.ispindle.plotter.analysis.AttenuationFit
 import com.ispindle.plotter.data.Reading
 import com.ispindle.plotter.ui.MainViewModel
 import kotlinx.coroutines.Dispatchers
@@ -58,12 +61,30 @@ import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.random.Random
 
-enum class TimeWindow(val label: String, val hours: Int?) {
-    H24("24h", 24),
-    D7("7d", 24 * 7),
-    D30("30d", 24 * 30),
-    ALL("All", null)
+enum class TimeWindow(val labelResId: Int, val hours: Int?) {
+    H24(R.string.graph_time_window_24h, 24),
+    D7(R.string.graph_time_window_7d, 24 * 7),
+    D30(R.string.graph_time_window_30d, 24 * 30),
+    ALL(R.string.graph_time_window_all, null)
 }
+
+/**
+ * State-of-charge zones for a single 18650 lithium-ion cell. These bands
+ * are painted behind the battery chart so the user reads where the cell
+ * sits not just in mV but in lifecycle terms — "above 4.0 V you're full,
+ * below 3.4 V you should be charging, below 3.2 V the cell is being
+ * actively damaged and the iSpindle will cut out shortly".
+ *
+ * Voltages are conventional Li-ion thresholds:
+ *   3.40–4.20 V  healthy operating range (green)
+ *   3.20–3.40 V  low / approaching cutoff (yellow)
+ *   3.00–3.20 V  critical / cell damage zone (red)
+ */
+private val LithiumZones = listOf(
+    YBand(3.40..4.20, Color(0xFF4CAF50).copy(alpha = 0.18f)),
+    YBand(3.20..3.40, Color(0xFFFFC107).copy(alpha = 0.18f)),
+    YBand(3.00..3.20, Color(0xFFF44336).copy(alpha = 0.20f))
+)
 
 @Composable
 fun GraphScreen(
@@ -118,7 +139,7 @@ fun GraphScreen(
         scope.launch {
             val csv = vm.exportReadingsCsv(deviceId)
             if (csv.isEmpty()) {
-                toast = "Nothing to export."
+                toast = ctx.getString(R.string.graph_nothing_to_export)
                 return@launch
             }
             val ok = withContext(Dispatchers.IO) {
@@ -128,7 +149,8 @@ fun GraphScreen(
                     }
                 }.isSuccess
             }
-            toast = if (ok) "Exported ${readings.size} readings." else "Export failed."
+            toast = if (ok) ctx.getString(R.string.graph_exported_n_readings, readings.size)
+                    else ctx.getString(R.string.graph_export_failed)
         }
     }
 
@@ -148,7 +170,7 @@ fun GraphScreen(
             style = androidx.compose.material3.MaterialTheme.typography.titleLarge
         )
         Text(
-            "${scoped.size} readings in window · ${readings.size} total",
+            stringResource(R.string.graph_readings_in_window, scoped.size, readings.size),
             style = MaterialTheme.typography.bodySmall
         )
         if (segments.isNotEmpty()) {
@@ -170,7 +192,7 @@ fun GraphScreen(
                         // is actually visible.
                         selectedSegmentIdx = null
                     },
-                    label = { Text(w.label) }
+                    label = { Text(stringResource(w.labelResId)) }
                 )
             }
         }
@@ -178,7 +200,7 @@ fun GraphScreen(
             OutlinedButton(
                 onClick = { showTrim = true },
                 enabled = readings.isNotEmpty()
-            ) { Text("Trim before…") }
+            ) { Text(stringResource(R.string.graph_btn_trim_before)) }
             OutlinedButton(
                 onClick = {
                     val stamp = SimpleDateFormat("yyyyMMdd-HHmm", Locale.US).format(Date())
@@ -187,7 +209,7 @@ fun GraphScreen(
                     csvLauncher.launch("ispindle-${safeLabel}-${stamp}.csv")
                 },
                 enabled = readings.isNotEmpty()
-            ) { Text("Export CSV…") }
+            ) { Text(stringResource(R.string.graph_btn_export_csv)) }
         }
         toast?.let {
             Text(it, style = MaterialTheme.typography.labelSmall,
@@ -195,12 +217,12 @@ fun GraphScreen(
         }
 
         if (scoped.isEmpty()) {
-            Text("No readings in this window.")
+            Text(stringResource(R.string.graph_no_readings_in_window))
             return@Column
         }
 
         MetricCard(
-            title = "Tilt angle (°)",
+            title = stringResource(R.string.graph_section_tilt_angle),
             series = ChartSeries(
                 label = "angle",
                 color = Color(0xFF2D5F9E),
@@ -211,7 +233,7 @@ fun GraphScreen(
         )
 
         MetricCard(
-            title = "Temperature (°C)",
+            title = stringResource(R.string.graph_section_temperature),
             series = ChartSeries(
                 label = "temp",
                 color = Color(0xFFB84A47),
@@ -226,9 +248,9 @@ fun GraphScreen(
             if (sg != null && sg > 0.0) r.timestampMs.toDouble() to sg else null
         }
         val calR2 = device?.calRSquared
-        val sgOverlay = remember(sgPoints, calR2) { buildSgOverlay(sgPoints, calR2) }
+        val sgOverlay = remember(sgPoints, calR2) { buildSgOverlay(ctx, sgPoints, calR2) }
         MetricCard(
-            title = "Specific gravity / PA%",
+            title = stringResource(R.string.graph_section_specific_gravity),
             series = ChartSeries(
                 label = "sg",
                 color = Color(0xFF3E7B51),
@@ -237,7 +259,7 @@ fun GraphScreen(
                 dotsOnly = true
             ),
             xFormatter = xFmt,
-            emptyHint = "No SG data yet — add calibration points to compute SG from tilt.",
+            emptyHint = stringResource(R.string.graph_sg_no_data_hint),
             secondaryAxis = SecondaryAxis(
                 // Triple-scale-hydrometer rule of thumb: every 0.001 SG point
                 // above 1.000 ≈ 0.13125 % alcohol-by-volume potential.
@@ -277,7 +299,7 @@ fun GraphScreen(
             )
         }
         MetricCard(
-            title = "Battery (V)",
+            title = stringResource(R.string.graph_section_battery),
             series = ChartSeries(
                 label = "battery",
                 color = Color(0xFF7A5C8A),
@@ -291,7 +313,15 @@ fun GraphScreen(
                 // stable across recompositions.
                 dotJitterY = 0.005
             ),
-            xFormatter = xFmt
+            xFormatter = xFmt,
+            // Lithium-ion 18650 (the cell the iSpindle uses): 4.20 V is
+            // full charge, 3.00 V is the absolute minimum below which
+            // the cell takes permanent damage. Lock the y-axis to that
+            // window so the user sees where the cell sits in absolute
+            // terms, not in autoscaled-to-data terms.
+            fixedYRange = 3.00..4.20,
+            yBands = LithiumZones,
+            yTickStep = 0.2
         )
         BatteryEstimateLine(scoped, batteryFit?.first)
     }
@@ -303,7 +333,8 @@ fun GraphScreen(
             onDismiss = { showTrim = false },
             onTrimmed = { count ->
                 showTrim = false
-                toast = if (count > 0) "Deleted $count readings." else "Nothing to trim."
+                toast = if (count > 0) ctx.getString(R.string.graph_deleted_n_readings, count)
+                        else ctx.getString(R.string.graph_trimmed_nothing)
             }
         )
     }
@@ -318,11 +349,19 @@ private fun FermentNavRow(
     val dateFmt = remember { SimpleDateFormat("MM-dd", Locale.getDefault()) }
     val seg = selectedIdx?.takeIf { it in segments.indices }?.let { segments[it] }
     val label = if (seg == null) {
-        "All ferments (${segments.size})"
+        stringResource(R.string.graph_all_ferments, segments.size)
     } else {
-        val range = "${dateFmt.format(Date(seg.startMs))} → ${dateFmt.format(Date(seg.endMs))}"
+        val startStr = dateFmt.format(Date(seg.startMs))
+        val endStr = dateFmt.format(Date(seg.endMs))
         val drop = seg.ogObserved - seg.fgObserved
-        "Ferment ${selectedIdx!! + 1}/${segments.size} · $range · −%.3f SG".format(drop)
+        stringResource(
+            R.string.graph_ferment_label,
+            selectedIdx!! + 1,
+            segments.size,
+            startStr,
+            endStr,
+            "%.3f".format(drop)
+        )
     }
     Row(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -348,7 +387,7 @@ private fun FermentNavRow(
             onClick = {
                 onSelect(if (selectedIdx == null) segments.lastIndex else null)
             },
-            label = { Text("All") }
+            label = { Text(stringResource(R.string.graph_all_chip_label)) }
         )
     }
 }
@@ -360,69 +399,127 @@ private fun SgEstimateLine(
     calRSquared: Double? = null
 ) {
     if (sgPoints.size < 6) return
+    val ctx = LocalContext.current
     val tStartMs = sgPoints.first().first
     val xs = DoubleArray(sgPoints.size) { (sgPoints[it].first - tStartMs) / 3_600_000.0 }
     val ys = DoubleArray(sgPoints.size) { sgPoints[it].second }
     val state = remember(sgPoints, calRSquared) { Fermentation.analyse(xs, ys, calRSquared) }
 
+    val phaseActive = stringResource(R.string.graph_phase_active)
+    val phaseSlowing = stringResource(R.string.graph_phase_slowing)
+    val phaseConditioning = stringResource(R.string.graph_phase_conditioning)
+    val phaseLag = stringResource(R.string.graph_phase_lag)
+    val phaseStuck = stringResource(R.string.graph_phase_stuck)
+
     when (state) {
         is Fermentation.State.Insufficient -> EstimateText(
-            "SG: not enough trend yet — wait for more readings or widen the time window."
+            stringResource(R.string.graph_sg_insufficient)
         )
         is Fermentation.State.Lag -> EstimateText(
-            "Lag phase · OG %.4f · current %.4f · %.1f h since first reading, no decline yet"
-                .format(state.og, state.current, state.durationHours)
+            stringResource(
+                R.string.graph_sg_lag_phase,
+                "%.4f".format(state.og),
+                "%.4f".format(state.current),
+                "%.1f".format(state.durationHours)
+            )
         )
         is Fermentation.State.Active -> {
             val abvNow = (state.og - state.current) * 131.25
             val abvAtFg = (state.og - state.predictedFg) * 131.25
             EstimateText(buildString {
-                append("Active · ")
-                append("OG %.4f → est FG %.4f".format(state.og, state.predictedFg))
-                state.predictedFgSigma?.let { append(" ± %.4f".format(it)) }
-                append(" · %.4f now · ".format(state.current))
-                append("rate %.3f SG/h · ".format(state.ratePerHour))
-                append("ETA ${formatHoursAhead(state.etaToFinishHours)}")
-                appendEtaCredible(state.etaCredibleLowHours, state.etaCredibleHighHours)
-                append(" · ABV %.1f%% → %.1f%%".format(abvNow, abvAtFg))
-                append(" · ${state.source.label()}")
-                appendMidPlateau(state.plateaus)
-                state.measurementSigma?.let { append(" · σ_meas %.4f".format(it)) }
+                append("$phaseActive · ")
+                append(ogToFg(ctx, state.og, state.predictedFg))
+                state.predictedFgSigma?.let { append(formatFgSigma(it)) }
+                append(nowFragment(ctx, state.current))
+                append(rateFragment(ctx, state.ratePerHour))
+                append(etaFragment(ctx, state.etaToFinishHours))
+                appendEtaCredible(ctx, state.etaCredibleLowHours, state.etaCredibleHighHours)
+                append(abvFragment(abvNow, abvAtFg))
+                append(" · ${state.source.label(ctx)}")
+                appendMidPlateau(ctx, state.plateaus)
+                state.measurementSigma?.let {
+                    append(ctx.getString(R.string.graph_sg_meas_sigma, "%.4f".format(it)))
+                }
             })
         }
         is Fermentation.State.Slowing -> {
             val abvNow = (state.og - state.current) * 131.25
             val abvAtFg = (state.og - state.predictedFg) * 131.25
             EstimateText(buildString {
-                append("Slowing · ")
-                append("OG %.4f → est FG %.4f".format(state.og, state.predictedFg))
-                state.predictedFgSigma?.let { append(" ± %.4f".format(it)) }
-                append(" · %.4f now · ".format(state.current))
-                append("rate %.3f SG/h · ".format(state.ratePerHour))
-                append("ETA ${formatHoursAhead(state.etaToFinishHours)}")
-                appendEtaCredible(state.etaCredibleLowHours, state.etaCredibleHighHours)
-                append(" · ABV %.1f%% → %.1f%%".format(abvNow, abvAtFg))
-                append(" · ${state.source.label()}")
-                appendMidPlateau(state.plateaus)
-                state.measurementSigma?.let { append(" · σ_meas %.4f".format(it)) }
+                append("$phaseSlowing · ")
+                append(ogToFg(ctx, state.og, state.predictedFg))
+                state.predictedFgSigma?.let { append(formatFgSigma(it)) }
+                append(nowFragment(ctx, state.current))
+                append(rateFragment(ctx, state.ratePerHour))
+                append(etaFragment(ctx, state.etaToFinishHours))
+                appendEtaCredible(ctx, state.etaCredibleLowHours, state.etaCredibleHighHours)
+                append(abvFragment(abvNow, abvAtFg))
+                append(" · ${state.source.label(ctx)}")
+                appendMidPlateau(ctx, state.plateaus)
+                state.measurementSigma?.let {
+                    append(ctx.getString(R.string.graph_sg_meas_sigma, "%.4f".format(it)))
+                }
             })
         }
-        is Fermentation.State.Complete -> {
+        is Fermentation.State.Conditioning -> {
             val abv = (state.og - state.fg) * 131.25
             EstimateText(
-                "Complete · OG %.4f · FG %.4f · %.1f%% ABV".format(state.og, state.fg, abv)
+                stringResource(
+                    R.string.graph_sg_conditioning,
+                    "%.4f".format(state.og),
+                    "%.4f".format(state.fg),
+                    "%.1f".format(abv)
+                )
             )
         }
         is Fermentation.State.Stuck -> {
             val abvNow = (state.og - state.current) * 131.25
             EstimateText(
-                "⚠ Stuck · OG %.4f · current %.4f · expected ~%.4f · flat for %.1f h · ABV so far %.1f%%"
-                    .format(state.og, state.current, state.expectedFg, state.flatHours, abvNow),
+                stringResource(
+                    R.string.graph_sg_stuck,
+                    "%.4f".format(state.og),
+                    "%.4f".format(state.current),
+                    "%.4f".format(state.expectedFg),
+                    "%.1f".format(state.flatHours),
+                    "%.1f".format(abvNow)
+                ),
                 isError = true
             )
         }
     }
+
+    // Academic reference for the parametric model used in OG/FG/ETA
+    // inference. Shown as a small caption under the prediction text so
+    // anyone reading the chart can find the model in the literature.
+    if (state is Fermentation.State.Active ||
+        state is Fermentation.State.Slowing ||
+        state is Fermentation.State.Conditioning
+    ) {
+        Text(
+            text = stringResource(R.string.graph_model_prefix) + AttenuationFit.ReferenceCitation,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+        )
+    }
 }
+
+// ── String fragment helpers (non-Composable, take Context for i18n) ─────────
+
+private fun ogToFg(ctx: Context, og: Double, fg: Double): String =
+    ctx.getString(R.string.graph_sg_og_to_fg, "%.4f".format(og), "%.4f".format(fg))
+
+private fun nowFragment(ctx: Context, current: Double): String =
+    ctx.getString(R.string.graph_sg_now_fragment, "%.4f".format(current))
+
+private fun rateFragment(ctx: Context, rate: Double): String =
+    ctx.getString(R.string.graph_sg_rate_fragment, "%.3f".format(rate))
+
+private fun etaFragment(ctx: Context, hours: Double?): String =
+    ctx.getString(R.string.graph_sg_eta_fragment, formatHoursAhead(ctx, hours))
+
+private fun abvFragment(abvNow: Double, abvAtFg: Double): String =
+    " · ABV %.1f%% → %.1f%%".format(abvNow, abvAtFg)
 
 /**
  * Builds a model overlay for the SG chart:
@@ -437,6 +534,7 @@ private fun SgEstimateLine(
  * Insufficient, or Stuck/Complete where the data already covers the story).
  */
 private fun buildSgOverlay(
+    ctx: Context,
     sgPoints: List<Pair<Double, Double>>,
     calRSquared: Double? = null
 ): ChartOverlay? {
@@ -474,7 +572,7 @@ private fun buildSgOverlay(
                 PlateauSpan(
                     xRange = (tStartMs + it.startH * 3_600_000.0)..
                         (tStartMs + it.endH * 3_600_000.0),
-                    label = plateauLabel(it)
+                    label = plateauLabel(ctx, it)
                 )
             }
         )
@@ -482,21 +580,107 @@ private fun buildSgOverlay(
 
     return when (state) {
         is Fermentation.State.Active -> {
-            val eta = state.etaToFinishHours ?: return null
             val fg = state.predictedFg
-            val (predict, low, high, floor) =
-                predictorWithBand(state.source, xs, ys, state, fg, nowH, tStartMs, nowMs, eta)
-            overlayMs(predict, eta, fg, low, high, floor, state.plateaus)
+            val eta = state.etaToFinishHours
+            if (eta != null) {
+                val (predict, low, high, floor) =
+                    predictorWithBand(state.source, xs, ys, state, fg, nowH, tStartMs, nowMs, eta)
+                overlayMs(predict, eta, fg, low, high, floor, state.plateaus)
+            } else {
+                // No future to extrapolate (data already at/past FG) — show
+                // the in-sample logistic fit so the user can still read the
+                // ferment shape.
+                buildInSampleOverlay(ctx, xs, ys, fg, tStartMs, state.plateaus)
+            }
         }
         is Fermentation.State.Slowing -> {
-            val eta = state.etaToFinishHours ?: return null
             val fg = state.predictedFg
-            val (predict, low, high, floor) =
-                predictorWithBand(state.source, xs, ys, state, fg, nowH, tStartMs, nowMs, eta)
-            overlayMs(predict, eta, fg, low, high, floor, state.plateaus)
+            val eta = state.etaToFinishHours
+            if (eta != null) {
+                val (predict, low, high, floor) =
+                    predictorWithBand(state.source, xs, ys, state, fg, nowH, tStartMs, nowMs, eta)
+                overlayMs(predict, eta, fg, low, high, floor, state.plateaus)
+            } else {
+                buildInSampleOverlay(ctx, xs, ys, fg, tStartMs, state.plateaus)
+            }
+        }
+        is Fermentation.State.Conditioning -> {
+            // The overlay isn't only forward-prediction — it's also a way
+            // to read the shape of the ferment after the fact (lag length,
+            // fastest-attenuation point, residual-vs-model). Refit the
+            // logistic on the full record and draw the curve through the
+            // data window only — no future extension, no dashed segment.
+            buildInSampleOverlay(ctx, xs, ys, state.fg, tStartMs, state.plateaus)
         }
         else -> null
     }
+}
+
+/**
+ * Overlay variant for "we're already at FG" states (Complete, or a
+ * Slowing/Active where the recent rate has gone non-negative so the
+ * predicted ETA is null). Refits the logistic on the full record and
+ * draws the curve through the data window only — no future extension,
+ * no dashed extrapolated segment.
+ */
+private fun buildInSampleOverlay(
+    ctx: Context,
+    xs: DoubleArray,
+    ys: DoubleArray,
+    fg: Double,
+    tStartMs: Double,
+    plateaus: List<com.ispindle.plotter.analysis.Plateau>
+): ChartOverlay? {
+    val fit = AttenuationFit.fit(xs, ys) ?: return null
+    val nowH = xs.last()
+    val t0 = xs.first()
+
+    val predict: (Double) -> Double = { msX ->
+        val h = (msX - tStartMs) / 3_600_000.0
+        fit.predict(h)
+    }
+
+    val (bandLowFn, bandHighFn, sampledFloor) = if (fit.covariance != null) {
+        val gridSize = 96
+        val grid = DoubleArray(gridSize) { t0 + (nowH - t0) * it.toDouble() / (gridSize - 1) }
+        val rng = Random(0x5E1ED)
+        val bands = fit.predictiveBand(
+            times = grid, rng = rng, nSamples = 256,
+            quantiles = doubleArrayOf(0.025, 0.5, 0.975)
+        )
+        val lows = bands[0]; val highs = bands[2]
+        fun interp(arr: DoubleArray): (Double) -> Double = { msX ->
+            val h = (msX - tStartMs) / 3_600_000.0
+            val u = ((h - t0) / (nowH - t0)).coerceIn(0.0, 1.0)
+            val pos = u * (gridSize - 1)
+            val i0 = pos.toInt().coerceAtMost(gridSize - 2)
+            val frac = pos - i0
+            arr[i0] + frac * (arr[i0 + 1] - arr[i0])
+        }
+        Triple(interp(lows) as (Double) -> Double, interp(highs) as (Double) -> Double, lows.min())
+    } else {
+        Triple(null, null, fg - 0.0015)
+    }
+
+    val floor = kotlin.math.min(sampledFloor, fg - 0.0015)
+
+    return ChartOverlay(
+        color = androidx.compose.ui.graphics.Color(0xFFD1495B),
+        sample = predict,
+        sampleCount = 96,
+        extendXTo = null,
+        extendYDownTo = floor,
+        dashAfterX = null,
+        bandLow = bandLowFn,
+        bandHigh = bandHighFn,
+        plateauSpans = plateaus.map {
+            PlateauSpan(
+                xRange = (tStartMs + it.startH * 3_600_000.0)..
+                    (tStartMs + it.endH * 3_600_000.0),
+                label = plateauLabel(ctx, it)
+            )
+        }
+    )
 }
 
 /**
@@ -537,8 +721,8 @@ private fun predictorWithBand(
 ): OverlayCurves {
     val finishH = nowH + etaH
 
-    if (source == Fermentation.PredictionSource.Logistic) {
-        val fit = LogisticFit.fit(xs, ys)
+    if (source == Fermentation.PredictionSource.Gompertz) {
+        val fit = AttenuationFit.fit(xs, ys)
         if (fit?.covariance != null) {
             // Dense time grid spanning the whole chart x-extent, in
             // hours from the same anchor as the data array.
@@ -588,8 +772,8 @@ private fun predictorFor(
     fg: Double,
     nowH: Double
 ): (Double) -> Double {
-    if (source == Fermentation.PredictionSource.Logistic) {
-        val fit = LogisticFit.fit(xs, ys)
+    if (source == Fermentation.PredictionSource.Gompertz) {
+        val fit = AttenuationFit.fit(xs, ys)
         if (fit != null) return { h -> fit.predict(h).coerceAtLeast(fg) }
     }
     // Fallback when the full-window logistic was rejected: build an analytic
@@ -620,25 +804,31 @@ private fun predictorFor(
     return { _ -> current }
 }
 
-private fun Fermentation.PredictionSource.label(): String = when (this) {
-    Fermentation.PredictionSource.Logistic -> "logistic"
-    Fermentation.PredictionSource.ExpDecay -> "exp"
-    Fermentation.PredictionSource.Linear -> "rate-based (75% attenuation prior)"
-    Fermentation.PredictionSource.Default -> "75% attenuation prior"
-}
+private fun Fermentation.PredictionSource.label(ctx: Context): String = ctx.getString(
+    when (this) {
+        Fermentation.PredictionSource.Gompertz -> R.string.graph_source_gompertz
+        Fermentation.PredictionSource.ExpDecay -> R.string.graph_source_expdecay
+        Fermentation.PredictionSource.Linear -> R.string.graph_source_linear
+        Fermentation.PredictionSource.Default -> R.string.graph_source_default
+    }
+)
 
 /**
  * Short label for a plateau span on the chart. Mid plateaus get the SG
  * value (the diagnostic detail); Lag and Tail are self-explanatory.
  */
-private fun plateauLabel(p: com.ispindle.plotter.analysis.Plateau): String = when (p.kind) {
-    com.ispindle.plotter.analysis.Plateau.Kind.Lag -> "lag"
-    // Three decimals (1 mSG resolution) keeps the label narrow enough
-    // for typical band widths; the user can read 4 dp off the y-axis if
-    // they want more precision.
-    com.ispindle.plotter.analysis.Plateau.Kind.Mid -> "paused %.3f".format(p.sg)
-    com.ispindle.plotter.analysis.Plateau.Kind.Tail -> "asymptote %.3f".format(p.sg)
-}
+private fun plateauLabel(ctx: Context, p: com.ispindle.plotter.analysis.Plateau): String =
+    when (p.kind) {
+        com.ispindle.plotter.analysis.Plateau.Kind.Lag ->
+            ctx.getString(R.string.graph_plateau_lag)
+        // Three decimals (1 mSG resolution) keeps the label narrow enough
+        // for typical band widths; the user can read 4 dp off the y-axis if
+        // they want more precision.
+        com.ispindle.plotter.analysis.Plateau.Kind.Mid ->
+            ctx.getString(R.string.graph_plateau_paused, "%.3f".format(p.sg))
+        com.ispindle.plotter.analysis.Plateau.Kind.Tail ->
+            ctx.getString(R.string.graph_plateau_asymptote, "%.3f".format(p.sg))
+    }
 
 /**
  * Annotate the estimate text when a mid-ferment plateau was detected —
@@ -647,26 +837,36 @@ private fun plateauLabel(p: com.ispindle.plotter.analysis.Plateau): String = whe
  * Complete on its own. Only Mid is interesting in an Active/Slowing
  * narrative.
  */
-private fun StringBuilder.appendMidPlateau(plateaus: List<com.ispindle.plotter.analysis.Plateau>) {
+private fun StringBuilder.appendMidPlateau(
+    ctx: Context,
+    plateaus: List<com.ispindle.plotter.analysis.Plateau>
+) {
     val mid = plateaus.firstOrNull { it.kind == com.ispindle.plotter.analysis.Plateau.Kind.Mid }
         ?: return
-    append(" · paused at %.4f for %.1f h".format(mid.sg, mid.durationH))
+    append(
+        ctx.getString(
+            R.string.graph_sg_paused_at,
+            "%.4f".format(mid.sg),
+            "%.1f".format(mid.durationH)
+        )
+    )
 }
 
 /** Format the 95 % credible interval on ETA as `(low–high)`. */
-private fun StringBuilder.appendEtaCredible(low: Double?, high: Double?) {
+private fun StringBuilder.appendEtaCredible(ctx: Context, low: Double?, high: Double?) {
     if (low == null || high == null) return
-    val lo = formatHoursAhead(low)
-    val hi = formatHoursAhead(high)
+    val lo = formatHoursAhead(ctx, low)
+    val hi = formatHoursAhead(ctx, high)
     // Squelch when both endpoints round to the same display value — e.g.
     // very tight posterior or very large dataset.
     if (lo == hi) return
-    append(" (95 %% CI %s–%s)".format(lo, hi))
+    append(ctx.getString(R.string.graph_sg_eta_ci, lo, hi))
 }
 
 @Composable
 private fun BatteryEstimateLine(readings: List<Reading>, fit: Fits.Linear?) {
     if (readings.size < 2 || fit == null) return
+    val ctx = LocalContext.current
     val tStartMs = readings.first().timestampMs.toDouble()
     val nowMs = System.currentTimeMillis().toDouble()
 
@@ -674,20 +874,28 @@ private fun BatteryEstimateLine(readings: List<Reading>, fit: Fits.Linear?) {
     val slopePerDay = fit.slope * 24.0
     val tCutoff = fit.timeToReach(3.4)
     val etaCutoff = tCutoff?.takeIf { it > nowX }?.minus(nowX)
-    val text = buildString {
-        append("Battery: ")
-        if (slopePerDay >= 0) {
-            // Positive or zero slope: nothing to predict. Probably charging or
-            // sitting in storage rather than discharging.
-            append("trend ${"%+.3f".format(slopePerDay)} V/day (no discharge to extrapolate)")
-        } else {
-            append("%.3f V/day drop · ".format(-slopePerDay))
-            append("days to 3.4 V cutoff: ${formatHoursAhead(etaCutoff, asDays = true)}")
-        }
-        append(" · RMS ±%.3f V".format(fit.rmsResidual))
+
+    val prefix = stringResource(R.string.graph_battery_prefix)
+    val body = if (slopePerDay >= 0) {
+        // Positive or zero slope: nothing to predict. Probably charging or
+        // sitting in storage rather than discharging.
+        stringResource(R.string.graph_battery_no_discharge, "%+.3f".format(slopePerDay))
+    } else {
+        stringResource(R.string.graph_battery_drop_per_day, "%.3f".format(-slopePerDay)) +
+            stringResource(R.string.graph_battery_days_to_cutoff, formatHoursAhead(ctx, etaCutoff, asDays = true))
     }
-    EstimateText(text)
+    val rms = stringResource(R.string.graph_battery_rms, "%.3f".format(fit.rmsResidual))
+    EstimateText("$prefix$body · $rms")
 }
+
+/**
+ * Formats `± σ` for the FG-uncertainty annotation. With thousands of
+ * tail points, the Laplace posterior on FG can collapse to fractional
+ * sub-mSG width — `%.4f` then rounds to "± 0.0000", which reads like a
+ * bug. Floor the display at <0.0001 SG instead.
+ */
+private fun formatFgSigma(sigma: Double): String =
+    if (sigma < 5e-5) " ± <0.0001" else " ± %.4f".format(sigma)
 
 @Composable
 private fun EstimateText(text: String, isError: Boolean = false) {
@@ -700,13 +908,15 @@ private fun EstimateText(text: String, isError: Boolean = false) {
     )
 }
 
-private fun formatHoursAhead(hours: Double?, asDays: Boolean = false): String {
-    if (hours == null || !hours.isFinite() || hours <= 0) return "—"
+private fun formatHoursAhead(ctx: Context, hours: Double?, asDays: Boolean = false): String {
+    if (hours == null || !hours.isFinite() || hours <= 0) {
+        return ctx.getString(R.string.graph_dur_em_dash)
+    }
     val days = hours / 24.0
     return when {
-        asDays || hours >= 48 -> "%.1f days".format(days)
-        hours >= 1.0 -> "%.1f h".format(hours)
-        else -> "%.0f min".format(hours * 60)
+        asDays || hours >= 48 -> ctx.getString(R.string.graph_dur_days, "%.1f".format(days))
+        hours >= 1.0 -> ctx.getString(R.string.graph_dur_hours, "%.1f".format(hours))
+        else -> ctx.getString(R.string.graph_dur_min, "%.0f".format(hours * 60))
     }
 }
 
@@ -772,16 +982,16 @@ private fun TrimBeforeDialog(
             ) {
                 Text(
                     when (preview) {
-                        -1 -> "Counting…"
-                        0 -> "Nothing to delete"
-                        1 -> "Delete 1 reading"
-                        else -> "Delete $preview readings"
+                        -1 -> stringResource(R.string.graph_trim_counting)
+                        0 -> stringResource(R.string.graph_trim_nothing_to_delete)
+                        1 -> stringResource(R.string.graph_trim_delete_one)
+                        else -> stringResource(R.string.graph_trim_delete_n, preview)
                     }
                 )
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
         }
     ) {
         Column(
@@ -789,13 +999,13 @@ private fun TrimBeforeDialog(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                "Delete every reading recorded before this date and local time.",
+                stringResource(R.string.graph_trim_delete_description),
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
             )
             DatePicker(state = datePickerState, showModeToggle = false)
             Text(
-                "Time of day (local)",
+                stringResource(R.string.graph_trim_time_of_day),
                 style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.padding(horizontal = 24.dp)
             )
@@ -818,7 +1028,10 @@ private fun MetricCard(
     xFormatter: (Double) -> String,
     emptyHint: String? = null,
     secondaryAxis: SecondaryAxis? = null,
-    overlay: ChartOverlay? = null
+    overlay: ChartOverlay? = null,
+    yBands: List<YBand> = emptyList(),
+    fixedYRange: ClosedFloatingPointRange<Double>? = null,
+    yTickStep: Double? = null
 ) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -831,7 +1044,10 @@ private fun MetricCard(
                     xFormatter = xFormatter,
                     xIsTimeMs = true,
                     secondaryAxis = secondaryAxis,
-                    overlay = overlay
+                    overlay = overlay,
+                    yBands = yBands,
+                    fixedYRange = fixedYRange,
+                    yTickStep = yTickStep
                 )
                 Latest(series)
             }
@@ -843,7 +1059,7 @@ private fun MetricCard(
 private fun Latest(series: ChartSeries) {
     val last = series.points.lastOrNull() ?: return
     Text(
-        text = "Latest: ${series.format(last.second)}",
+        text = stringResource(R.string.graph_latest_label, series.format(last.second)),
         style = androidx.compose.material3.MaterialTheme.typography.bodySmall
     )
 }

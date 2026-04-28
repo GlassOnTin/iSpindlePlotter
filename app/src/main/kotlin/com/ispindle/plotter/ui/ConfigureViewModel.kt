@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import com.ispindle.plotter.IspindleApp
+import com.ispindle.plotter.R
 import com.ispindle.plotter.calibration.CubicParser
 import com.ispindle.plotter.calibration.Polynomial
 import com.ispindle.plotter.data.Device
@@ -353,7 +354,7 @@ class ConfigureViewModel(
         val c = client ?: return
         val form = ui.form
         if (form.homeSsid.isBlank()) {
-            _state.update { it.copy(phase = Phase.Failed("Pick a home network SSID first")) }
+            _state.update { it.copy(phase = Phase.Failed(appContext.getString(R.string.configure_no_ssid_error))) }
             return
         }
         liveJob?.cancel()

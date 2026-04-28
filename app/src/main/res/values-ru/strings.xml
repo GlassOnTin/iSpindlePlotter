@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ── App / system ─────────────────────────────────────────────── -->
+    <string name="app_name">iSpindle Plotter</string>
+    <string name="server_notification_channel">Сервер iSpindle</string>
+    <string name="server_running">Ожидание показаний iSpindle</string>
+
+    <!-- ── Server service notification ────────────────────────────── -->
+    <string name="server_notif_starting">Запуск…</string>
+    <string name="server_notif_stopped">Остановлен</string>
+    <string name="server_notif_listening">Прослушивание на http://%1$s:%2$d</string>
+    <string name="server_notif_error">Ошибка: %1$s</string>
+
+    <!-- ── Navigation labels ────────────────────────────────────────── -->
+    <string name="nav_home">Главная</string>
+    <string name="nav_devices">Устройства</string>
+    <string name="nav_setup">Руководство</string>
+    <string name="nav_graph">График</string>
+    <string name="nav_calibrate">Калибровка</string>
+    <string name="nav_configure">Настройка</string>
+
+    <!-- ── Common / shared ──────────────────────────────────────────── -->
+    <string name="common_cancel">Отмена</string>
+    <string name="common_save">Сохранить</string>
+    <string name="common_delete">Удалить</string>
+    <string name="common_close">Закрыть</string>
+    <string name="common_label">Метка</string>
+
+    <!-- ── HomeScreen ───────────────────────────────────────────────── -->
+    <string name="home_section_http_server">HTTP-сервер</string>
+    <string name="home_status_running">Работает</string>
+    <string name="home_status_stopped">Остановлен</string>
+    <string name="home_status_error_prefix">Ошибка: %1$s</string>
+    <string name="home_endpoint_point_ispindle">Укажите iSpindle → %1$s</string>
+    <string name="home_tap_to_copy">Нажмите для копирования</string>
+    <string name="home_btn_start">Запустить</string>
+    <string name="home_btn_stop">Остановить</string>
+    <string name="home_section_latest_reading">Последние показания</string>
+    <string name="home_no_readings_yet">Показаний пока нет. Настройте iSpindle для отправки POST-запросов на указанный URL.</string>
+    <string name="home_section_known_devices">Известные устройства (%1$d)</string>
+    <string name="home_devices_appear_automatically">Устройства появляются автоматически после первого POST-запроса.</string>
+    <string name="home_reading_time">Время: %1$s</string>
+    <string name="home_reading_angle">Угол: %1$s°</string>
+    <string name="home_reading_temperature">Температура: %1$s °C</string>
+    <string name="home_reading_battery">Батарея: %1$s В</string>
+    <string name="home_reading_rssi">RSSI: %1$s dBm</string>
+    <string name="home_reading_sg_calibrated">SG (откалибровано): %1$s</string>
+    <string name="home_reading_sg_reported">SG (по данным устройства): %1$s</string>
+    <string name="home_reading_sg_none">SG: — (нет калибровки)</string>
+    <string name="home_copied_toast">Скопировано: %1$s</string>
+
+    <!-- ── DevicesScreen ────────────────────────────────────────────── -->
+    <string name="devices_no_devices_yet">Устройств пока нет — они появятся после первого POST-запроса.</string>
+    <string name="devices_rename_dialog_title">Переименовать устройство</string>
+    <string name="devices_delete_dialog_title">Удалить \"%1$s\"?</string>
+    <string name="devices_counting_readings">Подсчёт показаний…</string>
+    <string name="devices_no_readings_stored">Показания не сохранены.</string>
+    <string name="devices_one_reading_will_be_deleted">1 показание будет удалено навсегда.</string>
+    <string name="devices_n_readings_will_be_deleted">%1$d показаний будет удалено навсегда.</string>
+    <string name="devices_calibration_also_removed">Точки калибровки тоже будут удалены. Если iSpindle снова отправит данные, он появится как новая запись.</string>
+    <string name="devices_action_graph">График</string>
+    <string name="devices_action_calibrate">Калибровать</string>
+    <string name="devices_action_rename">Переименовать</string>
+    <string name="devices_action_delete">Удалить</string>
+    <string name="devices_hw_id_reported">hwId %1$s · сообщено \"%2$s\"</string>
+    <string name="devices_calibration_degree">Калибровка: степень %1$d</string>
+    <string name="devices_calibration_none">Калибровка: нет</string>
+    <string name="devices_last_reported_from">Последний запрос с %1$s</string>
+
+    <!-- ── GraphScreen ───────────────────────────────────────────────── -->
+    <string name="graph_readings_in_window">%1$d показаний в окне · %2$d всего</string>
+    <string name="graph_btn_trim_before">Обрезать до…</string>
+    <string name="graph_btn_export_csv">Экспорт CSV…</string>
+    <string name="graph_nothing_to_export">Нечего экспортировать.</string>
+    <string name="graph_exported_n_readings">Экспортировано %1$d показаний.</string>
+    <string name="graph_export_failed">Ошибка экспорта.</string>
+    <string name="graph_no_readings_in_window">Нет показаний в этом окне.</string>
+    <string name="graph_section_tilt_angle">Угол наклона (°)</string>
+    <string name="graph_section_temperature">Температура (°C)</string>
+    <string name="graph_section_specific_gravity">Удельный вес / PA%</string>
+    <string name="graph_section_battery">Батарея (В)</string>
+    <string name="graph_sg_no_data_hint">Данных SG пока нет — добавьте точки калибровки для вычисления SG по углу наклона.</string>
+    <string name="graph_latest_label">Последнее: %1$s</string>
+    <string name="graph_not_enough_data">Недостаточно данных (%1$d точек)</string>
+    <!-- TimeWindow chips -->
+    <string name="graph_time_window_24h">24ч</string>
+    <string name="graph_time_window_7d">7д</string>
+    <string name="graph_time_window_30d">30д</string>
+    <string name="graph_time_window_all">Все</string>
+
+    <!-- Ferment nav row -->
+    <string name="graph_all_ferments">Все ферментации (%1$d)</string>
+    <string name="graph_ferment_label">Ферментация %1$d/%2$d · %3$s → %4$s · −%5$s SG</string>
+    <string name="graph_all_chip_label">Все</string>
+    <!-- Phase labels -->
+    <string name="graph_phase_active">Активная</string>
+    <string name="graph_phase_slowing">Замедление</string>
+    <string name="graph_phase_conditioning">Кондиционирование</string>
+    <string name="graph_phase_lag">Лаг-фаза</string>
+    <string name="graph_phase_stuck">Застряла</string>
+    <!-- SG estimate fragments -->
+    <string name="graph_sg_insufficient">SG: тренда пока недостаточно — подождите больше показаний или расширьте временное окно.</string>
+    <string name="graph_sg_lag_phase">Лаг-фаза · OG %1$s · текущее %2$s · %3$s ч с первого показания, снижения нет</string>
+    <string name="graph_sg_og_to_fg">OG %1$s → ожид. FG %2$s</string>
+    <string name="graph_sg_now_fragment"> · %1$s сейчас · </string>
+    <string name="graph_sg_rate_fragment">скорость %1$s SG/ч · </string>
+    <string name="graph_sg_eta_fragment">ETA %1$s</string>
+    <string name="graph_sg_abv_fragment"> · ABV %1$s%% → %2$s%%</string>
+    <string name="graph_sg_paused_at"> · пауза на %1$s в течение %2$s ч</string>
+    <string name="graph_sg_conditioning">Кондиционирование · OG %1$s · FG %2$s · %3$s%% ABV · дрожжи завершают работу — проверьте стабильность перед розливом</string>
+    <string name="graph_sg_stuck">⚠ Застряла · OG %1$s · текущее %2$s · ожидалось ~%3$s · плато %4$s ч · ABV пока %5$s%%</string>
+    <string name="graph_model_prefix">модель: </string>
+    <string name="graph_sg_eta_ci"> (95 %% ДИ %1$s–%2$s)</string>
+    <string name="graph_sg_meas_sigma"> · σ_meas %1$s</string>
+    <string name="graph_source_gompertz">модиф. Gompertz</string>
+    <string name="graph_source_expdecay">exp</string>
+    <string name="graph_source_linear">по скорости (априорное затухание 75 %%)</string>
+    <string name="graph_source_default">априорное затухание 75 %%</string>
+    <string name="graph_dur_em_dash">—</string>
+    <string name="graph_dur_days">%1$s дн.</string>
+    <string name="graph_dur_hours">%1$s ч</string>
+    <string name="graph_dur_min">%1$s мин</string>
+    <string name="graph_plateau_lag">лаг</string>
+    <string name="graph_plateau_paused">пауза %1$s</string>
+    <string name="graph_plateau_asymptote">асимптота %1$s</string>
+    <!-- Battery estimate -->
+    <string name="graph_battery_prefix">Батарея: </string>
+    <string name="graph_battery_no_discharge">тренд %1$s В/день (разряда нет)</string>
+    <string name="graph_battery_drop_per_day">падение %1$s В/день · </string>
+    <string name="graph_battery_days_to_cutoff">дней до порога 3,4 В: %1$s</string>
+    <string name="graph_battery_rms">RMS ±%1$s В</string>
+    <!-- Trim dialog -->
+    <string name="graph_trim_delete_description">Удалить все показания, записанные до этой даты и местного времени.</string>
+    <string name="graph_trim_time_of_day">Время дня (местное)</string>
+    <string name="graph_trim_counting">Подсчёт…</string>
+    <string name="graph_trim_nothing_to_delete">Нечего удалять</string>
+    <string name="graph_trim_delete_one">Удалить 1 показание</string>
+    <string name="graph_trim_delete_n">Удалить %1$d показаний</string>
+    <string name="graph_trimmed_nothing">Нечего обрезать.</string>
+    <string name="graph_deleted_n_readings">Удалено %1$d показаний.</string>
+
+    <!-- ── CalibrationScreen ─────────────────────────────────────────── -->
+    <string name="cal_add_point_title">Добавить точку калибровки</string>
+    <string name="cal_add_point_description">Погрузите iSpindle в раствор сахара с известным SG (например, чистая вода = 1,000, или сахарно-водный раствор, измеренный рефрактометром). Дождитесь показания, скопируйте угол наклона и введите известный SG.</string>
+    <string name="cal_current_angle">Текущий угол: %1$s°</string>
+    <string name="cal_use_this">Использовать</string>
+    <string name="cal_angle_label">Угол (°)</string>
+    <string name="cal_known_sg_label">Известный SG</string>
+    <string name="cal_note_label">Примечание (необязательно)</string>
+    <string name="cal_btn_add_point">Добавить точку</string>
+    <string name="cal_points_title">Точки (%1$d)</string>
+    <string name="cal_no_points_yet">Точек калибровки пока нет.</string>
+    <string name="cal_delete_point_cd">Удалить</string>
+    <string name="cal_fit_polynomial_title">Подбор полинома</string>
+    <string name="cal_degree_chip">Степень %1$d</string>
+    <string name="cal_fit_description">Квадратичный (степень 2) — стандарт сообщества iSpindel. Нужно не менее (степень+1) активных точек.</string>
+    <string name="cal_btn_fit_save">Подобрать &amp; сохранить</string>
+    <string name="cal_btn_clear_calibration">Очистить калибровку</string>
+    <string name="cal_cleared">Калибровка очищена.</string>
+    <string name="cal_fit_saved">Сохранено: %1$s</string>
+    <string name="cal_fit_saved_r2">Сохранено: %1$s (R²=%2$s)</string>
+    <string name="cal_fit_not_enough_points">Нужно %1$d активных точек, есть %2$d.</string>
+    <string name="cal_fit_singular">Подбор не удался — точки могут быть коллинеарными или дублироваться.</string>
+    <string name="cal_current_polynomial_title">Текущий полином</string>
+    <string name="cal_sg_function">SG(угол) = %1$s</string>
+
+    <!-- ── SetupScreen ───────────────────────────────────────────────── -->
+    <string name="setup_title">Сопряжение iSpindle</string>
+    <string name="setup_auto_configure_title">Автонастройка (Android 10+)</string>
+    <string name="setup_auto_configure_description">Управляет порталом конфигурации iSpindle напрямую: подключается к его точке доступа, сканирует домашние сети, отправляет форму и ждёт выхода устройства в сеть. Полностью пропускает шаг с браузером.</string>
+    <string name="setup_btn_configure_now">Настроить iSpindle сейчас</string>
+    <string name="setup_or_manually">Или вручную:</string>
+    <string name="setup_manual_intro">MTB iSpindel PCB 4.0 работает на стандартной прошивке iSpindel на ESP8266. Bluetooth отсутствует — показания передаются по WiFi через HTTP POST.</string>
+    <string name="setup_this_phone_ip">IP этого телефона: %1$s</string>
+    <string name="setup_server_port">Порт сервера: %1$s</string>
+    <string name="setup_tap_ip_to_copy">Нажмите на IP для копирования.</string>
+    <string name="setup_steps_title">Шаги</string>
+    <string name="setup_step_1">На вкладке «Главная» нажмите «Запустить» для запуска HTTP-сервера. Постоянное уведомление подтверждает прослушивание.</string>
+    <string name="setup_step_2">Переведите iSpindle в режим настройки: держите горизонтально ~20 секунд при включении. Появится точка доступа с именем «iSpindel».</string>
+    <string name="setup_step_3">Подключите телефон к точке доступа «iSpindel» и откройте http://192.168.4.1/ в браузере для загрузки портала конфигурации.</string>
+    <string name="setup_step_4">В портале: укажите учётные данные WiFi домашней сети, «Тип сервиса» = HTTP, «Адрес сервера» = %1$s, «Порт» = %2$s, и короткий интервал (60 с подходит для тестирования).</string>
+    <string name="setup_step_5">Сохраните. iSpindle перезагрузится, подключится к домашней сети, проснётся, отправит JSON и перейдёт в спящий режим. Переподключите телефон к той же сети.</string>
+    <string name="setup_step_6">В течение одного интервала вкладка «Главная» покажет первое показание. На вкладке «Устройства» оно появится в списке — затем «Калибровка» и «График».</string>
+    <string name="setup_calibration_workflow_title">Процесс калибровки</string>
+    <string name="setup_calibration_intro">Калибровка переводит угол наклона в удельный вес. Нужно не менее 3 эталонных растворов для квадратичного подбора.</string>
+    <string name="setup_cal_step_1">Чистая вода при 20 °C = SG 1,000. Дождитесь стабилизации iSpindle, считайте угол с вкладки «Главная» и добавьте как (угол, 1,000) на вкладке «Калибровка».</string>
+    <string name="setup_cal_step_2">Приготовьте раствор сахара с водой, измерьте SG рефрактометром или ареометром, опустите iSpindle, запишите (угол, SG).</string>
+    <string name="setup_cal_step_3">Повторите для 2–3 дополнительных точек в ожидаемом диапазоне SG (1,000 → 1,080).</string>
+    <string name="setup_cal_step_4">Нажмите «Подобрать &amp; сохранить». R² должен быть > 0,999 для хорошего подбора. Будущие показания автоматически заполнят SG.</string>
+    <string name="setup_stable_address_title">Стабильный адрес</string>
+    <string name="setup_stable_address_intro">Если iSpindle настроен с прямым IP и телефон получает другой адрес после обновления DHCP, следующее показание будет потеряно. Два способа сохранить связь при смене IP:</string>
+    <string name="setup_stable_step_1">Зарезервируйте IP телефона на роутере. Обычно этот параметр называется «DHCP-резервирование», «статическая аренда» или «всегда назначать один IP».</string>
+    <string name="setup_stable_step_2">Используйте имя хоста вместо IP. Многие домашние роутеры публикуют DNS-имя для каждого DHCP-клиента. На экране «Настройка» нажмите «Найти имя хоста» — если роутер публикует уникальное имя для этого телефона, его можно использовать в качестве адреса сервера.</string>
+    <string name="setup_stable_step_3">Если «Найти имя хоста» сообщает о неоднозначности, роутер содержит устаревшие записи от предыдущих устройств. Дайте телефону уникальное имя в настройках DHCP роутера и удалите старые записи, или используйте зарезервированный IP.</string>
+    <string name="setup_troubleshooting_title">Устранение неполадок</string>
+    <string name="setup_trouble_same_subnet">• Телефон и iSpindle должны быть в одной подсети. Проверьте изоляцию гостевой сети роутера.</string>
+    <string name="setup_trouble_dhcp">• Если IP телефона изменился (истечение аренды DHCP), введите новый IP в портале iSpindle.</string>
+    <string name="setup_trouble_deep_sleep">• iSpindle переходит в глубокий сон между интервалами; пинговать его в этот период невозможно.</string>
+    <string name="setup_trouble_static_ip">• Для статического IP зарезервируйте MAC телефона на роутере.</string>
+    <string name="setup_copied_toast">Скопировано: %1$s</string>
+
+    <!-- ── ConfigureScreen ──────────────────────────────────────────── -->
+    <string name="configure_joining_title">Подключение к точке доступа iSpindle…</string>
+    <string name="configure_joining_body">Подтвердите системный диалог, когда он появится. Первый раз может занять 10–20 с.</string>
+    <string name="configure_unsupported_title">Не поддерживается на этом устройстве</string>
+    <string name="configure_unsupported_body">Программное подключение к WiFi требует Android 10 (API 29) или новее.</string>
+    <string name="configure_failed_title">Не удалось подключиться</string>
+    <string name="configure_saving_title">Сохранение и ожидание подключения iSpindle…</string>
+    <string name="configure_saving_body">Устройство перезагружается и подключается к домашней сети. Опрос каждые 1,5 с в течение 45 с.</string>
+    <string name="configure_joined_title">iSpindle подключился к %1$s</string>
+    <string name="configure_joined_body">IP станции: %1$s\n\nПереподключите телефон к той же домашней WiFi для получения показаний.</string>
+    <string name="configure_joined_ip_unknown">(ещё не известен)</string>
+    <string name="configure_save_timeout_title">Форма отправлена, но подключение не подтверждено</string>
+    <string name="configure_save_timeout_body">iSpindle принял форму, но не появился в домашней сети в течение времени опроса. Возможно, он подключится позже. Переподключите телефон к домашней WiFi и проверьте вкладку «Главная».</string>
+    <!-- Idle / auto-pair card -->
+    <string name="configure_auto_pair_title">Автосопряжение с iSpindle</string>
+    <string name="configure_auto_pair_instructions">1. Держите iSpindle горизонтально при включении ~20 с — он создаёт точку доступа iSpindel_&lt;chipID&gt;.\n2. Нажмите «Подключить». Если несколько iSpindle в зоне досягаемости, Android покажет список выбора.\n3. Выберите домашнюю сеть, введите пароль, сохраните. iSpindle перезагрузится и подключится.</string>
+    <string name="configure_ap_ssid_prefix_label">Префикс SSID точки доступа</string>
+    <string name="configure_ap_ssid_prefix_hint">Стандартная прошивка использует iSpindel_&lt;chipID&gt;; изменяйте только если переименовали.</string>
+    <string name="configure_btn_connect">Подключить</string>
+    <string name="configure_permission_denied">Разрешение на сканирование WiFi было отклонено. Автосопряжение невозможно без него.</string>
+    <!-- Connected card -->
+    <string name="configure_connected_title">Подключено к iSpindle</string>
+    <string name="configure_pick_home_network">Выберите домашнюю сеть для подключения iSpindle, затем сохраните.</string>
+    <string name="configure_scanning">  Сканирование…</string>
+    <string name="configure_home_ssid_label">SSID домашней WiFi</string>
+    <string name="configure_home_password_label">Пароль домашней WiFi</string>
+    <string name="configure_server_description">Куда iSpindle должен отправлять показания — по умолчанию этот телефон, что обычно и нужно. Нажмите «Использовать IP телефона» для восстановления значений по умолчанию.</string>
+    <string name="configure_pointing_at_phone">Указывает на телефон ✓</string>
+    <string name="configure_use_this_phone_ip">Использовать IP телефона</string>
+    <string name="configure_no_home_ip">(домашний IP не обнаружен — подключите телефон к домашней WiFi)</string>
+    <string name="configure_server_host_label">Хост сервера</string>
+    <string name="configure_port_label">Порт</string>
+    <string name="configure_uri_label">URI</string>
+    <string name="configure_sleep_interval_label">Интервал сна (с)</string>
+    <string name="configure_device_name_label">Имя устройства (необязательно)</string>
+    <string name="configure_btn_save_reboot">Сохранить &amp; перезагрузить</string>
+    <string name="configure_service_type_label">Тип сервиса</string>
+    <string name="configure_http_warning">⚠ Это приложение принимает показания только когда iSpindle использует Generic HTTP (или HTTPS). Другие сервисы отправляют данные в облако и обходят телефон.</string>
+    <!-- Hostname row -->
+    <string name="configure_btn_find_hostname">Найти имя хоста</string>
+    <string name="configure_hostname_idle_hint">Используйте имя, опубликованное роутером, чтобы iSpindle работал при изменениях DHCP.</string>
+    <string name="configure_hostname_resolving">Разрешение…</string>
+    <string name="configure_hostname_not_found">Обратная DNS-запись для этого телефона не найдена — используйте IP или задайте имя хоста в роутере.</string>
+    <string name="configure_hostname_ambiguous">%1$s разрешается в %2$d IP — имя общее.</string>
+    <string name="configure_hostname_other_ips">Другие IP с таким именем: %1$s</string>
+    <string name="configure_btn_use_hostname">Использовать %1$s</string>
+    <!-- Network list -->
+    <string name="configure_signal_quality">Сигнал %1$d%%</string>
+    <string name="configure_signal_wpa2"> · WPA2</string>
+    <string name="configure_signal_open"> · открытая</string>
+    <!-- Live reading -->
+    <string name="configure_live_reading_title">Показания iSpindle в реальном времени</string>
+    <string name="configure_live_tilt">Наклон: %1$s°</string>
+    <string name="configure_live_temperature">Температура: %1$s</string>
+    <string name="configure_live_battery">Батарея: %1$s В</string>
+    <string name="configure_live_gravity">Плотность: %1$s</string>
+    <!-- Firmware calibration card -->
+    <string name="configure_on_device_cal_title">Калибровка на устройстве</string>
+    <string name="configure_imported">Импортировано. Применится к устройству после первого POST при сопряжении.</string>
+    <string name="configure_parsed_as">Распознано как: %1$s</string>
+    <string name="configure_btn_import_cal">Импортировать калибровку</string>
+    <string name="configure_parse_failed">Не удалось распознать это выражение как кубическую функцию от наклона — прошивочная копия сохранена. При необходимости введите точки калибровки вручную на вкладке «Калибровка».</string>
+    <!-- Push calibration card -->
+    <string name="configure_push_cal_title">Отправить калибровку на устройство</string>
+    <string name="configure_push_cal_description">Записывает выбранный полином в поле POLYN iSpindle при «Сохранить &amp; перезагрузить». Полезно, чтобы прошивка сама сообщала правильную плотность другим получателям.</string>
+    <string name="configure_dont_change_polynomial">Не изменять полином устройства</string>
+    <!-- Pick SSID error -->
+    <string name="configure_no_ssid_error">Сначала выберите SSID домашней сети</string>
+</resources>

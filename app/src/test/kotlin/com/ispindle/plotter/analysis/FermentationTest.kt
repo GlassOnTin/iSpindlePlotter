@@ -49,7 +49,7 @@ class FermentationTest {
         assertTrue("flat hours ${s.flatHours} should be > 20") { s.flatHours > 20.0 }
     }
 
-    @Test fun `data near asymptote with prior drop classifies as Complete`() {
+    @Test fun `data near asymptote with prior drop classifies as Conditioning`() {
         val og = 1.054; val fg = 1.012
         val xs = DoubleArray(100) { it * 0.5 }
         val ys = DoubleArray(100) {
@@ -57,8 +57,8 @@ class FermentationTest {
             fg + (og - fg) / (1.0 + exp(0.4 * (xs[it] - 12.0)))
         }
         val s = Fermentation.analyse(xs, ys)
-        assertTrue("got $s", s is Fermentation.State.Complete)
-        s as Fermentation.State.Complete
+        assertTrue("got $s", s is Fermentation.State.Conditioning)
+        s as Fermentation.State.Conditioning
         assertEquals(og, s.og, 0.001)
         assertEquals(fg, s.fg, 0.002)
     }

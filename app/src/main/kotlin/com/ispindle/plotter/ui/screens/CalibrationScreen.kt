@@ -32,10 +32,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
+import com.ispindle.plotter.R
 import com.ispindle.plotter.calibration.Polynomial
 import com.ispindle.plotter.ui.MainViewModel
 import kotlinx.coroutines.launch
@@ -46,6 +49,7 @@ fun CalibrationScreen(
     deviceId: Long,
     padding: PaddingValues
 ) {
+    val ctx = LocalContext.current
     val device by remember(deviceId) { vm.deviceFlow(deviceId) }.collectAsState(initial = null)
     val latest by remember(deviceId) { vm.latestReadingFor(deviceId) }.collectAsState(initial = null)
     val points by remember(deviceId) { vm.calibrationFlow(deviceId) }.collectAsState(initial = emptyList())
@@ -72,20 +76,19 @@ fun CalibrationScreen(
 
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Add calibration point", style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.cal_add_point_title), style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
                 Text(
-                    "Submerge the iSpindle in a sugar solution of known SG (e.g. pure water = 1.000, or a sugar/water mix measured with a refractometer). " +
-                            "Wait for a reading, copy the tilt angle here, and enter the known SG.",
+                    stringResource(R.string.cal_add_point_description),
                     style = androidx.compose.material3.MaterialTheme.typography.bodySmall
                 )
                 latest?.let {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            "Current angle: %.2f°".format(it.angle),
+                            stringResource(R.string.cal_current_angle, "%.2f".format(it.angle)),
                             fontFamily = FontFamily.Monospace
                         )
                         TextButton(onClick = { angleText = "%.2f".format(it.angle) }) {
-                            Text("Use this")
+                            Text(stringResource(R.string.cal_use_this))
                         }
                     }
                 }
@@ -93,7 +96,7 @@ fun CalibrationScreen(
                     OutlinedTextField(
                         value = angleText,
                         onValueChange = { angleText = it },
-                        label = { Text("Angle (°)") },
+                        label = { Text(stringResource(R.string.cal_angle_label)) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.width(140.dp)
@@ -101,7 +104,7 @@ fun CalibrationScreen(
                     OutlinedTextField(
                         value = sgText,
                         onValueChange = { sgText = it },
-                        label = { Text("Known SG") },
+                        label = { Text(stringResource(R.string.cal_known_sg_label)) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.width(140.dp)
@@ -110,7 +113,7 @@ fun CalibrationScreen(
                 OutlinedTextField(
                     value = noteText,
                     onValueChange = { noteText = it },
-                    label = { Text("Note (optional)") },
+                    label = { Text(stringResource(R.string.cal_note_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -123,15 +126,15 @@ fun CalibrationScreen(
                             angleText = ""; sgText = ""; noteText = ""
                         }
                     }
-                ) { Text("Add point") }
+                ) { Text(stringResource(R.string.cal_btn_add_point)) }
             }
         }
 
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Points (${points.size})", style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.cal_points_title, points.size), style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
                 if (points.isEmpty()) {
-                    Text("No calibration points yet.", style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.cal_no_points_yet), style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
                 } else {
                     points.forEach { p ->
                         Row(
@@ -152,7 +155,7 @@ fun CalibrationScreen(
                                 }
                             }
                             IconButton(onClick = { vm.deleteCalibrationPoint(p) }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete")
+                                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.cal_delete_point_cd))
                             }
                         }
                     }
@@ -162,39 +165,43 @@ fun CalibrationScreen(
 
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Fit polynomial", style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.cal_fit_polynomial_title), style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     (1..3).forEach { d ->
                         FilterChip(
                             selected = degree == d,
                             onClick = { degree = d },
-                            label = { Text("Degree $d") }
+                            label = { Text(stringResource(R.string.cal_degree_chip, d)) }
                         )
                     }
                 }
                 Text(
-                    "Quadratic (degree 2) is the iSpindel community default. You need at least (degree+1) enabled points.",
+                    stringResource(R.string.cal_fit_description),
                     style = androidx.compose.material3.MaterialTheme.typography.bodySmall
                 )
+                val fitSingularLabel = stringResource(R.string.cal_fit_singular)
+                val calClearedLabel = stringResource(R.string.cal_cleared)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = {
                         scope.launch {
                             fitMessage = when (val r = vm.fitAndSave(deviceId, degree)) {
                                 is MainViewModel.FitOutcome.Fitted -> {
-                                    val r2 = r.rSquared?.let { " (R²=%.4f)".format(it) } ?: ""
-                                    "Saved: ${r.polynomial.format()}$r2"
+                                    val poly = r.polynomial.format()
+                                    val r2 = r.rSquared
+                                    if (r2 != null) ctx.getString(R.string.cal_fit_saved_r2, poly, "%.4f".format(r2))
+                                    else ctx.getString(R.string.cal_fit_saved, poly)
                                 }
                                 is MainViewModel.FitOutcome.NotEnoughPoints ->
-                                    "Need ${r.need} enabled points, have ${r.have}."
+                                    ctx.getString(R.string.cal_fit_not_enough_points, r.need, r.have)
                                 MainViewModel.FitOutcome.Singular ->
-                                    "Fit failed — points may be collinear or duplicated."
+                                    fitSingularLabel
                             }
                         }
-                    }) { Text("Fit & save") }
+                    }) { Text(stringResource(R.string.cal_btn_fit_save)) }
                     OutlinedButton(onClick = {
                         vm.clearCalibration(deviceId)
-                        fitMessage = "Calibration cleared."
-                    }) { Text("Clear calibration") }
+                        fitMessage = calClearedLabel
+                    }) { Text(stringResource(R.string.cal_btn_clear_calibration)) }
                 }
                 fitMessage?.let {
                     Text(it, style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
@@ -206,10 +213,10 @@ fun CalibrationScreen(
             if (d.calDegree > 0) {
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Current polynomial",
+                        Text(stringResource(R.string.cal_current_polynomial_title),
                             style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
                         val poly = Polynomial.fromDevice(d)
-                        Text("SG(angle) = ${poly.format()}",
+                        Text(stringResource(R.string.cal_sg_function, poly.format()),
                             fontFamily = FontFamily.Monospace,
                             style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
                         d.calRSquared?.let {

@@ -43,10 +43,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.ispindle.plotter.R
 import com.ispindle.plotter.network.IspindleService
 import com.ispindle.plotter.network.LiveReading
 import com.ispindle.plotter.network.ScannedAp
@@ -71,41 +73,42 @@ fun ConfigureScreen(
         when (val phase = ui.phase) {
             ConfigureViewModel.Phase.Idle -> IdleCard(vm, ui)
             ConfigureViewModel.Phase.Joining -> StatusCard(
-                title = "Joining iSpindle AP…",
-                body = "Approve the system dialog when it appears. The first time can take 10–20 s.",
+                title = stringResource(R.string.configure_joining_title),
+                body = stringResource(R.string.configure_joining_body),
                 showSpinner = true,
                 onCancel = { vm.reset() }
             )
             ConfigureViewModel.Phase.Unsupported -> StatusCard(
-                title = "Not supported on this device",
-                body = "Programmatic WiFi join requires Android 10 (API 29) or newer.",
+                title = stringResource(R.string.configure_unsupported_title),
+                body = stringResource(R.string.configure_unsupported_body),
                 onCancel = onBack
             )
             is ConfigureViewModel.Phase.Failed -> StatusCard(
-                title = "Couldn't connect",
+                title = stringResource(R.string.configure_failed_title),
                 body = phase.message,
                 onCancel = { vm.reset() }
             )
             is ConfigureViewModel.Phase.Connected -> ConnectedCard(vm, ui, networks = emptyList())
             is ConfigureViewModel.Phase.ScanLoaded -> ConnectedCard(vm, ui, networks = phase.networks)
             ConfigureViewModel.Phase.Saving -> StatusCard(
-                title = "Saving and waiting for iSpindle to join…",
-                body = "The device reboots and joins your home network. Poll runs every 1.5 s for up to 45 s.",
+                title = stringResource(R.string.configure_saving_title),
+                body = stringResource(R.string.configure_saving_body),
                 showSpinner = true
             )
             is ConfigureViewModel.Phase.Joined -> StatusCard(
-                title = "iSpindle joined ${phase.homeSsid}",
-                body = "Station IP: ${phase.deviceIp.ifBlank { "(not yet known)" }}\n\n" +
-                        "Reconnect this phone to the same home WiFi to receive readings.",
+                title = stringResource(R.string.configure_joined_title, phase.homeSsid),
+                body = stringResource(
+                    R.string.configure_joined_body,
+                    phase.deviceIp.ifBlank { stringResource(R.string.configure_joined_ip_unknown) }
+                ),
                 onCancel = {
                     vm.reset()
                     onBack()
                 }
             )
             ConfigureViewModel.Phase.SaveTimeout -> StatusCard(
-                title = "Save submitted, but join not confirmed",
-                body = "The iSpindle accepted the form but did not appear on the home network within the polling window. " +
-                        "It may still join after a longer settle time. Reconnect this phone to home WiFi and check the Home tab.",
+                title = stringResource(R.string.configure_save_timeout_title),
+                body = stringResource(R.string.configure_save_timeout_body),
                 onCancel = {
                     vm.reset()
                     onBack()
@@ -133,11 +136,9 @@ private fun PushCalibrationCard(
     }
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Send calibration to device", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.configure_push_cal_title), style = MaterialTheme.typography.titleMedium)
             Text(
-                "Writes the chosen polynomial into the iSpindle's POLYN field on Save & " +
-                        "reboot. Useful so the firmware itself reports a sensible gravity " +
-                        "even to other receivers, not just this app.",
+                stringResource(R.string.configure_push_cal_description),
                 style = MaterialTheme.typography.bodySmall
             )
             ui.pushableCalibrations.forEach { device ->
@@ -173,7 +174,7 @@ private fun PushCalibrationCard(
             }
             if (ui.pushFromDeviceId != null) {
                 TextButton(onClick = { vm.selectPushSource(null) }) {
-                    Text("Don't change device polynomial")
+                    Text(stringResource(R.string.configure_dont_change_polynomial))
                 }
             }
         }
@@ -189,7 +190,7 @@ private fun FirmwareCalibrationCard(
     val parsed = ui.parsedCoeffs
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("On-device calibration", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.configure_on_device_cal_title), style = MaterialTheme.typography.titleMedium)
             Text(
                 raw,
                 fontFamily = FontFamily.Monospace,
@@ -197,7 +198,7 @@ private fun FirmwareCalibrationCard(
             )
             when {
                 ui.polynomialImported -> Text(
-                    "Imported. Will apply to this device on its first POST after pairing.",
+                    stringResource(R.string.configure_imported),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.tertiary
                 )
@@ -208,15 +209,14 @@ private fun FirmwareCalibrationCard(
                         parsed[2].takeIf { it != 0.0 }?.let { "%.4g·tilt²".format(it) },
                         parsed[3].takeIf { it != 0.0 }?.let { "%.4g·tilt³".format(it) }
                     )
-                    Text("Parsed as: ${terms.joinToString(" + ")}",
+                    Text(stringResource(R.string.configure_parsed_as, terms.joinToString(" + ")),
                         style = MaterialTheme.typography.bodySmall)
                     Button(onClick = { vm.importFirmwareCalibration() }) {
-                        Text("Import calibration")
+                        Text(stringResource(R.string.configure_btn_import_cal))
                     }
                 }
                 else -> Text(
-                    "Couldn't parse this expression as a cubic in tilt — leaving the firmware copy in place. " +
-                            "Re-enter calibration points by hand on the Calibrate tab if needed.",
+                    stringResource(R.string.configure_parse_failed),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error
                 )
@@ -242,27 +242,26 @@ private fun IdleCard(vm: ConfigureViewModel, ui: ConfigureViewModel.UiState) {
         vm.connect()
     }
 
+    val permDeniedMsg = stringResource(R.string.configure_permission_denied)
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) launchConnect()
-        else permRationale = "WiFi-scan permission was declined. Auto-pair can't proceed without it."
+        else permRationale = permDeniedMsg
     }
 
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Auto-pair with iSpindle", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.configure_auto_pair_title), style = MaterialTheme.typography.titleMedium)
             Text(
-                "1. Hold the iSpindle horizontally at power-on for ~20 s — it raises an AP named iSpindel_<chipID>.\n" +
-                        "2. Tap Connect. If several iSpindles are in range Android shows a picker so you can choose the right one.\n" +
-                        "3. Pick your home network, enter its password, save. The iSpindle reboots and joins.",
+                stringResource(R.string.configure_auto_pair_instructions),
                 style = MaterialTheme.typography.bodySmall
             )
             OutlinedTextField(
                 value = prefix,
                 onValueChange = { prefix = it },
-                label = { Text("AP SSID prefix") },
-                supportingText = { Text("Default firmware uses iSpindel_<chipID>; adjust only if you renamed it.") },
+                label = { Text(stringResource(R.string.configure_ap_ssid_prefix_label)) },
+                supportingText = { Text(stringResource(R.string.configure_ap_ssid_prefix_hint)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -275,7 +274,7 @@ private fun IdleCard(vm: ConfigureViewModel, ui: ConfigureViewModel.UiState) {
                 } else {
                     launchConnect()
                 }
-            }) { Text("Connect") }
+            }) { Text(stringResource(R.string.configure_btn_connect)) }
             permRationale?.let {
                 Text(
                     it,
@@ -297,16 +296,16 @@ private fun ConnectedCard(
 
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Connected to iSpindle", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.configure_connected_title), style = MaterialTheme.typography.titleMedium)
             Text(
-                "Pick the home network you want the iSpindle to join, then save.",
+                stringResource(R.string.configure_pick_home_network),
                 style = MaterialTheme.typography.bodySmall
             )
 
             if (networks.isEmpty()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.width(18.dp))
-                    Text("  Scanning…", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.configure_scanning), style = MaterialTheme.typography.bodySmall)
                 }
             } else {
                 NetworkList(
@@ -319,21 +318,20 @@ private fun ConnectedCard(
             OutlinedTextField(
                 value = form.homeSsid,
                 onValueChange = { vm.updateForm { f -> f.copy(homeSsid = it) } },
-                label = { Text("Home WiFi SSID") },
+                label = { Text(stringResource(R.string.configure_home_ssid_label)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
             OutlinedTextField(
                 value = form.homePassword,
                 onValueChange = { vm.updateForm { f -> f.copy(homePassword = it) } },
-                label = { Text("Home WiFi password") },
+                label = { Text(stringResource(R.string.configure_home_password_label)) },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
-                "Where the iSpindle should POST readings — defaults to this phone, " +
-                        "which is usually what you want. Tap \"Use this phone\" to restore the defaults.",
+                stringResource(R.string.configure_server_description),
                 style = MaterialTheme.typography.bodySmall
             )
             val phoneDefault = ui.homeIpSnapshot
@@ -348,11 +346,14 @@ private fun ConnectedCard(
                     onClick = { vm.applyPhoneDefaults() },
                     enabled = phoneDefault != null && !pointsAtPhone
                 ) {
-                    Text(if (pointsAtPhone) "Pointing at phone ✓" else "Use this phone IP")
+                    Text(
+                        if (pointsAtPhone) stringResource(R.string.configure_pointing_at_phone)
+                        else stringResource(R.string.configure_use_this_phone_ip)
+                    )
                 }
                 if (phoneDefault == null) {
                     Text(
-                        "(no home IP detected — connect this phone to home WiFi first)",
+                        stringResource(R.string.configure_no_home_ip),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.error
                     )
@@ -363,14 +364,14 @@ private fun ConnectedCard(
                 OutlinedTextField(
                     value = form.serverHost.orEmpty(),
                     onValueChange = { vm.updateForm { f -> f.copy(serverHost = it) } },
-                    label = { Text("Server host") },
+                    label = { Text(stringResource(R.string.configure_server_host_label)) },
                     singleLine = true,
                     modifier = Modifier.width(180.dp)
                 )
                 OutlinedTextField(
                     value = form.serverPort?.toString().orEmpty(),
                     onValueChange = { v -> vm.updateForm { f -> f.copy(serverPort = v.toIntOrNull()) } },
-                    label = { Text("Port") },
+                    label = { Text(stringResource(R.string.configure_port_label)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.width(110.dp)
@@ -379,7 +380,7 @@ private fun ConnectedCard(
             OutlinedTextField(
                 value = form.serverPath.orEmpty(),
                 onValueChange = { vm.updateForm { f -> f.copy(serverPath = it) } },
-                label = { Text("URI") },
+                label = { Text(stringResource(R.string.configure_uri_label)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -394,7 +395,7 @@ private fun ConnectedCard(
             OutlinedTextField(
                 value = form.sleepSeconds?.toString().orEmpty(),
                 onValueChange = { v -> vm.updateForm { f -> f.copy(sleepSeconds = v.toIntOrNull()) } },
-                label = { Text("Sleep interval (s)") },
+                label = { Text(stringResource(R.string.configure_sleep_interval_label)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth()
@@ -402,14 +403,14 @@ private fun ConnectedCard(
             OutlinedTextField(
                 value = form.deviceName.orEmpty(),
                 onValueChange = { vm.updateForm { f -> f.copy(deviceName = it) } },
-                label = { Text("Device name (optional)") },
+                label = { Text(stringResource(R.string.configure_device_name_label)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { vm.save() }) { Text("Save & reboot") }
-                OutlinedButton(onClick = { vm.reset() }) { Text("Cancel") }
+                Button(onClick = { vm.save() }) { Text(stringResource(R.string.configure_btn_save_reboot)) }
+                OutlinedButton(onClick = { vm.reset() }) { Text(stringResource(R.string.common_cancel)) }
             }
         }
     }
@@ -426,19 +427,19 @@ private fun HostnameRow(vm: ConfigureViewModel, ui: ConfigureViewModel.UiState) 
                 onClick = { vm.probeHostname() },
                 enabled = ui.homeIpSnapshot != null &&
                         ui.hostnameProbe !is ConfigureViewModel.HostnameProbe.Probing
-            ) { Text("Find hostname") }
+            ) { Text(stringResource(R.string.configure_btn_find_hostname)) }
             when (val p = ui.hostnameProbe) {
                 ConfigureViewModel.HostnameProbe.Idle -> Text(
-                    "Use a router-published name so the iSpindle survives DHCP changes.",
+                    stringResource(R.string.configure_hostname_idle_hint),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 ConfigureViewModel.HostnameProbe.Probing -> Text(
-                    "Resolving…",
+                    stringResource(R.string.configure_hostname_resolving),
                     style = MaterialTheme.typography.labelSmall
                 )
                 ConfigureViewModel.HostnameProbe.NotFound -> Text(
-                    "No reverse-DNS record for this phone — use the IP, or set a hostname in your router.",
+                    stringResource(R.string.configure_hostname_not_found),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.error
                 )
@@ -449,7 +450,7 @@ private fun HostnameRow(vm: ConfigureViewModel, ui: ConfigureViewModel.UiState) 
                     color = MaterialTheme.colorScheme.tertiary
                 )
                 is ConfigureViewModel.HostnameProbe.Ambiguous -> Text(
-                    "${p.hostname} resolves to ${p.resolvesTo.size} IPs — name is shared.",
+                    stringResource(R.string.configure_hostname_ambiguous, p.hostname, p.resolvesTo.size),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.error
                 )
@@ -458,13 +459,15 @@ private fun HostnameRow(vm: ConfigureViewModel, ui: ConfigureViewModel.UiState) 
         when (val p = ui.hostnameProbe) {
             is ConfigureViewModel.HostnameProbe.Unique -> {
                 Button(onClick = { vm.applyHostnameAsServer(p.hostname) }) {
-                    Text("Use ${p.hostname}")
+                    Text(stringResource(R.string.configure_btn_use_hostname, p.hostname))
                 }
             }
             is ConfigureViewModel.HostnameProbe.Ambiguous -> {
                 Text(
-                    "Other IPs answering to that name: " +
-                            p.resolvesTo.filter { it != ui.homeIpSnapshot }.joinToString(", "),
+                    stringResource(
+                        R.string.configure_hostname_other_ips,
+                        p.resolvesTo.filter { it != ui.homeIpSnapshot }.joinToString(", ")
+                    ),
                     style = MaterialTheme.typography.labelSmall
                 )
             }
@@ -490,7 +493,7 @@ private fun ServiceTypeDropdown(
                 value = "${selected.label} (selAPI=${selected.selApi})",
                 onValueChange = { /* read-only */ },
                 readOnly = true,
-                label = { Text("Service type") },
+                label = { Text(stringResource(R.string.configure_service_type_label)) },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                 modifier = Modifier
                     .menuAnchor()
@@ -513,8 +516,7 @@ private fun ServiceTypeDropdown(
         }
         if (!isHttp) {
             Text(
-                "⚠ This app only receives readings when the iSpindle uses Generic HTTP " +
-                        "(or HTTPS). Other services post to their own cloud and bypass the phone.",
+                stringResource(R.string.configure_http_warning),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.error
             )
@@ -550,8 +552,12 @@ private fun NetworkList(
                             ap.ssid + if (ap.ssid == selected) "  ✓" else "",
                             style = MaterialTheme.typography.bodyMedium
                         )
+                        val encryptedSuffix = if (ap.encrypted)
+                            stringResource(R.string.configure_signal_wpa2)
+                        else
+                            stringResource(R.string.configure_signal_open)
                         Text(
-                            "Signal ${ap.quality}%${if (ap.encrypted) " · WPA2" else " · open"}",
+                            stringResource(R.string.configure_signal_quality, ap.quality) + encryptedSuffix,
                             style = MaterialTheme.typography.labelSmall
                         )
                     }
@@ -578,7 +584,7 @@ private fun StatusCard(
             }
             Text(body, style = MaterialTheme.typography.bodyMedium)
             onCancel?.let {
-                OutlinedButton(onClick = it) { Text("Close") }
+                OutlinedButton(onClick = it) { Text(stringResource(R.string.common_close)) }
             }
         }
     }
@@ -588,11 +594,11 @@ private fun StatusCard(
 private fun LiveReadingCard(reading: LiveReading) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text("Live reading from iSpindle", style = MaterialTheme.typography.titleMedium)
-            reading.tiltDeg?.let { Text("Tilt: %.2f°".format(it), fontFamily = FontFamily.Monospace) }
-            reading.temperature?.let { Text("Temperature: %.2f".format(it), fontFamily = FontFamily.Monospace) }
-            reading.batteryV?.let { Text("Battery: %.2f V".format(it), fontFamily = FontFamily.Monospace) }
-            reading.gravity?.let { Text("Gravity: %.4f".format(it), fontFamily = FontFamily.Monospace) }
+            Text(stringResource(R.string.configure_live_reading_title), style = MaterialTheme.typography.titleMedium)
+            reading.tiltDeg?.let { Text(stringResource(R.string.configure_live_tilt, "%.2f".format(it)), fontFamily = FontFamily.Monospace) }
+            reading.temperature?.let { Text(stringResource(R.string.configure_live_temperature, "%.2f".format(it)), fontFamily = FontFamily.Monospace) }
+            reading.batteryV?.let { Text(stringResource(R.string.configure_live_battery, "%.2f".format(it)), fontFamily = FontFamily.Monospace) }
+            reading.gravity?.let { Text(stringResource(R.string.configure_live_gravity, "%.4f".format(it)), fontFamily = FontFamily.Monospace) }
         }
     }
 }

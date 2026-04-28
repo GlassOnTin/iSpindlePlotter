@@ -74,8 +74,8 @@ class RealCaptureTest {
         assertTrue("expected Active; got $state", state is Fermentation.State.Active)
         state as Fermentation.State.Active
         assertEquals(
-            "source should be Logistic (regression — pre-fix this fell to Linear)",
-            Fermentation.PredictionSource.Logistic, state.source
+            "source should be Gompertz (regression — pre-fix this fell to Linear)",
+            Fermentation.PredictionSource.Gompertz, state.source
         )
         assertTrue(
             "OG ${state.og} should be near observed max ~1.0527",
@@ -83,7 +83,7 @@ class RealCaptureTest {
         )
         assertTrue(
             "predicted FG ${state.predictedFg} should sit in 70-90 % atten band",
-            state.predictedFg in 1.012..1.020
+            state.predictedFg in 1.011..1.020
         )
         val eta = state.etaToFinishHours
         assertTrue("ETA $eta should be set and in (5, 40) h", eta != null && eta in 5.0..40.0)
@@ -111,8 +111,8 @@ class RealCaptureTest {
         state as Fermentation.State.Active
 
         assertEquals(
-            "source should still be Logistic post-restart",
-            Fermentation.PredictionSource.Logistic, state.source
+            "source should still be Gompertz post-restart",
+            Fermentation.PredictionSource.Gompertz, state.source
         )
         val mid = state.plateaus.firstOrNull { it.kind == Plateau.Kind.Mid }
         assertTrue(

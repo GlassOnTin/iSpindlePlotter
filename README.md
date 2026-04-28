@@ -10,7 +10,7 @@ hydrometer — including the **MTB iSpindel PCB 4.0**.
 
 <p align="center">
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1_en-US.png"
-       alt="SG chart with Bayesian logistic fit, 95% credible band, lag and mid-ferment plateau detection"
+       alt="SG chart with modified-Gompertz fit (Zwietering 1990), 95% credible band, lag and mid-ferment plateau detection"
        width="320">
 </p>
 
@@ -35,14 +35,29 @@ or install from source below.
   battery voltage, with 24 h / 7 d / 30 d / all windows.
 - Calibration: add `(angle, known SG)` points, fit a polynomial of degree
   1–3 by ordinary least squares, see R², apply the fit to live readings.
-- Bayesian fermentation model — 4-parameter logistic SG curve fitted by
-  Levenberg–Marquardt with a Gaussian prior on attenuation (MAP), Laplace
-  approximation of the posterior, and a 95 % credible band on both the
-  predicted SG curve and the time-to-FG. See [`ROADMAP.md`](ROADMAP.md)
-  for what the fitter does today and where it's going.
+- Bayesian fermentation model — 4-parameter modified-Gompertz SG curve
+  ([Zwietering et al. 1990](https://doi.org/10.1128/aem.56.6.1875-1881.1990))
+  fitted by Levenberg–Marquardt with a Gaussian prior on attenuation
+  (MAP), Laplace approximation of the posterior, and a 95 % credible
+  band on both the predicted SG curve and the time-to-FG. The Gompertz
+  asymmetry naturally accommodates the long flat lag and slow asymptotic
+  tail of real beer fermentation. See [`ROADMAP.md`](ROADMAP.md) for
+  what the fitter does today and where it's going.
 - Plateau detection — flags lag plateaus, mid-ferment diauxic shifts
   (where yeast pauses between sugar populations), and asymptote tails
   on the SG chart with a shaded band and inline label.
+- Phase classifier — Lag / Active / Slowing / Conditioning / Stuck.
+  "Conditioning" replaces a misleading "Complete": when SG drops below
+  the iSpindle's noise floor the ferment is usually still biologically
+  active (yeast scrubbing diacetyl, finishing maltotriose, CO₂
+  desorbing), and the label points the brewer at the right next steps.
+- Battery health chart — lithium-ion 18650 voltage zones (full / low /
+  critical) shaded behind the discharge trend, axis locked to the
+  3.0–4.2 V cell window. Linear-regression smoother with a Gaussian
+  jitter cloud over the raw points.
+- Localised in 10 languages: Arabic, Bengali, Chinese (Simplified),
+  English, French, German, Hindi, Japanese, Portuguese, Russian,
+  Spanish. Follows the system locale.
 - Room-backed storage, so readings persist across app restarts.
 
 ## Build from source

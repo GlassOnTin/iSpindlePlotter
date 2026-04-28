@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ── App / system ─────────────────────────────────────────────── -->
+    <string name="app_name">iSpindle Plotter</string>
+    <string name="server_notification_channel">iSpindle सर्वर</string>
+    <string name="server_running">iSpindle रीडिंग सुन रहा है</string>
+
+    <!-- ── Server service notification ─────────────────────────────── -->
+    <string name="server_notif_starting">शुरू हो रहा है…</string>
+    <string name="server_notif_stopped">बंद</string>
+    <string name="server_notif_listening">http://%1$s:%2$d पर सुन रहा है</string>
+    <string name="server_notif_error">त्रुटि: %1$s</string>
+
+    <!-- ── Navigation labels ─────────────────────────────────────────── -->
+    <string name="nav_home">होम</string>
+    <string name="nav_devices">डिवाइस</string>
+    <string name="nav_setup">सेटअप गाइड</string>
+    <string name="nav_graph">ग्राफ़</string>
+    <string name="nav_calibrate">कैलिब्रेट</string>
+    <string name="nav_configure">कॉन्फ़िगर</string>
+
+    <!-- ── Common ────────────────────────────────────────────────────── -->
+    <string name="common_cancel">रद्द करें</string>
+    <string name="common_save">सहेजें</string>
+    <string name="common_delete">हटाएं</string>
+    <string name="common_close">बंद करें</string>
+    <string name="common_label">लेबल</string>
+
+    <!-- ── HomeScreen ────────────────────────────────────────────────── -->
+    <string name="home_section_http_server">HTTP सर्वर</string>
+    <string name="home_status_running">चल रहा है</string>
+    <string name="home_status_stopped">बंद</string>
+    <string name="home_status_error_prefix">त्रुटि: %1$s</string>
+    <string name="home_endpoint_point_ispindle">iSpindle → %1$s पर इंगित करें</string>
+    <string name="home_tap_to_copy">कॉपी करने के लिए टैप करें</string>
+    <string name="home_btn_start">शुरू करें</string>
+    <string name="home_btn_stop">रोकें</string>
+    <string name="home_section_latest_reading">नवीनतम रीडिंग</string>
+    <string name="home_no_readings_yet">अभी तक कोई रीडिंग नहीं। अपने iSpindle को ऊपर दिए URL पर POST करने के लिए कॉन्फ़िगर करें।</string>
+    <string name="home_section_known_devices">ज्ञात डिवाइस (%1$d)</string>
+    <string name="home_devices_appear_automatically">डिवाइस पहले POST के बाद स्वचालित रूप से दिखाई देते हैं।</string>
+    <string name="home_reading_time">समय: %1$s</string>
+    <string name="home_reading_angle">कोण: %1$s°</string>
+    <string name="home_reading_temperature">तापमान: %1$s °C</string>
+    <string name="home_reading_battery">बैटरी: %1$s V</string>
+    <string name="home_reading_rssi">RSSI: %1$s dBm</string>
+    <string name="home_reading_sg_calibrated">विशिष्ट घनत्व (कैलिब्रेटेड): %1$s</string>
+    <string name="home_reading_sg_reported">विशिष्ट घनत्व (रिपोर्टेड): %1$s</string>
+    <string name="home_reading_sg_none">विशिष्ट घनत्व: — (कोई कैलिब्रेशन नहीं)</string>
+    <string name="home_copied_toast">%1$s कॉपी किया</string>
+
+    <!-- ── DevicesScreen ─────────────────────────────────────────────── -->
+    <string name="devices_no_devices_yet">अभी तक कोई डिवाइस नहीं — पहले POST के बाद दिखेंगे।</string>
+    <string name="devices_rename_dialog_title">डिवाइस का नाम बदलें</string>
+    <string name="devices_delete_dialog_title">"%1$s" हटाएं?</string>
+    <string name="devices_counting_readings">रीडिंग गिन रहे हैं…</string>
+    <string name="devices_no_readings_stored">कोई रीडिंग संग्रहीत नहीं है।</string>
+    <string name="devices_one_reading_will_be_deleted">1 रीडिंग स्थायी रूप से हटाई जाएगी।</string>
+    <string name="devices_n_readings_will_be_deleted">%1$d रीडिंग स्थायी रूप से हटाई जाएंगी।</string>
+    <string name="devices_calibration_also_removed">कैलिब्रेशन पॉइंट भी हटा दिए जाएंगे। यदि iSpindle फिर से POST करता है तो यह नई एंट्री के रूप में दिखेगा।</string>
+    <string name="devices_action_graph">ग्राफ़</string>
+    <string name="devices_action_calibrate">कैलिब्रेट</string>
+    <string name="devices_action_rename">नाम बदलें</string>
+    <string name="devices_action_delete">हटाएं</string>
+    <string name="devices_hw_id_reported">hwId %1$s · रिपोर्टेड नाम "%2$s"</string>
+    <string name="devices_calibration_degree">कैलिब्रेशन: डिग्री %1$d</string>
+    <string name="devices_calibration_none">कैलिब्रेशन: कोई नहीं</string>
+    <string name="devices_last_reported_from">अंतिम रिपोर्ट %1$s से</string>
+
+    <!-- ── GraphScreen ────────────────────────────────────────────────── -->
+    <string name="graph_readings_in_window">विंडो में %1$d रीडिंग · कुल %2$d</string>
+    <string name="graph_btn_trim_before">इससे पहले ट्रिम करें…</string>
+    <string name="graph_btn_export_csv">CSV निर्यात करें…</string>
+    <string name="graph_nothing_to_export">निर्यात करने के लिए कुछ नहीं।</string>
+    <string name="graph_exported_n_readings">%1$d रीडिंग निर्यात की गईं।</string>
+    <string name="graph_export_failed">निर्यात विफल।</string>
+    <string name="graph_no_readings_in_window">इस विंडो में कोई रीडिंग नहीं।</string>
+    <string name="graph_section_tilt_angle">झुकाव कोण (°)</string>
+    <string name="graph_section_temperature">तापमान (°C)</string>
+    <string name="graph_section_specific_gravity">विशिष्ट घनत्व / संभावित अल्कोहल%</string>
+    <string name="graph_section_battery">बैटरी (V)</string>
+    <string name="graph_sg_no_data_hint">अभी तक कोई घनत्व डेटा नहीं — झुकाव से घनत्व गणना के लिए कैलिब्रेशन पॉइंट जोड़ें।</string>
+    <string name="graph_latest_label">नवीनतम: %1$s</string>
+    <string name="graph_not_enough_data">पर्याप्त डेटा नहीं (%1$d पॉइंट)</string>
+    <string name="graph_time_window_24h">24घं</string>
+    <string name="graph_time_window_7d">7दिन</string>
+    <string name="graph_time_window_30d">30दिन</string>
+    <string name="graph_time_window_all">सभी</string>
+    <string name="graph_all_ferments">सभी किण्वन (%1$d)</string>
+    <string name="graph_ferment_label">किण्वन %1$d/%2$d · %3$s → %4$s · −%5$s SG</string>
+    <string name="graph_all_chip_label">सभी</string>
+    <string name="graph_phase_active">सक्रिय</string>
+    <string name="graph_phase_slowing">धीमा हो रहा है</string>
+    <string name="graph_phase_conditioning">कंडीशनिंग</string>
+    <string name="graph_phase_lag">लैग चरण</string>
+    <string name="graph_phase_stuck">रुका हुआ</string>
+    <string name="graph_sg_insufficient">घनत्व: पर्याप्त प्रवृत्ति नहीं — अधिक रीडिंग की प्रतीक्षा करें या समय विंडो बढ़ाएं।</string>
+    <string name="graph_sg_lag_phase">लैग चरण · प्रारंभिक घनत्व %1$s · वर्तमान %2$s · पहली रीडिंग से %3$s घंटे, अभी तक कमी नहीं</string>
+    <string name="graph_sg_og_to_fg">प्रारंभिक घनत्व %1$s → अनुमानित अंतिम घनत्व %2$s</string>
+    <string name="graph_sg_now_fragment"> · अभी %1$s · </string>
+    <string name="graph_sg_rate_fragment">दर %1$s SG/घं · </string>
+    <string name="graph_sg_eta_fragment">ETA %1$s</string>
+    <string name="graph_sg_abv_fragment"> · ABV %1$s%% → %2$s%%</string>
+    <string name="graph_sg_paused_at"> · %1$s पर %2$s घंटे रुका</string>
+    <string name="graph_sg_conditioning">कंडीशनिंग · प्रारंभिक घनत्व %1$s · अंतिम घनत्व %2$s · %3$s%% ABV · यीस्ट अभी सफाई कर रहा है — पैकेजिंग से पहले स्थिर रीडिंग सत्यापित करें</string>
+    <string name="graph_sg_stuck">⚠ रुका हुआ · प्रारंभिक घनत्व %1$s · वर्तमान %2$s · अपेक्षित ~%3$s · %4$s घंटे से स्थिर · अब तक ABV %5$s%%</string>
+    <string name="graph_model_prefix">मॉडल: </string>
+    <string name="graph_sg_eta_ci"> (95%% CI %1$s–%2$s)</string>
+    <string name="graph_sg_meas_sigma"> · σ_meas %1$s</string>
+    <string name="graph_source_gompertz">संशोधित Gompertz</string>
+    <string name="graph_source_expdecay">exp</string>
+    <string name="graph_source_linear">दर-आधारित (75%% क्षीणन पूर्वानुमान)</string>
+    <string name="graph_source_default">75%% क्षीणन पूर्वानुमान</string>
+    <string name="graph_dur_em_dash">—</string>
+    <string name="graph_dur_days">%1$s दिन</string>
+    <string name="graph_dur_hours">%1$s घं</string>
+    <string name="graph_dur_min">%1$s मि</string>
+    <string name="graph_plateau_lag">लैग</string>
+    <string name="graph_plateau_paused">रुका %1$s</string>
+    <string name="graph_plateau_asymptote">स्पर्शोन्मुख %1$s</string>
+    <string name="graph_battery_prefix">बैटरी: </string>
+    <string name="graph_battery_no_discharge">प्रवृत्ति %1$s V/दिन (एक्सट्रापोलेट करने के लिए कोई डिस्चार्ज नहीं)</string>
+    <string name="graph_battery_drop_per_day">%1$s V/दिन गिरावट · </string>
+    <string name="graph_battery_days_to_cutoff">3.4 V कटऑफ तक दिन: %1$s</string>
+    <string name="graph_battery_rms">RMS ±%1$s V</string>
+    <string name="graph_trim_delete_description">इस तिथि और स्थानीय समय से पहले की सभी रीडिंग हटाएं।</string>
+    <string name="graph_trim_time_of_day">दिन का समय (स्थानीय)</string>
+    <string name="graph_trim_counting">गिन रहे हैं…</string>
+    <string name="graph_trim_nothing_to_delete">हटाने के लिए कुछ नहीं</string>
+    <string name="graph_trim_delete_one">1 रीडिंग हटाएं</string>
+    <string name="graph_trim_delete_n">%1$d रीडिंग हटाएं</string>
+    <string name="graph_trimmed_nothing">ट्रिम करने के लिए कुछ नहीं।</string>
+    <string name="graph_deleted_n_readings">%1$d रीडिंग हटाई गईं।</string>
+
+    <!-- ── CalibrationScreen ──────────────────────────────────────────── -->
+    <string name="cal_add_point_title">कैलिब्रेशन पॉइंट जोड़ें</string>
+    <string name="cal_add_point_description">iSpindle को ज्ञात घनत्व वाले चीनी घोल में डुबोएं (जैसे शुद्ध पानी = 1.000, या रिफ्रैक्टोमीटर से मापा गया घोल)। एक रीडिंग का इंतज़ार करें, झुकाव कोण यहाँ कॉपी करें और ज्ञात घनत्व दर्ज करें।</string>
+    <string name="cal_current_angle">वर्तमान कोण: %1$s°</string>
+    <string name="cal_use_this">यह उपयोग करें</string>
+    <string name="cal_angle_label">कोण (°)</string>
+    <string name="cal_known_sg_label">ज्ञात घनत्व</string>
+    <string name="cal_note_label">नोट (वैकल्पिक)</string>
+    <string name="cal_btn_add_point">पॉइंट जोड़ें</string>
+    <string name="cal_points_title">पॉइंट (%1$d)</string>
+    <string name="cal_no_points_yet">अभी तक कोई कैलिब्रेशन पॉइंट नहीं।</string>
+    <string name="cal_delete_point_cd">हटाएं</string>
+    <string name="cal_fit_polynomial_title">बहुपद फ़िट करें</string>
+    <string name="cal_degree_chip">डिग्री %1$d</string>
+    <string name="cal_fit_description">द्विघात (डिग्री 2) iSpindel समुदाय का डिफ़ॉल्ट है। कम से कम (डिग्री+1) सक्षम पॉइंट की आवश्यकता है।</string>
+    <string name="cal_btn_fit_save">फ़िट करें और सहेजें</string>
+    <string name="cal_btn_clear_calibration">कैलिब्रेशन साफ़ करें</string>
+    <string name="cal_cleared">कैलिब्रेशन साफ़ किया गया।</string>
+    <string name="cal_fit_saved">सहेजा गया: %1$s</string>
+    <string name="cal_fit_saved_r2">सहेजा गया: %1$s (R²=%2$s)</string>
+    <string name="cal_fit_not_enough_points">%1$d सक्षम पॉइंट चाहिए, %2$d हैं।</string>
+    <string name="cal_fit_singular">फ़िट विफल — पॉइंट सहरेखीय या डुप्लिकेट हो सकते हैं।</string>
+    <string name="cal_current_polynomial_title">वर्तमान बहुपद</string>
+    <string name="cal_sg_function">घनत्व(कोण) = %1$s</string>
+
+    <!-- ── SetupScreen ────────────────────────────────────────────────── -->
+    <string name="setup_title">अपना iSpindle जोड़ें</string>
+    <string name="setup_auto_configure_title">स्वचालित कॉन्फ़िगर (Android 10+)</string>
+    <string name="setup_auto_configure_description">iSpindle के कॉन्फ़िग पोर्टल को सीधे नियंत्रित करता है: उसके AP से जुड़ता है, आपके होम नेटवर्क स्कैन करता है, फ़ॉर्म जमा करता है और डिवाइस के ऑनलाइन होने का इंतज़ार करता है। मैन्युअल ब्राउज़र चरण पूरी तरह छोड़ देता है।</string>
+    <string name="setup_btn_configure_now">iSpindle अभी कॉन्फ़िगर करें</string>
+    <string name="setup_or_manually">या मैन्युअली करें:</string>
+    <string name="setup_manual_intro">MTB iSpindel PCB 4.0, ESP8266 पर मानक iSpindel फ़र्मवेयर चलाता है। कोई Bluetooth नहीं — रीडिंग WiFi पर HTTP POST के रूप में आती हैं।</string>
+    <string name="setup_this_phone_ip">इस फ़ोन का वर्तमान IP: %1$s</string>
+    <string name="setup_server_port">सर्वर पोर्ट: %1$s</string>
+    <string name="setup_tap_ip_to_copy">IP कॉपी करने के लिए टैप करें।</string>
+    <string name="setup_steps_title">चरण</string>
+    <string name="setup_step_1">होम टैब में, HTTP सर्वर शुरू करने के लिए Start टैप करें। एक स्थायी नोटिफ़िकेशन पुष्टि करता है कि यह सुन रहा है।</string>
+    <string name="setup_step_2">iSpindle को कॉन्फ़िग मोड में बूट करें: पावर-ऑन पर ~20 सेकंड क्षैतिज रखें। यह "iSpindel" नामक AP उठाएगा।</string>
+    <string name="setup_step_3">इस फ़ोन को "iSpindel" WiFi AP से कनेक्ट करें और कॉन्फ़िग पोर्टल लोड करने के लिए ब्राउज़र में http://192.168.4.1/ खोलें।</string>
+    <string name="setup_step_4">पोर्टल में: अपने होम नेटवर्क के WiFi क्रेडेंशियल सेट करें, "Service Type" = HTTP, "Server Address" = %1$s, "Server Port" = %2$s, और एक छोटा सैंपल इंटरवल (परीक्षण के लिए 60 s काम करता है) सेट करें।</string>
+    <string name="setup_step_5">सहेजें। iSpindle रीबूट होता है, आपके होम नेटवर्क से जुड़ता है, जागता है, JSON POST करता है, फिर सोता है। इस फ़ोन को उसी होम नेटवर्क से फिर से कनेक्ट करें।</string>
+    <string name="setup_step_6">एक इंटरवल के भीतर होम टैब पहली रीडिंग दिखाता है। डिवाइस टैब खोलें और इसे सूचीबद्ध देखें, फिर Calibrate और Graph करें।</string>
+    <string name="setup_calibration_workflow_title">कैलिब्रेशन वर्कफ़्लो</string>
+    <string name="setup_calibration_intro">कैलिब्रेशन झुकाव कोण को विशिष्ट घनत्व में बदलता है। द्विघात फ़िट के लिए कम से कम 3 संदर्भ घोल चाहिए।</string>
+    <string name="setup_cal_step_1">20 °C पर शुद्ध पानी = SG 1.000। iSpindle को स्थिर होने दें, होम से कोण पढ़ें और इसे Calibrate टैब पर (कोण, 1.000) के रूप में जोड़ें।</string>
+    <string name="setup_cal_step_2">चीनी+पानी का घोल मिलाएं, रिफ्रैक्टोमीटर या हाइड्रोमीटर से SG मापें, iSpindle को उसमें रखें, (कोण, SG) रिकॉर्ड करें।</string>
+    <string name="setup_cal_step_3">अपेक्षित SG रेंज (1.000 → 1.080) में 2–3 और संदर्भ पॉइंट के लिए दोहराएं।</string>
+    <string name="setup_cal_step_4">"Fit &amp; save" टैप करें। एक साफ़ फ़िट के लिए R² > 0.999 होना चाहिए। भविष्य की रीडिंग स्वचालित रूप से SG भरेंगी।</string>
+    <string name="setup_stable_address_title">स्थिर पता</string>
+    <string name="setup_stable_address_intro">यदि iSpindle एक raw IP के साथ कॉन्फ़िगर है और फ़ोन को DHCP नवीनीकरण के बाद एक अलग IP मिलती है, तो अगली रीडिंग छोड़ दी जाती है। IP परिवर्तनों के बीच लिंक को जीवित रखने के दो तरीके:</string>
+    <string name="setup_stable_step_1">राउटर पर फ़ोन की IP रिज़र्व करें। सेटिंग आमतौर पर "DHCP reservation", "static lease", या "always assign the same IP" कहलाती है।</string>
+    <string name="setup_stable_step_2">IP के बजाय hostname उपयोग करें। कई होम राउटर प्रत्येक DHCP क्लाइंट के लिए DNS नाम प्रकाशित करते हैं। Configure स्क्रीन पर "Find hostname" टैप करें — यदि राउटर इस फ़ोन के लिए एक अनूठा नाम प्रकाशित करता है तो आप इसे iSpindle के सर्वर पते के रूप में उपयोग कर सकते हैं, और यह IP परिवर्तनों से बचता है।</string>
+    <string name="setup_stable_step_3">यदि "Find hostname" रिपोर्ट करता है कि नाम अस्पष्ट है, तो राउटर में पिछले डिवाइस की पुरानी प्रविष्टियां हैं। राउटर की DHCP सेटिंग में इस फ़ोन को एक अलग नाम दें और पुरानी प्रविष्टियां हटाएं, या एक रिज़र्व IP पर वापस जाएं।</string>
+    <string name="setup_troubleshooting_title">समस्या निवारण</string>
+    <string name="setup_trouble_same_subnet">• फ़ोन और iSpindle एक ही सबनेट पर होने चाहिए। अपने राउटर के गेस्ट-नेटवर्क आइसोलेशन की जांच करें।</string>
+    <string name="setup_trouble_dhcp">• यदि फ़ोन का IP बदलता है (DHCP लीज़ एक्सपायरी), iSpindle पोर्टल में नया IP फिर से दर्ज करें।</string>
+    <string name="setup_trouble_deep_sleep">• iSpindle इंटरवल के बीच डीप-स्लीप में जाता है; आप मध्य-चक्र में उसे ping नहीं कर पाएंगे।</string>
+    <string name="setup_trouble_static_ip">• स्थिर IP के लिए, अपने राउटर पर फ़ोन का MAC रिज़र्व करें।</string>
+    <string name="setup_copied_toast">%1$s कॉपी किया</string>
+
+    <!-- ── ConfigureScreen ───────────────────────────────────────────── -->
+    <string name="configure_joining_title">iSpindle AP से जुड़ रहे हैं…</string>
+    <string name="configure_joining_body">दिखाई देने पर सिस्टम डायलॉग स्वीकृत करें। पहली बार 10–20 s लग सकते हैं।</string>
+    <string name="configure_unsupported_title">इस डिवाइस पर समर्थित नहीं</string>
+    <string name="configure_unsupported_body">प्रोग्रामेटिक WiFi जॉइन के लिए Android 10 (API 29) या नया चाहिए।</string>
+    <string name="configure_failed_title">कनेक्ट नहीं हो सका</string>
+    <string name="configure_saving_title">सहेज रहे हैं और iSpindle के जुड़ने का इंतज़ार कर रहे हैं…</string>
+    <string name="configure_saving_body">डिवाइस रीबूट होता है और आपके होम नेटवर्क से जुड़ता है। 45 s तक हर 1.5 s पर पोल करता है।</string>
+    <string name="configure_joined_title">iSpindle %1$s से जुड़ गया</string>
+    <string name="configure_joined_body">स्टेशन IP: %1$s\n\nरीडिंग प्राप्त करने के लिए इस फ़ोन को उसी होम WiFi से फिर से कनेक्ट करें।</string>
+    <string name="configure_joined_ip_unknown">(अभी ज्ञात नहीं)</string>
+    <string name="configure_save_timeout_title">सहेजा गया, लेकिन जॉइन की पुष्टि नहीं हुई</string>
+    <string name="configure_save_timeout_body">iSpindle ने फ़ॉर्म स्वीकार किया लेकिन पोलिंग विंडो में होम नेटवर्क पर दिखाई नहीं दिया। यह अधिक समय के बाद जुड़ सकता है। इस फ़ोन को होम WiFi से फिर से कनेक्ट करें और होम टैब जांचें।</string>
+    <string name="configure_auto_pair_title">iSpindle के साथ स्वचालित जोड़ी</string>
+    <string name="configure_auto_pair_instructions">1. पावर-ऑन पर iSpindle को ~20 s क्षैतिज रखें — यह iSpindel_&lt;chipID&gt; नामक AP उठाता है।\n2. Connect टैप करें। यदि रेंज में कई iSpindle हैं तो Android एक picker दिखाता है।\n3. अपना होम नेटवर्क चुनें, पासवर्ड डालें, सहेजें। iSpindle रीबूट होकर जुड़ता है।</string>
+    <string name="configure_ap_ssid_prefix_label">AP SSID प्रीफ़िक्स</string>
+    <string name="configure_ap_ssid_prefix_hint">डिफ़ॉल्ट फ़र्मवेयर iSpindel_&lt;chipID&gt; उपयोग करता है; केवल तभी बदलें जब आपने इसे नाम दिया हो।</string>
+    <string name="configure_btn_connect">कनेक्ट करें</string>
+    <string name="configure_permission_denied">WiFi स्कैन अनुमति अस्वीकार। इसके बिना स्वचालित जोड़ी नहीं हो सकती।</string>
+    <string name="configure_connected_title">iSpindle से कनेक्ट</string>
+    <string name="configure_pick_home_network">वह होम नेटवर्क चुनें जिससे iSpindle जुड़े, फिर सहेजें।</string>
+    <string name="configure_scanning">  स्कैन कर रहे हैं…</string>
+    <string name="configure_home_ssid_label">होम WiFi SSID</string>
+    <string name="configure_home_password_label">होम WiFi पासवर्ड</string>
+    <string name="configure_server_description">iSpindle को रीडिंग कहाँ POST करनी है — डिफ़ॉल्ट यह फ़ोन है, जो आमतौर पर वही है जो आप चाहते हैं। डिफ़ॉल्ट पुनर्स्थापित करने के लिए "Use this phone" टैप करें।</string>
+    <string name="configure_pointing_at_phone">फ़ोन की ओर इंगित ✓</string>
+    <string name="configure_use_this_phone_ip">इस फ़ोन का IP उपयोग करें</string>
+    <string name="configure_no_home_ip">(कोई होम IP नहीं मिला — पहले इस फ़ोन को होम WiFi से कनेक्ट करें)</string>
+    <string name="configure_server_host_label">सर्वर होस्ट</string>
+    <string name="configure_port_label">पोर्ट</string>
+    <string name="configure_uri_label">URI</string>
+    <string name="configure_sleep_interval_label">स्लीप इंटरवल (s)</string>
+    <string name="configure_device_name_label">डिवाइस नाम (वैकल्पिक)</string>
+    <string name="configure_btn_save_reboot">सहेजें और रीबूट करें</string>
+    <string name="configure_service_type_label">सेवा प्रकार</string>
+    <string name="configure_http_warning">⚠ यह ऐप केवल तभी रीडिंग प्राप्त करता है जब iSpindle Generic HTTP (या HTTPS) उपयोग करे। अन्य सेवाएं अपने क्लाउड पर POST करती हैं और फ़ोन को बायपास करती हैं।</string>
+    <string name="configure_btn_find_hostname">होस्टनाम ढूंढें</string>
+    <string name="configure_hostname_idle_hint">राउटर-प्रकाशित नाम उपयोग करें ताकि iSpindle DHCP परिवर्तनों से बचे।</string>
+    <string name="configure_hostname_resolving">रिज़ॉल्व कर रहे हैं…</string>
+    <string name="configure_hostname_not_found">इस फ़ोन के लिए कोई रिवर्स-DNS रिकॉर्ड नहीं — IP उपयोग करें, या अपने राउटर में होस्टनाम सेट करें।</string>
+    <string name="configure_hostname_ambiguous">%1$s, %2$d IPs पर रिज़ॉल्व होता है — नाम साझा है।</string>
+    <string name="configure_hostname_other_ips">उस नाम पर उत्तर देने वाले अन्य IP: %1$s</string>
+    <string name="configure_btn_use_hostname">%1$s उपयोग करें</string>
+    <string name="configure_signal_quality">सिग्नल %1$d%%</string>
+    <string name="configure_signal_wpa2"> · WPA2</string>
+    <string name="configure_signal_open"> · खुला</string>
+    <string name="configure_live_reading_title">iSpindle से लाइव रीडिंग</string>
+    <string name="configure_live_tilt">झुकाव: %1$s°</string>
+    <string name="configure_live_temperature">तापमान: %1$s</string>
+    <string name="configure_live_battery">बैटरी: %1$s V</string>
+    <string name="configure_live_gravity">घनत्व: %1$s</string>
+    <string name="configure_on_device_cal_title">डिवाइस पर कैलिब्रेशन</string>
+    <string name="configure_imported">आयात किया गया। पेयरिंग के बाद पहले POST पर इस डिवाइस पर लागू होगा।</string>
+    <string name="configure_parsed_as">इस रूप में पार्स किया: %1$s</string>
+    <string name="configure_btn_import_cal">कैलिब्रेशन आयात करें</string>
+    <string name="configure_parse_failed">इस एक्सप्रेशन को tilt में cubic के रूप में पार्स नहीं किया जा सका — फ़र्मवेयर की कॉपी यथावत रहेगी। आवश्यकता हो तो Calibrate टैब पर मैन्युअली कैलिब्रेशन पॉइंट फिर से दर्ज करें।</string>
+    <string name="configure_push_cal_title">डिवाइस को कैलिब्रेशन भेजें</string>
+    <string name="configure_push_cal_description">Save &amp; reboot पर चुने गए polynomial को iSpindle के POLYN फ़ील्ड में लिखता है। उपयोगी है ताकि फ़र्मवेयर खुद भी उचित घनत्व रिपोर्ट करे, न केवल इस ऐप को।</string>
+    <string name="configure_dont_change_polynomial">डिवाइस polynomial न बदलें</string>
+    <string name="configure_no_ssid_error">पहले होम नेटवर्क SSID चुनें</string>
+</resources>

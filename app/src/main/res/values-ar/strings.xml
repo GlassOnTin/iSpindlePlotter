@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ── App / system ─────────────────────────────────────────────── -->
+    <string name="app_name">iSpindle Plotter</string>
+    <string name="server_notification_channel">خادم iSpindle</string>
+    <string name="server_running">يستمع لقراءات iSpindle</string>
+
+    <!-- ── Server service notification ─────────────────────────────── -->
+    <string name="server_notif_starting">جارٍ البدء…</string>
+    <string name="server_notif_stopped">متوقف</string>
+    <string name="server_notif_listening">يستمع على http://%1$s:%2$d</string>
+    <string name="server_notif_error">خطأ: %1$s</string>
+
+    <!-- ── Navigation labels ─────────────────────────────────────────── -->
+    <string name="nav_home">الرئيسية</string>
+    <string name="nav_devices">الأجهزة</string>
+    <string name="nav_setup">دليل الإعداد</string>
+    <string name="nav_graph">الرسم البياني</string>
+    <string name="nav_calibrate">المعايرة</string>
+    <string name="nav_configure">الضبط</string>
+
+    <!-- ── Common ────────────────────────────────────────────────────── -->
+    <string name="common_cancel">إلغاء</string>
+    <string name="common_save">حفظ</string>
+    <string name="common_delete">حذف</string>
+    <string name="common_close">إغلاق</string>
+    <string name="common_label">التسمية</string>
+
+    <!-- ── HomeScreen ────────────────────────────────────────────────── -->
+    <string name="home_section_http_server">خادم HTTP</string>
+    <string name="home_status_running">يعمل</string>
+    <string name="home_status_stopped">متوقف</string>
+    <string name="home_status_error_prefix">خطأ: %1$s</string>
+    <string name="home_endpoint_point_ispindle">وجِّه iSpindle ← %1$s</string>
+    <string name="home_tap_to_copy">انقر للنسخ</string>
+    <string name="home_btn_start">بدء</string>
+    <string name="home_btn_stop">إيقاف</string>
+    <string name="home_section_latest_reading">آخر قراءة</string>
+    <string name="home_no_readings_yet">لا توجد قراءات بعد. اضبط iSpindle ليُرسل POST إلى الرابط أعلاه.</string>
+    <string name="home_section_known_devices">الأجهزة المعروفة (%1$d)</string>
+    <string name="home_devices_appear_automatically">تظهر الأجهزة تلقائيًا بعد أول POST.</string>
+    <string name="home_reading_time">الوقت: %1$s</string>
+    <string name="home_reading_angle">الزاوية: %1$s°</string>
+    <string name="home_reading_temperature">الحرارة: %1$s °C</string>
+    <string name="home_reading_battery">البطارية: %1$s V</string>
+    <string name="home_reading_rssi">RSSI: %1$s dBm</string>
+    <string name="home_reading_sg_calibrated">الكثافة النسبية (معايَرة): %1$s</string>
+    <string name="home_reading_sg_reported">الكثافة النسبية (مُبلَّغة): %1$s</string>
+    <string name="home_reading_sg_none">الكثافة: — (لا معايرة)</string>
+    <string name="home_copied_toast">تم نسخ %1$s</string>
+
+    <!-- ── DevicesScreen ─────────────────────────────────────────────── -->
+    <string name="devices_no_devices_yet">لا أجهزة بعد — ستظهر بعد أول POST.</string>
+    <string name="devices_rename_dialog_title">إعادة تسمية الجهاز</string>
+    <string name="devices_delete_dialog_title">حذف \"%1$s\"؟</string>
+    <string name="devices_counting_readings">جارٍ حساب القراءات…</string>
+    <string name="devices_no_readings_stored">لا توجد قراءات مخزنة.</string>
+    <string name="devices_one_reading_will_be_deleted">ستُحذف قراءة واحدة نهائيًا.</string>
+    <string name="devices_n_readings_will_be_deleted">ستُحذف %1$d قراءات نهائيًا.</string>
+    <string name="devices_calibration_also_removed">ستُحذف نقاط المعايرة أيضًا. إذا أرسل iSpindle مجددًا فسيظهر كإدخال جديد.</string>
+    <string name="devices_action_graph">رسم بياني</string>
+    <string name="devices_action_calibrate">معايرة</string>
+    <string name="devices_action_rename">إعادة تسمية</string>
+    <string name="devices_action_delete">حذف</string>
+    <string name="devices_hw_id_reported">hwId %1$s · الاسم المُبلَّغ \"%2$s\"</string>
+    <string name="devices_calibration_degree">المعايرة: الدرجة %1$d</string>
+    <string name="devices_calibration_none">المعايرة: لا يوجد</string>
+    <string name="devices_last_reported_from">آخر تقرير من %1$s</string>
+
+    <!-- ── GraphScreen ────────────────────────────────────────────────── -->
+    <string name="graph_readings_in_window">%1$d قراءات في النافذة · %2$d إجمالاً</string>
+    <string name="graph_btn_trim_before">قص ما قبل…</string>
+    <string name="graph_btn_export_csv">تصدير CSV…</string>
+    <string name="graph_nothing_to_export">لا شيء للتصدير.</string>
+    <string name="graph_exported_n_readings">تم تصدير %1$d قراءات.</string>
+    <string name="graph_export_failed">فشل التصدير.</string>
+    <string name="graph_no_readings_in_window">لا توجد قراءات في هذه النافذة.</string>
+    <string name="graph_section_tilt_angle">زاوية الميل (°)</string>
+    <string name="graph_section_temperature">الحرارة (°C)</string>
+    <string name="graph_section_specific_gravity">الكثافة النسبية / % الكحول المحتمل</string>
+    <string name="graph_section_battery">البطارية (V)</string>
+    <string name="graph_sg_no_data_hint">لا توجد بيانات كثافة بعد — أضف نقاط معايرة لحساب الكثافة من الميل.</string>
+    <string name="graph_latest_label">الأحدث: %1$s</string>
+    <string name="graph_not_enough_data">بيانات غير كافية (%1$d نقطة)</string>
+    <string name="graph_time_window_24h">٢٤س</string>
+    <string name="graph_time_window_7d">٧أ</string>
+    <string name="graph_time_window_30d">٣٠أ</string>
+    <string name="graph_time_window_all">الكل</string>
+    <string name="graph_all_ferments">جميع التخميرات (%1$d)</string>
+    <string name="graph_ferment_label">تخمير %1$d/%2$d · %3$s → %4$s · −%5$s SG</string>
+    <string name="graph_all_chip_label">الكل</string>
+    <string name="graph_phase_active">نشط</string>
+    <string name="graph_phase_slowing">يتباطأ</string>
+    <string name="graph_phase_conditioning">تنضيج</string>
+    <string name="graph_phase_lag">طور التأخر</string>
+    <string name="graph_phase_stuck">متوقف</string>
+    <string name="graph_sg_insufficient">الكثافة: اتجاه غير كافٍ — انتظر قراءات أكثر أو وسِّع نافذة الوقت.</string>
+    <string name="graph_sg_lag_phase">طور التأخر · الكثافة الأولية %1$s · الحالية %2$s · %3$s ساعة منذ أول قراءة، لا انخفاض بعد</string>
+    <string name="graph_sg_og_to_fg">الكثافة الأولية %1$s → الكثافة النهائية المتوقعة %2$s</string>
+    <string name="graph_sg_now_fragment"> · %1$s الآن · </string>
+    <string name="graph_sg_rate_fragment">المعدل %1$s SG/س · </string>
+    <string name="graph_sg_eta_fragment">الوقت المتوقع %1$s</string>
+    <string name="graph_sg_abv_fragment"> · ABV %1$s%% → %2$s%%</string>
+    <string name="graph_sg_paused_at"> · توقف عند %1$s لمدة %2$s ساعة</string>
+    <string name="graph_sg_conditioning">تنضيج · الكثافة الأولية %1$s · النهائية %2$s · %3$s%% ABV · الخميرة لا تزال تنظف — تحقق من استقرار القراءات قبل التعبئة</string>
+    <string name="graph_sg_stuck">⚠ متوقف · الكثافة الأولية %1$s · الحالية %2$s · المتوقعة ~%3$s · ثابتة منذ %4$s ساعة · ABV حتى الآن %5$s%%</string>
+    <string name="graph_model_prefix">النموذج: </string>
+    <string name="graph_sg_eta_ci"> (فاصل ثقة 95%% %1$s–%2$s)</string>
+    <string name="graph_sg_meas_sigma"> · σ_meas %1$s</string>
+    <string name="graph_source_gompertz">Gompertz معدّل</string>
+    <string name="graph_source_expdecay">exp</string>
+    <string name="graph_source_linear">قائم على المعدل (مقدِّمة تخفيف 75%%)</string>
+    <string name="graph_source_default">مقدِّمة تخفيف 75%%</string>
+    <string name="graph_dur_em_dash">—</string>
+    <string name="graph_dur_days">%1$s يوم</string>
+    <string name="graph_dur_hours">%1$s س</string>
+    <string name="graph_dur_min">%1$s د</string>
+    <string name="graph_plateau_lag">ركود</string>
+    <string name="graph_plateau_paused">توقف %1$s</string>
+    <string name="graph_plateau_asymptote">خط مقارب %1$s</string>
+    <string name="graph_battery_prefix">البطارية: </string>
+    <string name="graph_battery_no_discharge">الاتجاه %1$s V/يوم (لا تفريغ للاستقراء)</string>
+    <string name="graph_battery_drop_per_day">انخفاض %1$s V/يوم · </string>
+    <string name="graph_battery_days_to_cutoff">أيام حتى قطع 3.4 V: %1$s</string>
+    <string name="graph_battery_rms">RMS ±%1$s V</string>
+    <string name="graph_trim_delete_description">احذف جميع القراءات المسجلة قبل هذا التاريخ والوقت المحلي.</string>
+    <string name="graph_trim_time_of_day">وقت اليوم (محلي)</string>
+    <string name="graph_trim_counting">جارٍ الحساب…</string>
+    <string name="graph_trim_nothing_to_delete">لا شيء للحذف</string>
+    <string name="graph_trim_delete_one">حذف قراءة واحدة</string>
+    <string name="graph_trim_delete_n">حذف %1$d قراءات</string>
+    <string name="graph_trimmed_nothing">لا شيء للقص.</string>
+    <string name="graph_deleted_n_readings">تم حذف %1$d قراءات.</string>
+
+    <!-- ── CalibrationScreen ──────────────────────────────────────────── -->
+    <string name="cal_add_point_title">إضافة نقطة معايرة</string>
+    <string name="cal_add_point_description">أغمر iSpindle في محلول سكري بكثافة معروفة (مثل الماء النقي = 1.000 أو خليط محلول مقاس بمضيء انكساري). انتظر قراءة، انسخ زاوية الميل هنا وأدخل الكثافة المعروفة.</string>
+    <string name="cal_current_angle">الزاوية الحالية: %1$s°</string>
+    <string name="cal_use_this">استخدم هذا</string>
+    <string name="cal_angle_label">الزاوية (°)</string>
+    <string name="cal_known_sg_label">الكثافة المعروفة</string>
+    <string name="cal_note_label">ملاحظة (اختياري)</string>
+    <string name="cal_btn_add_point">إضافة نقطة</string>
+    <string name="cal_points_title">النقاط (%1$d)</string>
+    <string name="cal_no_points_yet">لا توجد نقاط معايرة بعد.</string>
+    <string name="cal_delete_point_cd">حذف</string>
+    <string name="cal_fit_polynomial_title">ملاءمة متعددة الحدود</string>
+    <string name="cal_degree_chip">الدرجة %1$d</string>
+    <string name="cal_fit_description">التربيعي (الدرجة 2) هو افتراضي مجتمع iSpindel. تحتاج على الأقل إلى (الدرجة+1) نقاط مُفعَّلة.</string>
+    <string name="cal_btn_fit_save">ملاءمة وحفظ</string>
+    <string name="cal_btn_clear_calibration">مسح المعايرة</string>
+    <string name="cal_cleared">تم مسح المعايرة.</string>
+    <string name="cal_fit_saved">تم الحفظ: %1$s</string>
+    <string name="cal_fit_saved_r2">تم الحفظ: %1$s (R²=%2$s)</string>
+    <string name="cal_fit_not_enough_points">مطلوب %1$d نقاط مُفعَّلة، متوفر %2$d.</string>
+    <string name="cal_fit_singular">فشلت الملاءمة — قد تكون النقاط خطية أو مكررة.</string>
+    <string name="cal_current_polynomial_title">متعددة الحدود الحالية</string>
+    <string name="cal_sg_function">الكثافة(الزاوية) = %1$s</string>
+
+    <!-- ── SetupScreen ────────────────────────────────────────────────── -->
+    <string name="setup_title">ربط iSpindle</string>
+    <string name="setup_auto_configure_title">الإعداد التلقائي (Android 10+)</string>
+    <string name="setup_auto_configure_description">يتحكم مباشرةً في بوابة الإعداد الخاصة بـ iSpindle: يتصل بنقطة الوصول الخاصة به، يفحص شبكاتك المنزلية، يرسل النموذج وينتظر حتى يتصل الجهاز. يتجاوز خطوة المتصفح اليدوية تمامًا.</string>
+    <string name="setup_btn_configure_now">ضبط iSpindle الآن</string>
+    <string name="setup_or_manually">أو افعل ذلك يدويًا:</string>
+    <string name="setup_manual_intro">يعمل MTB iSpindel PCB 4.0 على برنامج iSpindel القياسي على ESP8266. لا يوجد Bluetooth — تصل القراءات عبر WiFi كـ HTTP POST.</string>
+    <string name="setup_this_phone_ip">عنوان IP الحالي لهذا الهاتف: %1$s</string>
+    <string name="setup_server_port">منفذ الخادم: %1$s</string>
+    <string name="setup_tap_ip_to_copy">انقر على IP للنسخ.</string>
+    <string name="setup_steps_title">الخطوات</string>
+    <string name="setup_step_1">في تبويب الرئيسية، انقر على بدء لتشغيل خادم HTTP. إشعار دائم يؤكد أنه يستمع.</string>
+    <string name="setup_step_2">أدخل iSpindle في وضع الإعداد: أمسكه أفقيًا ~20 ثانية عند تشغيله. سيُطلق نقطة وصول باسم "iSpindel".</string>
+    <string name="setup_step_3">اتصل بهذا الهاتف بنقطة WiFi "iSpindel" وافتح http://192.168.4.1/ في متصفح لتحميل بوابة الإعداد.</string>
+    <string name="setup_step_4">في البوابة: اضبط بيانات WiFi لشبكتك المنزلية، واضبط "نوع الخدمة" = HTTP، "عنوان الخادم" = %1$s، "منفذ الخادم" = %2$s، وفترة عينة قصيرة (60 ثانية مناسبة للاختبار).</string>
+    <string name="setup_step_5">احفظ. يُعاد تشغيل iSpindle ويتصل بشبكتك المنزلية ويستيقظ ويرسل JSON ثم ينام. أعد توصيل هذا الهاتف بالشبكة المنزلية ذاتها.</string>
+    <string name="setup_step_6">خلال فترة واحدة يُظهر تبويب الرئيسية القراءة الأولى. افتح تبويب الأجهزة لرؤيتها مُدرجة، ثم قم بالمعايرة والرسم البياني.</string>
+    <string name="setup_calibration_workflow_title">سير عمل المعايرة</string>
+    <string name="setup_calibration_intro">تحوّل المعايرة زاوية الميل إلى كثافة نسبية. تحتاج على الأقل إلى 3 محاليل مرجعية لملاءمة تربيعية.</string>
+    <string name="setup_cal_step_1">ماء نقي عند 20 °C = SG 1.000. دع iSpindle يستقر، اقرأ الزاوية من الرئيسية وأضفها كـ (زاوية، 1.000) في تبويب المعايرة.</string>
+    <string name="setup_cal_step_2">اخلط محلولًا سكريًا، قِس كثافته بمقياس الانكسار أو مقياس الكثافة، اغمر iSpindle، سجّل (الزاوية، SG).</string>
+    <string name="setup_cal_step_3">كرر لـ 2–3 نقاط مرجعية أخرى في نطاق SG المتوقع (1.000 → 1.080).</string>
+    <string name="setup_cal_step_4">انقر "ملاءمة وحفظ". يجب أن يكون R² > 0.999 لملاءمة جيدة. ستملأ القراءات المستقبلية SG تلقائيًا.</string>
+    <string name="setup_stable_address_title">عنوان ثابت</string>
+    <string name="setup_stable_address_intro">إذا كان iSpindle مُعدًّا بعنوان IP مباشر وحصل الهاتف على عنوان مختلف بعد تجديد DHCP، ستُتجاهل القراءة التالية. طريقتان للحفاظ على الاتصال عبر تغييرات IP:</string>
+    <string name="setup_stable_step_1">احجز عنوان IP الهاتف في جهاز التوجيه. يُسمى الإعداد عادةً "حجز DHCP" أو "عقد ثابت" أو "تعيين نفس IP دائمًا".</string>
+    <string name="setup_stable_step_2">استخدم اسم مضيف بدلًا من IP. تنشر كثير من أجهزة التوجيه المنزلية اسم DNS لكل عميل DHCP. في شاشة الضبط، انقر "البحث عن اسم مضيف" — إذا نشر جهاز التوجيه اسمًا فريدًا لهذا الهاتف يمكنك استخدامه كعنوان خادم iSpindle وسيظل يعمل بعد تغييرات IP.</string>
+    <string name="setup_stable_step_3">إذا أبلغ "البحث عن اسم مضيف" بأن الاسم غامض، فجهاز التوجيه لديه إدخالات قديمة من أجهزة سابقة. امنح هذا الهاتف اسمًا مميزًا في إعدادات DHCP لجهاز التوجيه وأزل الإدخالات القديمة، أو استخدم IP محجوز.</string>
+    <string name="setup_troubleshooting_title">استكشاف الأخطاء وإصلاحها</string>
+    <string name="setup_trouble_same_subnet">• يجب أن يكون الهاتف وiSpindle على نفس الشبكة الفرعية. تحقق من عزل الشبكة الضيفية في جهاز التوجيه.</string>
+    <string name="setup_trouble_dhcp">• إذا تغير IP الهاتف (انتهاء عقد DHCP)، أعد إدخال IP الجديد في بوابة iSpindle.</string>
+    <string name="setup_trouble_deep_sleep">• يدخل iSpindle في النوم العميق بين الفترات؛ لن تتمكن من الوصول إليه في منتصف الدورة.</string>
+    <string name="setup_trouble_static_ip">• لعنوان IP ثابت، احجز MAC الهاتف في جهاز التوجيه.</string>
+    <string name="setup_copied_toast">تم نسخ %1$s</string>
+
+    <!-- ── ConfigureScreen ───────────────────────────────────────────── -->
+    <string name="configure_joining_title">جارٍ الانضمام إلى نقطة وصول iSpindle…</string>
+    <string name="configure_joining_body">وافق على مربع حوار النظام عند ظهوره. قد تستغرق المرة الأولى 10–20 ثانية.</string>
+    <string name="configure_unsupported_title">غير مدعوم على هذا الجهاز</string>
+    <string name="configure_unsupported_body">يتطلب الانضمام البرمجي إلى WiFi نظام Android 10 (واجهة برمجة التطبيقات 29) أو أحدث.</string>
+    <string name="configure_failed_title">تعذّر الاتصال</string>
+    <string name="configure_saving_title">جارٍ الحفظ وانتظار انضمام iSpindle…</string>
+    <string name="configure_saving_body">يُعاد تشغيل الجهاز وينضم إلى شبكتك المنزلية. يُستعلَم كل 1.5 ثانية لمدة تصل إلى 45 ثانية.</string>
+    <string name="configure_joined_title">انضم iSpindle إلى %1$s</string>
+    <string name="configure_joined_body">عنوان IP الجهاز: %1$s\n\nأعد توصيل هذا الهاتف بنفس WiFi المنزلي لتلقي القراءات.</string>
+    <string name="configure_joined_ip_unknown">(غير معروف بعد)</string>
+    <string name="configure_save_timeout_title">تم إرسال الحفظ لكن لم يُؤكَّد الانضمام</string>
+    <string name="configure_save_timeout_body">قبل iSpindle النموذج لكنه لم يظهر على الشبكة المنزلية ضمن نافذة الاستعلام. قد ينضم بعد وقت أطول. أعد توصيل هذا الهاتف بـ WiFi المنزلي وتحقق من تبويب الرئيسية.</string>
+    <string name="configure_auto_pair_title">إقران تلقائي مع iSpindle</string>
+    <string name="configure_auto_pair_instructions">1. أمسك iSpindle أفقيًا عند التشغيل ~20 ثانية — سيُطلق نقطة وصول باسم iSpindel_&lt;chipID&gt;.\n2. انقر اتصال. إذا كان هناك عدة iSpindle في النطاق، يعرض Android منتقيًا لاختيار الجهاز الصحيح.\n3. اختر شبكتك المنزلية، أدخل كلمة المرور، احفظ. يُعاد تشغيل iSpindle وينضم.</string>
+    <string name="configure_ap_ssid_prefix_label">بادئة SSID لنقطة الوصول</string>
+    <string name="configure_ap_ssid_prefix_hint">يستخدم البرنامج الثابت الافتراضي iSpindel_&lt;chipID&gt;؛ غيّره فقط إذا أعدت تسميته.</string>
+    <string name="configure_btn_connect">اتصال</string>
+    <string name="configure_permission_denied">رُفض إذن فحص WiFi. لا يمكن المتابعة مع الإقران التلقائي بدونه.</string>
+    <string name="configure_connected_title">متصل بـ iSpindle</string>
+    <string name="configure_pick_home_network">اختر الشبكة المنزلية التي تريد انضمام iSpindle إليها، ثم احفظ.</string>
+    <string name="configure_scanning">  جارٍ الفحص…</string>
+    <string name="configure_home_ssid_label">SSID WiFi المنزلي</string>
+    <string name="configure_home_password_label">كلمة مرور WiFi المنزلي</string>
+    <string name="configure_server_description">إلى أين يجب أن يرسل iSpindle القراءات — الافتراضي هذا الهاتف وهو عادةً ما تريده. انقر "استخدام هذا الهاتف" لاستعادة الإعدادات الافتراضية.</string>
+    <string name="configure_pointing_at_phone">يشير إلى الهاتف ✓</string>
+    <string name="configure_use_this_phone_ip">استخدام IP هذا الهاتف</string>
+    <string name="configure_no_home_ip">(لم يُكتشف IP منزلي — اتصل أولاً بـ WiFi المنزلي)</string>
+    <string name="configure_server_host_label">مضيف الخادم</string>
+    <string name="configure_port_label">المنفذ</string>
+    <string name="configure_uri_label">URI</string>
+    <string name="configure_sleep_interval_label">فترة النوم (ث)</string>
+    <string name="configure_device_name_label">اسم الجهاز (اختياري)</string>
+    <string name="configure_btn_save_reboot">حفظ وإعادة التشغيل</string>
+    <string name="configure_service_type_label">نوع الخدمة</string>
+    <string name="configure_http_warning">⚠ يتلقى هذا التطبيق القراءات فقط عندما يستخدم iSpindle HTTP العام (أو HTTPS). تُرسل الخدمات الأخرى إلى سحابتها الخاصة وتتجاوز الهاتف.</string>
+    <string name="configure_btn_find_hostname">البحث عن اسم مضيف</string>
+    <string name="configure_hostname_idle_hint">استخدم اسمًا نشره جهاز التوجيه حتى يتحمل iSpindle تغييرات DHCP.</string>
+    <string name="configure_hostname_resolving">جارٍ الحل…</string>
+    <string name="configure_hostname_not_found">لا يوجد سجل DNS عكسي لهذا الهاتف — استخدم IP أو اضبط اسم مضيف في جهاز التوجيه.</string>
+    <string name="configure_hostname_ambiguous">%1$s يحل إلى %2$d عناوين IP — الاسم مشترك.</string>
+    <string name="configure_hostname_other_ips">عناوين IP أخرى تستجيب لذلك الاسم: %1$s</string>
+    <string name="configure_btn_use_hostname">استخدام %1$s</string>
+    <string name="configure_signal_quality">الإشارة %1$d%%</string>
+    <string name="configure_signal_wpa2"> · WPA2</string>
+    <string name="configure_signal_open"> · مفتوح</string>
+    <string name="configure_live_reading_title">قراءة مباشرة من iSpindle</string>
+    <string name="configure_live_tilt">الميل: %1$s°</string>
+    <string name="configure_live_temperature">الحرارة: %1$s</string>
+    <string name="configure_live_battery">البطارية: %1$s V</string>
+    <string name="configure_live_gravity">الكثافة: %1$s</string>
+    <string name="configure_on_device_cal_title">المعايرة على الجهاز</string>
+    <string name="configure_imported">تم الاستيراد. سيُطبَّق على هذا الجهاز في أول POST بعد الإقران.</string>
+    <string name="configure_parsed_as">تم تحليله على أنه: %1$s</string>
+    <string name="configure_btn_import_cal">استيراد المعايرة</string>
+    <string name="configure_parse_failed">تعذّر تحليل هذا التعبير كمكعّب في الميل — يُترك نسخة البرنامج الثابت كما هي. أعد إدخال نقاط المعايرة يدويًا في تبويب المعايرة إذا لزم.</string>
+    <string name="configure_push_cal_title">إرسال المعايرة إلى الجهاز</string>
+    <string name="configure_push_cal_description">يكتب متعددة الحدود المختارة في حقل POLYN الخاص بـ iSpindle عند الحفظ وإعادة التشغيل. مفيد حتى يُبلّغ البرنامج الثابت نفسه عن كثافة معقولة لمتلقين آخرين وليس فقط لهذا التطبيق.</string>
+    <string name="configure_dont_change_polynomial">لا تغيير متعددة الحدود للجهاز</string>
+    <string name="configure_no_ssid_error">اختر SSID الشبكة المنزلية أولاً</string>
+</resources>

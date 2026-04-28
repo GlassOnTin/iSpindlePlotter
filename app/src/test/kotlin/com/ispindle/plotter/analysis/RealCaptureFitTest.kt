@@ -22,7 +22,7 @@ class RealCaptureFitTest {
 
     @Test fun `33h capture fit converges with covariance and a Logistic-trustable FG`() {
         val (hours, sgs) = loadFixture("ferment_capture_2026-04-27_31h.csv")
-        val r = LogisticFit.fit(hours, sgs)!!
+        val r = AttenuationFit.fit(hours, sgs)!!
         assertNotNull("covariance must be populated for v1", r.covariance)
         assertTrue("OG ${r.og} should be near observed max ~1.0527", r.og in 1.050..1.055)
         val atten = (r.og - r.fg) / (r.og - 1.0)
@@ -49,7 +49,7 @@ class RealCaptureFitTest {
      */
     @Test fun `33h capture fit respects the lag plateau (h0-9)`() {
         val (hours, sgs) = loadFixture("ferment_capture_2026-04-27_31h.csv")
-        val r = LogisticFit.fit(hours, sgs)!!
+        val r = AttenuationFit.fit(hours, sgs)!!
         val lagResids = hours.indices
             .filter { hours[it] < 9.0 }
             .map { sgs[it] - r.predict(hours[it]) }
@@ -68,7 +68,7 @@ class RealCaptureFitTest {
 
     @Test fun `33h capture fit RMS residual is below 2 mSG`() {
         val (hours, sgs) = loadFixture("ferment_capture_2026-04-27_31h.csv")
-        val r = LogisticFit.fit(hours, sgs)!!
+        val r = AttenuationFit.fit(hours, sgs)!!
         // 2 mSG = 0.002 — comfortably above the per-point iSpindle noise
         // (~0.5 mSG estimated on this device), under the 3 mSG that
         // would indicate a structurally bad fit.
@@ -90,7 +90,7 @@ class RealCaptureFitTest {
      */
     @Test fun `33h capture MAP ETA falls inside its own 95 percent credible interval`() {
         val (hours, sgs) = loadFixture("ferment_capture_2026-04-27_31h.csv")
-        val r = LogisticFit.fit(hours, sgs)!!
+        val r = AttenuationFit.fit(hours, sgs)!!
         val target = r.fg + 0.001
         val mapEta = r.timeToReach(target)!!
         val q = r.etaQuantiles(target, Random(0x5E1ED), nSamples = 512)!!
@@ -117,7 +117,7 @@ class RealCaptureFitTest {
      */
     @Test fun `33h capture predictive band is tight on data and non-degenerate`() {
         val (hours, sgs) = loadFixture("ferment_capture_2026-04-27_31h.csv")
-        val r = LogisticFit.fit(hours, sgs)!!
+        val r = AttenuationFit.fit(hours, sgs)!!
         val nowH = hours.last()
         val midH = (hours.first() + nowH) / 2.0
         val grid = doubleArrayOf(midH, nowH)
@@ -147,8 +147,8 @@ class RealCaptureFitTest {
     @Test fun `same brew at different timepoints gives compatible OG`() {
         val (h1, s1) = loadFixture("ferment_capture_2026-04-26.csv")
         val (h2, s2) = loadFixture("ferment_capture_2026-04-27_31h.csv")
-        val r1 = LogisticFit.fit(h1, s1)!!
-        val r2 = LogisticFit.fit(h2, s2)!!
+        val r1 = AttenuationFit.fit(h1, s1)!!
+        val r2 = AttenuationFit.fit(h2, s2)!!
         assertEquals(
             "OG should agree across fixtures (same brew)",
             r1.og, r2.og, 0.002
@@ -169,7 +169,7 @@ class RealCaptureFitTest {
      */
     @Test fun `13_7h capture fit completes and lands in a sane place`() {
         val (hours, sgs) = loadFixture("ferment_capture_2026-04-26.csv")
-        val r = LogisticFit.fit(hours, sgs)!!
+        val r = AttenuationFit.fit(hours, sgs)!!
         assertTrue("OG ${r.og} should be near observed max ~1.0527", r.og in 1.050..1.055)
         val atten = (r.og - r.fg) / (r.og - 1.0)
         assertTrue(

@@ -43,7 +43,7 @@ class IspindleServerService : Service() {
         // user-facing Start/Stop buttons run while the activity is in the
         // foreground, so this is only the background-restart edge case.
         try {
-            startForegroundInternal("Starting…")
+            startForegroundInternal(getString(R.string.server_notif_starting))
             server.start()
             observerJob = scope.launch {
                 server.state.collectLatest { updateNotification(it) }
@@ -101,10 +101,10 @@ class IspindleServerService : Service() {
         val text = when (state) {
             is IspindleHttpServer.State.Running -> {
                 val ip = NetworkUtils.preferredIpv4() ?: "?.?.?.?"
-                "Listening on http://$ip:${state.port}"
+                getString(R.string.server_notif_listening, ip, state.port)
             }
-            IspindleHttpServer.State.Stopped -> "Stopped"
-            is IspindleHttpServer.State.Error -> "Error: ${state.message}"
+            IspindleHttpServer.State.Stopped -> getString(R.string.server_notif_stopped)
+            is IspindleHttpServer.State.Error -> getString(R.string.server_notif_error, state.message)
         }
         val mgr = getSystemService(NotificationManager::class.java) ?: return
         mgr.notify(NOTIF_ID, buildNotification(text))

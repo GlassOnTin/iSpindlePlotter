@@ -8,20 +8,22 @@ import kotlin.random.Random
 
 class UncertaintyPropagationTest {
 
-    @Test fun `logistic fit reports an FG sigma proportional to measurement sigma`() {
-        // Synthetic full-window logistic so the LM converges and we can
+    @Test fun `attenuation fit reports an FG sigma proportional to measurement sigma`() {
+        // Synthetic full-window Gompertz so the LM converges and we can
         // read the covariance off cleanly.
-        val og = 1.060; val fg = 1.010; val k = 0.5; val tMid = 24.0
+        val og = 1.060; val fg = 1.010; val muMax = 0.0030; val lambda = 6.0
         val n = 80
         val xs = DoubleArray(n) { it.toDouble() * 60.0 / n }
         val rng = Random(7)
         val sigma = 0.001
+        val a = og - fg
         val ys = DoubleArray(n) {
-            val mean = fg + (og - fg) / (1.0 + exp(k * (xs[it] - tMid)))
+            val arg = muMax * kotlin.math.E / a * (lambda - xs[it]) + 1.0
+            val mean = og - a * exp(-exp(arg))
             mean + sigma * boxMuller(rng)
         }
-        val fit10x = LogisticFit.fit(xs, ys, measurementSigma = 10.0 * sigma)
-        val fit1x = LogisticFit.fit(xs, ys, measurementSigma = sigma)
+        val fit10x = AttenuationFit.fit(xs, ys, measurementSigma = 10.0 * sigma)
+        val fit1x = AttenuationFit.fit(xs, ys, measurementSigma = sigma)
         assertNotNull(fit1x); assertNotNull(fit10x)
         val s1 = fit1x!!.fgSigma
         val s10 = fit10x!!.fgSigma

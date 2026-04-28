@@ -1,6 +1,273 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- ── App / system ─────────────────────────────────────────────── -->
     <string name="app_name">iSpindle Plotter</string>
     <string name="server_notification_channel">iSpindle server</string>
     <string name="server_running">Listening for iSpindle readings</string>
+
+    <!-- ── Server service notification ────────────────────────────── -->
+    <string name="server_notif_starting">Starting…</string>
+    <string name="server_notif_stopped">Stopped</string>
+    <string name="server_notif_listening">Listening on http://%1$s:%2$d</string>
+    <string name="server_notif_error">Error: %1$s</string>
+
+    <!-- ── Navigation labels ────────────────────────────────────────── -->
+    <string name="nav_home">Home</string>
+    <string name="nav_devices">Devices</string>
+    <string name="nav_setup">Setup Guide</string>
+    <string name="nav_graph">Graph</string>
+    <string name="nav_calibrate">Calibrate</string>
+    <string name="nav_configure">Configure</string>
+
+    <!-- ── Common / shared ──────────────────────────────────────────── -->
+    <string name="common_cancel">Cancel</string>
+    <string name="common_save">Save</string>
+    <string name="common_delete">Delete</string>
+    <string name="common_close">Close</string>
+    <string name="common_label">Label</string>
+
+    <!-- ── HomeScreen ───────────────────────────────────────────────── -->
+    <string name="home_section_http_server">HTTP Server</string>
+    <string name="home_status_running">Running</string>
+    <string name="home_status_stopped">Stopped</string>
+    <string name="home_status_error_prefix">Error: %1$s</string>
+    <string name="home_endpoint_point_ispindle">Point iSpindle → %1$s</string>
+    <string name="home_tap_to_copy">Tap to copy</string>
+    <string name="home_btn_start">Start</string>
+    <string name="home_btn_stop">Stop</string>
+    <string name="home_section_latest_reading">Latest reading</string>
+    <string name="home_no_readings_yet">No readings yet. Configure your iSpindle to POST to the URL above.</string>
+    <string name="home_section_known_devices">Known devices (%1$d)</string>
+    <string name="home_devices_appear_automatically">Devices appear automatically after their first POST.</string>
+    <string name="home_reading_time">Time: %1$s</string>
+    <string name="home_reading_angle">Angle: %1$s°</string>
+    <string name="home_reading_temperature">Temperature: %1$s °C</string>
+    <string name="home_reading_battery">Battery: %1$s V</string>
+    <string name="home_reading_rssi">RSSI: %1$s dBm</string>
+    <string name="home_reading_sg_calibrated">SG (calibrated): %1$s</string>
+    <string name="home_reading_sg_reported">SG (as reported): %1$s</string>
+    <string name="home_reading_sg_none">SG: — (no calibration)</string>
+    <string name="home_copied_toast">Copied %1$s</string>
+
+    <!-- ── DevicesScreen ────────────────────────────────────────────── -->
+    <string name="devices_no_devices_yet">No devices yet — they show up after the first POST.</string>
+    <string name="devices_rename_dialog_title">Rename device</string>
+    <string name="devices_delete_dialog_title">Delete \"%1$s\"?</string>
+    <string name="devices_counting_readings">Counting readings…</string>
+    <string name="devices_no_readings_stored">No readings stored.</string>
+    <string name="devices_one_reading_will_be_deleted">1 reading will be permanently deleted.</string>
+    <string name="devices_n_readings_will_be_deleted">%1$d readings will be permanently deleted.</string>
+    <string name="devices_calibration_also_removed">Calibration points are also removed. If the iSpindle posts again it will reappear as a new entry.</string>
+    <string name="devices_action_graph">Graph</string>
+    <string name="devices_action_calibrate">Calibrate</string>
+    <string name="devices_action_rename">Rename</string>
+    <string name="devices_action_delete">Delete</string>
+    <string name="devices_hw_id_reported">hwId %1$s · reported \"%2$s\"</string>
+    <string name="devices_calibration_degree">Calibration: degree %1$d</string>
+    <string name="devices_calibration_none">Calibration: none</string>
+    <string name="devices_last_reported_from">Last reported from %1$s</string>
+
+    <!-- ── GraphScreen ───────────────────────────────────────────────── -->
+    <string name="graph_readings_in_window">%1$d readings in window · %2$d total</string>
+    <string name="graph_btn_trim_before">Trim before…</string>
+    <string name="graph_btn_export_csv">Export CSV…</string>
+    <string name="graph_nothing_to_export">Nothing to export.</string>
+    <string name="graph_exported_n_readings">Exported %1$d readings.</string>
+    <string name="graph_export_failed">Export failed.</string>
+    <string name="graph_no_readings_in_window">No readings in this window.</string>
+    <string name="graph_section_tilt_angle">Tilt angle (°)</string>
+    <string name="graph_section_temperature">Temperature (°C)</string>
+    <string name="graph_section_specific_gravity">Specific gravity / PA%</string>
+    <string name="graph_section_battery">Battery (V)</string>
+    <string name="graph_sg_no_data_hint">No SG data yet — add calibration points to compute SG from tilt.</string>
+    <string name="graph_latest_label">Latest: %1$s</string>
+    <string name="graph_not_enough_data">Not enough data yet (%1$d pts)</string>
+    <!-- TimeWindow chips -->
+    <string name="graph_time_window_24h">24h</string>
+    <string name="graph_time_window_7d">7d</string>
+    <string name="graph_time_window_30d">30d</string>
+    <string name="graph_time_window_all">All</string>
+
+    <!-- Ferment nav row -->
+    <string name="graph_all_ferments">All ferments (%1$d)</string>
+    <string name="graph_ferment_label">Ferment %1$d/%2$d · %3$s → %4$s · −%5$s SG</string>
+    <string name="graph_all_chip_label">All</string>
+    <!-- Phase labels -->
+    <string name="graph_phase_active">Active</string>
+    <string name="graph_phase_slowing">Slowing</string>
+    <string name="graph_phase_conditioning">Conditioning</string>
+    <string name="graph_phase_lag">Lag</string>
+    <string name="graph_phase_stuck">Stuck</string>
+    <!-- SG estimate fragments -->
+    <string name="graph_sg_insufficient">SG: not enough trend yet — wait for more readings or widen the time window.</string>
+    <string name="graph_sg_lag_phase">Lag phase · OG %1$s · current %2$s · %3$s h since first reading, no decline yet</string>
+    <string name="graph_sg_og_to_fg">OG %1$s → est FG %2$s</string>
+    <string name="graph_sg_now_fragment"> · %1$s now · </string>
+    <string name="graph_sg_rate_fragment">rate %1$s SG/h · </string>
+    <string name="graph_sg_eta_fragment">ETA %1$s</string>
+    <string name="graph_sg_abv_fragment"> · ABV %1$s%% → %2$s%%</string>
+    <string name="graph_sg_paused_at"> · paused at %1$s for %2$s h</string>
+    <string name="graph_sg_conditioning">Conditioning · OG %1$s · FG %2$s · %3$s%% ABV · yeast still cleaning up — verify stable readings before packaging</string>
+    <string name="graph_sg_stuck">⚠ Stuck · OG %1$s · current %2$s · expected ~%3$s · flat for %4$s h · ABV so far %5$s%%</string>
+    <string name="graph_model_prefix">model: </string>
+    <string name="graph_sg_eta_ci"> (95 %% CI %1$s–%2$s)</string>
+    <string name="graph_sg_meas_sigma"> · σ_meas %1$s</string>
+    <!-- Prediction-source labels -->
+    <string name="graph_source_gompertz">modified Gompertz</string>
+    <string name="graph_source_expdecay">exp</string>
+    <string name="graph_source_linear">rate-based (75%% attenuation prior)</string>
+    <string name="graph_source_default">75%% attenuation prior</string>
+    <!-- Duration formatting -->
+    <string name="graph_dur_em_dash">—</string>
+    <string name="graph_dur_days">%1$s days</string>
+    <string name="graph_dur_hours">%1$s h</string>
+    <string name="graph_dur_min">%1$s min</string>
+    <!-- Plateau labels rendered inside the SG chart band -->
+    <string name="graph_plateau_lag">lag</string>
+    <string name="graph_plateau_paused">paused %1$s</string>
+    <string name="graph_plateau_asymptote">asymptote %1$s</string>
+    <!-- Battery estimate -->
+    <string name="graph_battery_prefix">Battery: </string>
+    <string name="graph_battery_no_discharge">trend %1$s V/day (no discharge to extrapolate)</string>
+    <string name="graph_battery_drop_per_day">%1$s V/day drop · </string>
+    <string name="graph_battery_days_to_cutoff">days to 3.4 V cutoff: %1$s</string>
+    <string name="graph_battery_rms">RMS ±%1$s V</string>
+    <!-- Trim dialog -->
+    <string name="graph_trim_delete_description">Delete every reading recorded before this date and local time.</string>
+    <string name="graph_trim_time_of_day">Time of day (local)</string>
+    <string name="graph_trim_counting">Counting…</string>
+    <string name="graph_trim_nothing_to_delete">Nothing to delete</string>
+    <string name="graph_trim_delete_one">Delete 1 reading</string>
+    <string name="graph_trim_delete_n">Delete %1$d readings</string>
+    <string name="graph_trimmed_nothing">Nothing to trim.</string>
+    <string name="graph_deleted_n_readings">Deleted %1$d readings.</string>
+
+    <!-- ── CalibrationScreen ─────────────────────────────────────────── -->
+    <string name="cal_add_point_title">Add calibration point</string>
+    <string name="cal_add_point_description">Submerge the iSpindle in a sugar solution of known SG (e.g. pure water = 1.000, or a sugar/water mix measured with a refractometer). Wait for a reading, copy the tilt angle here, and enter the known SG.</string>
+    <string name="cal_current_angle">Current angle: %1$s°</string>
+    <string name="cal_use_this">Use this</string>
+    <string name="cal_angle_label">Angle (°)</string>
+    <string name="cal_known_sg_label">Known SG</string>
+    <string name="cal_note_label">Note (optional)</string>
+    <string name="cal_btn_add_point">Add point</string>
+    <string name="cal_points_title">Points (%1$d)</string>
+    <string name="cal_no_points_yet">No calibration points yet.</string>
+    <string name="cal_delete_point_cd">Delete</string>
+    <string name="cal_fit_polynomial_title">Fit polynomial</string>
+    <string name="cal_degree_chip">Degree %1$d</string>
+    <string name="cal_fit_description">Quadratic (degree 2) is the iSpindel community default. You need at least (degree+1) enabled points.</string>
+    <string name="cal_btn_fit_save">Fit &amp; save</string>
+    <string name="cal_btn_clear_calibration">Clear calibration</string>
+    <string name="cal_cleared">Calibration cleared.</string>
+    <string name="cal_fit_saved">Saved: %1$s</string>
+    <string name="cal_fit_saved_r2">Saved: %1$s (R²=%2$s)</string>
+    <string name="cal_fit_not_enough_points">Need %1$d enabled points, have %2$d.</string>
+    <string name="cal_fit_singular">Fit failed — points may be collinear or duplicated.</string>
+    <string name="cal_current_polynomial_title">Current polynomial</string>
+    <string name="cal_sg_function">SG(angle) = %1$s</string>
+
+    <!-- ── SetupScreen ───────────────────────────────────────────────── -->
+    <string name="setup_title">Pairing your iSpindle</string>
+    <string name="setup_auto_configure_title">Auto-configure (Android 10+)</string>
+    <string name="setup_auto_configure_description">Drives the iSpindle\'s config portal directly: joins its AP, scans your home networks, submits the form, and waits for the device to come online. Skips the manual browser step entirely.</string>
+    <string name="setup_btn_configure_now">Configure iSpindle now</string>
+    <string name="setup_or_manually">Or do it manually:</string>
+    <string name="setup_manual_intro">MTB iSpindel PCB 4.0 runs the standard iSpindel firmware on an ESP8266. There is no Bluetooth — readings come in over WiFi as an HTTP POST.</string>
+    <string name="setup_this_phone_ip">This phone\'s current IP: %1$s</string>
+    <string name="setup_server_port">Server port: %1$s</string>
+    <string name="setup_tap_ip_to_copy">Tap the IP to copy it.</string>
+    <string name="setup_steps_title">Steps</string>
+    <string name="setup_step_1">On the Home tab, tap Start to bring up the HTTP server. A persistent notification confirms it is listening.</string>
+    <string name="setup_step_2">Boot the iSpindle into config mode: hold it horizontally for ~20 seconds at power-on. It raises an AP named \"iSpindel\".</string>
+    <string name="setup_step_3">Connect this phone to the \"iSpindel\" WiFi AP and open http://192.168.4.1/ in a browser to load the config portal.</string>
+    <string name="setup_step_4">In the portal: set WiFi credentials for your home network, set \"Service Type\" = HTTP, \"Server Address\" = %1$s, \"Server Port\" = %2$s, and a short sample interval (60 s works for testing).</string>
+    <string name="setup_step_5">Save. The iSpindle reboots, joins your home network, wakes, POSTs JSON, then sleeps. Reconnect this phone to the same home network.</string>
+    <string name="setup_step_6">Within one interval the Home tab shows the first reading. Open the Devices tab to see it listed, then Calibrate and Graph.</string>
+    <string name="setup_calibration_workflow_title">Calibration workflow</string>
+    <string name="setup_calibration_intro">Calibration turns tilt angle into specific gravity. You need at least 3 reference solutions for a quadratic fit.</string>
+    <string name="setup_cal_step_1">Pure water at 20 °C = SG 1.000. Let the iSpindle stabilise, read the angle from Home, and add it as (angle, 1.000) on the Calibrate tab.</string>
+    <string name="setup_cal_step_2">Mix a sugar+water solution, measure SG with a refractometer or hydrometer, float the iSpindle, record (angle, SG).</string>
+    <string name="setup_cal_step_3">Repeat for 2–3 more reference points across the expected SG range (1.000 → 1.080).</string>
+    <string name="setup_cal_step_4">Tap \"Fit &amp; save\". R² should be > 0.999 for a clean fit. Future readings auto-populate SG.</string>
+    <string name="setup_stable_address_title">Stable address</string>
+    <string name="setup_stable_address_intro">If the iSpindle is configured with a raw IP and the phone gets a different one after a DHCP renewal, the next reading is dropped. Two ways to keep the link alive across IP changes:</string>
+    <string name="setup_stable_step_1">Reserve the phone\'s IP on your router. The setting is usually called \"DHCP reservation\", \"static lease\", or \"always assign the same IP\".</string>
+    <string name="setup_stable_step_2">Use a hostname instead of an IP. Many home routers publish a DNS name for every DHCP client. On the Configure screen, tap \"Find hostname\" — if the router publishes a unique name for this phone you can use that as the iSpindle\'s server address, and it survives IP changes.</string>
+    <string name="setup_stable_step_3">If \"Find hostname\" reports the name is ambiguous, the router has stale entries from previous devices. Give this phone a distinct name in the router\'s DHCP settings and remove the old entries, or fall back to a reserved IP.</string>
+    <string name="setup_troubleshooting_title">Troubleshooting</string>
+    <string name="setup_trouble_same_subnet">• Phone and iSpindle must be on the same subnet. Check your router\'s guest-network isolation.</string>
+    <string name="setup_trouble_dhcp">• If the phone\'s IP changes (DHCP lease expiry), re-enter the new IP in the iSpindle portal.</string>
+    <string name="setup_trouble_deep_sleep">• The iSpindle deep-sleeps between intervals; you will not be able to ping it mid-cycle.</string>
+    <string name="setup_trouble_static_ip">• For a static IP, reserve the phone\'s MAC on your router.</string>
+    <string name="setup_copied_toast">Copied %1$s</string>
+
+    <!-- ── ConfigureScreen ──────────────────────────────────────────── -->
+    <string name="configure_joining_title">Joining iSpindle AP…</string>
+    <string name="configure_joining_body">Approve the system dialog when it appears. The first time can take 10–20 s.</string>
+    <string name="configure_unsupported_title">Not supported on this device</string>
+    <string name="configure_unsupported_body">Programmatic WiFi join requires Android 10 (API 29) or newer.</string>
+    <string name="configure_failed_title">Couldn\'t connect</string>
+    <string name="configure_saving_title">Saving and waiting for iSpindle to join…</string>
+    <string name="configure_saving_body">The device reboots and joins your home network. Poll runs every 1.5 s for up to 45 s.</string>
+    <string name="configure_joined_title">iSpindle joined %1$s</string>
+    <string name="configure_joined_body">Station IP: %1$s\n\nReconnect this phone to the same home WiFi to receive readings.</string>
+    <string name="configure_joined_ip_unknown">(not yet known)</string>
+    <string name="configure_save_timeout_title">Save submitted, but join not confirmed</string>
+    <string name="configure_save_timeout_body">The iSpindle accepted the form but did not appear on the home network within the polling window. It may still join after a longer settle time. Reconnect this phone to home WiFi and check the Home tab.</string>
+    <!-- Idle / auto-pair card -->
+    <string name="configure_auto_pair_title">Auto-pair with iSpindle</string>
+    <string name="configure_auto_pair_instructions">1. Hold the iSpindle horizontally at power-on for ~20 s — it raises an AP named iSpindel_&lt;chipID&gt;.\n2. Tap Connect. If several iSpindles are in range Android shows a picker so you can choose the right one.\n3. Pick your home network, enter its password, save. The iSpindle reboots and joins.</string>
+    <string name="configure_ap_ssid_prefix_label">AP SSID prefix</string>
+    <string name="configure_ap_ssid_prefix_hint">Default firmware uses iSpindel_&lt;chipID&gt;; adjust only if you renamed it.</string>
+    <string name="configure_btn_connect">Connect</string>
+    <string name="configure_permission_denied">WiFi-scan permission was declined. Auto-pair can\'t proceed without it.</string>
+    <!-- Connected card -->
+    <string name="configure_connected_title">Connected to iSpindle</string>
+    <string name="configure_pick_home_network">Pick the home network you want the iSpindle to join, then save.</string>
+    <string name="configure_scanning">  Scanning…</string>
+    <string name="configure_home_ssid_label">Home WiFi SSID</string>
+    <string name="configure_home_password_label">Home WiFi password</string>
+    <string name="configure_server_description">Where the iSpindle should POST readings — defaults to this phone, which is usually what you want. Tap \"Use this phone\" to restore the defaults.</string>
+    <string name="configure_pointing_at_phone">Pointing at phone ✓</string>
+    <string name="configure_use_this_phone_ip">Use this phone IP</string>
+    <string name="configure_no_home_ip">(no home IP detected — connect this phone to home WiFi first)</string>
+    <string name="configure_server_host_label">Server host</string>
+    <string name="configure_port_label">Port</string>
+    <string name="configure_uri_label">URI</string>
+    <string name="configure_sleep_interval_label">Sleep interval (s)</string>
+    <string name="configure_device_name_label">Device name (optional)</string>
+    <string name="configure_btn_save_reboot">Save &amp; reboot</string>
+    <string name="configure_service_type_label">Service type</string>
+    <string name="configure_http_warning">⚠ This app only receives readings when the iSpindle uses Generic HTTP (or HTTPS). Other services post to their own cloud and bypass the phone.</string>
+    <!-- Hostname row -->
+    <string name="configure_btn_find_hostname">Find hostname</string>
+    <string name="configure_hostname_idle_hint">Use a router-published name so the iSpindle survives DHCP changes.</string>
+    <string name="configure_hostname_resolving">Resolving…</string>
+    <string name="configure_hostname_not_found">No reverse-DNS record for this phone — use the IP, or set a hostname in your router.</string>
+    <string name="configure_hostname_ambiguous">%1$s resolves to %2$d IPs — name is shared.</string>
+    <string name="configure_hostname_other_ips">Other IPs answering to that name: %1$s</string>
+    <string name="configure_btn_use_hostname">Use %1$s</string>
+    <!-- Network list -->
+    <string name="configure_signal_quality">Signal %1$d%%</string>
+    <string name="configure_signal_wpa2"> · WPA2</string>
+    <string name="configure_signal_open"> · open</string>
+    <!-- Live reading -->
+    <string name="configure_live_reading_title">Live reading from iSpindle</string>
+    <string name="configure_live_tilt">Tilt: %1$s°</string>
+    <string name="configure_live_temperature">Temperature: %1$s</string>
+    <string name="configure_live_battery">Battery: %1$s V</string>
+    <string name="configure_live_gravity">Gravity: %1$s</string>
+    <!-- Firmware calibration card -->
+    <string name="configure_on_device_cal_title">On-device calibration</string>
+    <string name="configure_imported">Imported. Will apply to this device on its first POST after pairing.</string>
+    <string name="configure_parsed_as">Parsed as: %1$s</string>
+    <string name="configure_btn_import_cal">Import calibration</string>
+    <string name="configure_parse_failed">Couldn\'t parse this expression as a cubic in tilt — leaving the firmware copy in place. Re-enter calibration points by hand on the Calibrate tab if needed.</string>
+    <!-- Push calibration card -->
+    <string name="configure_push_cal_title">Send calibration to device</string>
+    <string name="configure_push_cal_description">Writes the chosen polynomial into the iSpindle\'s POLYN field on Save &amp; reboot. Useful so the firmware itself reports a sensible gravity even to other receivers, not just this app.</string>
+    <string name="configure_dont_change_polynomial">Don\'t change device polynomial</string>
+    <!-- Pick SSID error -->
+    <string name="configure_no_ssid_error">Pick a home network SSID first</string>
 </resources>

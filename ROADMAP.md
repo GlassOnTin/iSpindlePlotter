@@ -1,11 +1,18 @@
 # Fermentation auto-model roadmap
 
 The model that predicts FG, ETA, and the chart overlay lives in
-`app/src/main/kotlin/com/ispindle/plotter/analysis/`. The fitter is a
-4-parameter logistic
-`SG(t) = FG + (OG − FG) / (1 + exp(k·(t − tMid)))`
-solved by Levenberg-Marquardt. This is a sketch of where it is, where
-it's going, and what each step actually buys us.
+`app/src/main/kotlin/com/ispindle/plotter/analysis/`. The fitter is the
+4-parameter modified-Gompertz attenuation curve
+
+  `SG(t) = OG − A · exp(−exp((μ_max·e/A)·(λ−t) + 1))`,  `A = OG−FG`
+
+([Zwietering et al. 1990](https://doi.org/10.1128/aem.56.6.1875-1881.1990)),
+solved by Levenberg-Marquardt. Earlier versions used a symmetric
+4-parameter logistic; the version history below describes the path
+through both.
+
+This is a sketch of where it is, where it's going, and what each step
+actually buys us.
 
 ## v0 — bounded LM (shipped)
 
@@ -102,6 +109,40 @@ and called out in the estimate text as "paused at 1.0290 for 3.0 h".
 - The MIN_PLATEAU_HOURS = 2.5 h floor can mask a brief diauxic micro-
   pause. Loosening it admits noise blips (verified empirically on the
   35 h capture: a 2 h false positive at h 13–14 disappeared at 2.5 h).
+
+## v1.3 — modified-Gompertz attenuation curve (shipped)
+
+Replace the symmetric 4-parameter logistic with the modified Gompertz of
+Zwietering et al. (1990). Same Bayesian-MAP machinery (LM solver,
+Gaussian attenuation prior, Laplace posterior, predictive band, ETA
+quantiles) — just an asymmetric curve under the hood.
+
+`AttenuationFit.kt` replaces the old `LogisticFit.kt`. Parameters are
+now `(og, fg, muMax, lambda)` where `lambda` is the lag time (the
+x-intercept of the tangent at the inflection) and `muMax` is the peak
+|dSG/dt|.
+
+**Why.** A symmetric S-curve has the same shape at the start as at the
+end. Real fermentations don't: the lag is dead-flat at OG for hours,
+then the curve bends sharply into the descent. The symmetric logistic
+could only approximate this by pushing `tMid` far to the right, which
+warped the descent. Gompertz is asymmetric by construction — long flat
+top, sharper transition, slower asymptotic tail toward FG.
+
+**Visible changes.**
+
+- Lag-region residuals collapse: the model curve sits flat at OG
+  through the lag and only bends into descent at `t ≈ λ`.
+- The estimate text reports the source as `modified Gompertz` and a
+  small caption underneath cites the Zwietering paper.
+- `lambda` is meaningful as a per-brew lag-time observation, available
+  for future hierarchical priors (v2).
+
+**Non-changes.**
+
+- Same parameter count, same trust gates in `Fermentation.pickFgEstimate`,
+  same `Stuck` / `Conditioning` / `Lag` classifiers. Existing tests
+  carried over with synthetic data regenerated against Gompertz.
 
 ## v2 — hierarchical priors across the user's history
 
@@ -217,9 +258,9 @@ watching.
 
 ## Out of scope
 
-- Bayesian model averaging across logistic + Gompertz + Richards
-  curves. The logistic fits the MTB iSpindel data well enough; adding
-  alternative shape priors gives marginal gains on a phone app.
+- Bayesian model averaging across Gompertz + Richards + biphasic
+  curves. The single Gompertz fits the MTB iSpindel data well enough;
+  adding alternative shape priors gives marginal gains on a phone app.
 - Full No-U-Turn Sampler / HMC. The Laplace approximation in v1 is
   cheap and adequate; full MCMC adds dependencies and per-frame cost
   for arguably no user-visible improvement until v2 hyperparameter

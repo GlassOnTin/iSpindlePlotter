@@ -10,11 +10,12 @@ import kotlin.random.Random
  * Combines two layers of evidence:
  *   - **Recent rate** from a 6-hour linear fit on the tail of the data.
  *     Robust to noise and works the moment we have any decline.
- *   - **Logistic fit** over the whole window (when there's enough signal),
- *     giving OG, FG, inflection, and a long-range ETA.
+ *   - **Modified-Gompertz fit** ([AttenuationFit]) over the whole
+ *     window (when there's enough signal), giving OG, FG, peak rate,
+ *     lag time, and a long-range ETA.
  *
  * The state always reports observed OG (max SG seen) so the user has a
- * concrete reference even before the logistic converges.
+ * concrete reference even before the parametric fit converges.
  */
 object Fermentation {
 
@@ -53,9 +54,9 @@ object Fermentation {
             val etaCredibleHighHours: Double? = null,
             /**
              * Detected flat segments (lag, mid-ferment diauxic shift, or
-             * tail). The single-logistic model can't reproduce a mid
-             * plateau; surfacing the detection lets the chart shade it
-             * and the estimate text annotate "stalled at X for Y h".
+             * tail). The Gompertz model can't reproduce a mid plateau;
+             * surfacing the detection lets the chart shade it and the
+             * estimate text annotate "stalled at X for Y h".
              */
             val plateaus: List<Plateau> = emptyList()
         ) : State()
@@ -77,9 +78,23 @@ object Fermentation {
             val plateaus: List<Plateau> = emptyList()
         ) : State()
 
-        data class Complete(
+        /**
+         * SG has settled at or near the prior FG and the smoothed rate has
+         * fallen below the iSpindle's resolution floor (~0.1 mSG/h).
+         *
+         * Deliberately *not* called "Complete": at this stage the SG signal
+         * has reached measurement-noise territory, but the ferment is
+         * usually still biologically active — yeast cleaning up diacetyl
+         * and acetaldehyde, finishing maltotriose (sub-resolution SG drop),
+         * and CO2 desorbing from supersaturated wort. The label nudges the
+         * brewer toward the right next steps (diacetyl rest, stable-reading
+         * verification) rather than implying "ready to package".
+         */
+        data class Conditioning(
             val og: Double,
-            val fg: Double
+            val fg: Double,
+            /** See [Active.plateaus]. */
+            val plateaus: List<Plateau> = emptyList()
         ) : State()
 
         data class Stuck(
@@ -91,7 +106,8 @@ object Fermentation {
     }
 
     enum class PredictionSource {
-        Logistic,
+        /** [AttenuationFit] modified-Gompertz fit. The trusted source. */
+        Gompertz,
         ExpDecay,
         Linear,   // last-resort: "current rate × remaining drop"
         Default   // 75 % attenuation prior, no usable rate signal
@@ -158,21 +174,21 @@ object Fermentation {
             return State.Lag(og = og, current = current, durationHours = durationH)
         }
 
-        // 3. Try the full-window logistic. May be unreliable while we're
-        //    still inside the active phase, but worth a shot — the
-        //    bounded LM is conservative. Pass measurement σ so the result
-        //    carries an FG uncertainty.
-        val logistic = LogisticFit.fit(hours, sgs, sigma)
+        // 3. Try the full-window modified-Gompertz fit. May be unreliable
+        //    while we're still inside the active phase, but worth a shot —
+        //    the bounded LM is conservative. Pass measurement σ so the
+        //    result carries an FG uncertainty.
+        val gompertz = AttenuationFit.fit(hours, sgs, sigma)
 
         // 3b. Detect sustained flat segments (lag / diauxic shift / tail).
-        //     Independent of the logistic — the LM can't model a mid
-        //     plateau, but the chart and the estimate text can call it out.
+        //     Independent of the parametric fit — the model can't reproduce
+        //     a mid plateau, but the chart and the estimate text can.
         val plateaus = PlateauDetector.detect(hours, sgs)
 
         // 4. Predicted FG with graceful degradation.
         val (predictedFg, source) = pickFgEstimate(
             og = og,
-            logistic = logistic,
+            gompertz = gompertz,
             current = current,
             recentRate = recentRate
         )
@@ -191,7 +207,7 @@ object Fermentation {
             drop > STUCK_DROP_THRESHOLD &&
             current <= priorFg + 0.003
         ) {
-            return State.Complete(og = og, fg = current)
+            return State.Conditioning(og = og, fg = current, plateaus = plateaus)
         }
 
         // 6. Stuck? Data plateau but well above the prior FG — fermentation
@@ -211,16 +227,16 @@ object Fermentation {
         val now = hours.last()
         val terminalSg = predictedFg + 0.001
         val eta = when (source) {
-            PredictionSource.Logistic -> logistic?.timeToReach(terminalSg)?.minus(now)
+            PredictionSource.Gompertz -> gompertz?.timeToReach(terminalSg)?.minus(now)
             else -> linearEta(current, terminalSg, recentRate)
         }?.takeIf { it.isFinite() && it >= 0.0 }
 
         // 7b. ETA credible interval — propagated from the Laplace
-        //     posterior over the 4 logistic params. Only meaningful when
-        //     source == Logistic; nulls otherwise.
-        val etaCredible: Pair<Double?, Double?> = if (source == PredictionSource.Logistic && logistic != null) {
+        //     posterior over the 4 Gompertz params. Only meaningful when
+        //     source == Gompertz; nulls otherwise.
+        val etaCredible: Pair<Double?, Double?> = if (source == PredictionSource.Gompertz && gompertz != null) {
             val rng = Random(BAYESIAN_SEED)
-            val q = logistic.etaQuantiles(terminalSg, rng)
+            val q = gompertz.etaQuantiles(terminalSg, rng)
             if (q != null && q.size >= 3) {
                 val low = (q[0] - now).takeIf { it.isFinite() && it >= 0.0 }
                 val high = (q[2] - now).takeIf { it.isFinite() && it >= 0.0 }
@@ -229,12 +245,12 @@ object Fermentation {
         } else null to null
 
         // 8. FG uncertainty: from the LM covariance when we trust the
-        //    logistic, or from the prior's spread (≈±0.003 SG, the std of
-        //    typical attenuation outcomes 60–90 % across mainstream beer
-        //    styles) when we're falling back to the 75 %-attenuation prior.
+        //    parametric fit, or from the prior's spread (≈±0.003 SG, the
+        //    std of typical attenuation outcomes 60–90 % across mainstream
+        //    beer styles) when we're falling back to the prior.
         val priorFgSigma = 0.06 * (og - 1.000).coerceAtLeast(0.005)
         val predictedFgSigma = when (source) {
-            PredictionSource.Logistic -> logistic?.fgSigma
+            PredictionSource.Gompertz -> gompertz?.fgSigma
             else -> priorFgSigma
         }
 
@@ -271,11 +287,11 @@ object Fermentation {
 
     private fun pickFgEstimate(
         og: Double,
-        logistic: LogisticFit.Result?,
+        gompertz: AttenuationFit.Result?,
         current: Double,
         recentRate: Double?
     ): Pair<Double, PredictionSource> {
-        // Trust the logistic only when:
+        // Trust the Gompertz fit only when:
         //  * its OG matches what we actually observed,
         //  * its FG is mechanically plausible (above the 90 % attenuation
         //    floor and below OG),
@@ -284,14 +300,21 @@ object Fermentation {
         //    happened to end", not a real asymptote, and
         //  * the implied attenuation is at least 50 %, which excludes the
         //    "still in lag, fit thinks lag is the asymptote" failure mode.
-        if (logistic != null) {
-            val ogClose = abs(logistic.og - og) < 0.005
-            val fgPlausible = logistic.fg in 0.985..(og - 0.001)
-            val notHuggingData = current - logistic.fg > 0.002
-            val attenuation = (og - logistic.fg) / max(og - 1.000, 1e-6)
+        if (gompertz != null) {
+            val ogClose = abs(gompertz.og - og) < 0.005
+            val fgPlausible = gompertz.fg in 0.985..(og - 0.001)
+            // The "not hugging data" gate exists to reject mid-active fits
+            // where the LM has just identified "where data happened to end"
+            // rather than a real asymptote. But once observed attenuation is
+            // ≥ 70 % the data has plausibly reached its asymptote, and FG ≈
+            // current is the correct answer, not a fit failure.
+            val observedAtten = (og - current) / max(og - 1.000, 1e-6)
+            val asymptoteReached = observedAtten >= 0.70
+            val notHuggingData = asymptoteReached || (current - gompertz.fg > 0.002)
+            val attenuation = (og - gompertz.fg) / max(og - 1.000, 1e-6)
             val attenuationPlausible = attenuation >= 0.50
             if (ogClose && fgPlausible && notHuggingData && attenuationPlausible) {
-                return logistic.fg to PredictionSource.Logistic
+                return gompertz.fg to PredictionSource.Gompertz
             }
         }
         // Fallback: 75 % attenuation prior. Source distinguishes whether

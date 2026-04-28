@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ── App / system ─────────────────────────────────────────────── -->
+    <string name="app_name">iSpindle Plotter</string>
+    <string name="server_notification_channel">iSpindleサーバー</string>
+    <string name="server_running">iSpindleの計測値を待機中</string>
+
+    <!-- ── Server service notification ────────────────────────────── -->
+    <string name="server_notif_starting">起動中…</string>
+    <string name="server_notif_stopped">停止</string>
+    <string name="server_notif_listening">http://%1$s:%2$d でリッスン中</string>
+    <string name="server_notif_error">エラー: %1$s</string>
+
+    <!-- ── Navigation labels ────────────────────────────────────────── -->
+    <string name="nav_home">ホーム</string>
+    <string name="nav_devices">デバイス</string>
+    <string name="nav_setup">セットアップ</string>
+    <string name="nav_graph">グラフ</string>
+    <string name="nav_calibrate">キャリブレーション</string>
+    <string name="nav_configure">設定</string>
+
+    <!-- ── Common / shared ──────────────────────────────────────────── -->
+    <string name="common_cancel">キャンセル</string>
+    <string name="common_save">保存</string>
+    <string name="common_delete">削除</string>
+    <string name="common_close">閉じる</string>
+    <string name="common_label">ラベル</string>
+
+    <!-- ── HomeScreen ───────────────────────────────────────────────── -->
+    <string name="home_section_http_server">HTTPサーバー</string>
+    <string name="home_status_running">実行中</string>
+    <string name="home_status_stopped">停止中</string>
+    <string name="home_status_error_prefix">エラー: %1$s</string>
+    <string name="home_endpoint_point_ispindle">iSpindleを指定 → %1$s</string>
+    <string name="home_tap_to_copy">タップしてコピー</string>
+    <string name="home_btn_start">開始</string>
+    <string name="home_btn_stop">停止</string>
+    <string name="home_section_latest_reading">最新の計測値</string>
+    <string name="home_no_readings_yet">計測値がまだありません。iSpindleを上記URLへPOSTするよう設定してください。</string>
+    <string name="home_section_known_devices">既知のデバイス (%1$d)</string>
+    <string name="home_devices_appear_automatically">デバイスは最初のPOSTの後に自動的に表示されます。</string>
+    <string name="home_reading_time">時刻: %1$s</string>
+    <string name="home_reading_angle">角度: %1$s°</string>
+    <string name="home_reading_temperature">温度: %1$s °C</string>
+    <string name="home_reading_battery">バッテリー: %1$s V</string>
+    <string name="home_reading_rssi">RSSI: %1$s dBm</string>
+    <string name="home_reading_sg_calibrated">SG (キャリブレーション済み): %1$s</string>
+    <string name="home_reading_sg_reported">SG (デバイス報告値): %1$s</string>
+    <string name="home_reading_sg_none">SG: — (キャリブレーションなし)</string>
+    <string name="home_copied_toast">%1$s をコピーしました</string>
+
+    <!-- ── DevicesScreen ────────────────────────────────────────────── -->
+    <string name="devices_no_devices_yet">デバイスがまだありません — 最初のPOSTの後に表示されます。</string>
+    <string name="devices_rename_dialog_title">デバイスの名前を変更</string>
+    <string name="devices_delete_dialog_title">\"%1$s\" を削除しますか？</string>
+    <string name="devices_counting_readings">計測値を数えています…</string>
+    <string name="devices_no_readings_stored">保存された計測値はありません。</string>
+    <string name="devices_one_reading_will_be_deleted">1件の計測値が完全に削除されます。</string>
+    <string name="devices_n_readings_will_be_deleted">%1$d件の計測値が完全に削除されます。</string>
+    <string name="devices_calibration_also_removed">キャリブレーションポイントも削除されます。iSpindleが再度POSTすると新しいエントリとして表示されます。</string>
+    <string name="devices_action_graph">グラフ</string>
+    <string name="devices_action_calibrate">キャリブレーション</string>
+    <string name="devices_action_rename">名前変更</string>
+    <string name="devices_action_delete">削除</string>
+    <string name="devices_hw_id_reported">hwId %1$s · 報告名 \"%2$s\"</string>
+    <string name="devices_calibration_degree">キャリブレーション: 次数 %1$d</string>
+    <string name="devices_calibration_none">キャリブレーション: なし</string>
+    <string name="devices_last_reported_from">最後の報告元: %1$s</string>
+
+    <!-- ── GraphScreen ───────────────────────────────────────────────── -->
+    <string name="graph_readings_in_window">ウィンドウ内 %1$d件 · 合計 %2$d件</string>
+    <string name="graph_btn_trim_before">以前をトリム…</string>
+    <string name="graph_btn_export_csv">CSVエクスポート…</string>
+    <string name="graph_nothing_to_export">エクスポートするものがありません。</string>
+    <string name="graph_exported_n_readings">%1$d件の計測値をエクスポートしました。</string>
+    <string name="graph_export_failed">エクスポートに失敗しました。</string>
+    <string name="graph_no_readings_in_window">このウィンドウに計測値がありません。</string>
+    <string name="graph_section_tilt_angle">傾き角度 (°)</string>
+    <string name="graph_section_temperature">温度 (°C)</string>
+    <string name="graph_section_specific_gravity">比重 / PA%</string>
+    <string name="graph_section_battery">バッテリー (V)</string>
+    <string name="graph_sg_no_data_hint">SGデータがまだありません — キャリブレーションポイントを追加して傾きからSGを計算してください。</string>
+    <string name="graph_latest_label">最新: %1$s</string>
+    <string name="graph_not_enough_data">データが不足しています (%1$d点)</string>
+    <!-- TimeWindow chips -->
+    <string name="graph_time_window_24h">24時間</string>
+    <string name="graph_time_window_7d">7日</string>
+    <string name="graph_time_window_30d">30日</string>
+    <string name="graph_time_window_all">すべて</string>
+
+    <!-- Ferment nav row -->
+    <string name="graph_all_ferments">全発酵 (%1$d)</string>
+    <string name="graph_ferment_label">発酵 %1$d/%2$d · %3$s → %4$s · −%5$s SG</string>
+    <string name="graph_all_chip_label">すべて</string>
+    <!-- Phase labels -->
+    <string name="graph_phase_active">活発</string>
+    <string name="graph_phase_slowing">減速中</string>
+    <string name="graph_phase_conditioning">熟成中</string>
+    <string name="graph_phase_lag">ラグ期</string>
+    <string name="graph_phase_stuck">停滞</string>
+    <!-- SG estimate fragments -->
+    <string name="graph_sg_insufficient">SG: まだ十分なトレンドがありません — より多くの計測値を待つか、時間ウィンドウを広げてください。</string>
+    <string name="graph_sg_lag_phase">ラグ期 · OG %1$s · 現在 %2$s · 最初の計測から %3$s 時間、まだ下降なし</string>
+    <string name="graph_sg_og_to_fg">OG %1$s → 予測FG %2$s</string>
+    <string name="graph_sg_now_fragment"> · 現在 %1$s · </string>
+    <string name="graph_sg_rate_fragment">速度 %1$s SG/時 · </string>
+    <string name="graph_sg_eta_fragment">ETA %1$s</string>
+    <string name="graph_sg_abv_fragment"> · ABV %1$s%% → %2$s%%</string>
+    <string name="graph_sg_paused_at"> · %1$s で %2$s 時間停滞</string>
+    <string name="graph_sg_conditioning">熟成中 · OG %1$s · FG %2$s · %3$s%% ABV · 酵母がまだクリーンアップ中 — 梱包前に安定した計測値を確認してください</string>
+    <string name="graph_sg_stuck">⚠ 停滞 · OG %1$s · 現在 %2$s · 予測 ~%3$s · %4$s 時間フラット · これまでのABV %5$s%%</string>
+    <string name="graph_model_prefix">モデル: </string>
+    <string name="graph_sg_eta_ci">（95%% 信頼区間 %1$s–%2$s）</string>
+    <string name="graph_sg_meas_sigma"> · σ_meas %1$s</string>
+    <string name="graph_source_gompertz">修正 Gompertz</string>
+    <string name="graph_source_expdecay">exp</string>
+    <string name="graph_source_linear">速度ベース（75%% 減衰の事前分布）</string>
+    <string name="graph_source_default">75%% 減衰の事前分布</string>
+    <string name="graph_dur_em_dash">—</string>
+    <string name="graph_dur_days">%1$s 日</string>
+    <string name="graph_dur_hours">%1$s 時間</string>
+    <string name="graph_dur_min">%1$s 分</string>
+    <string name="graph_plateau_lag">ラグ</string>
+    <string name="graph_plateau_paused">停止 %1$s</string>
+    <string name="graph_plateau_asymptote">漸近 %1$s</string>
+    <!-- Battery estimate -->
+    <string name="graph_battery_prefix">バッテリー: </string>
+    <string name="graph_battery_no_discharge">トレンド %1$s V/日 (放電なし)</string>
+    <string name="graph_battery_drop_per_day">%1$s V/日低下 · </string>
+    <string name="graph_battery_days_to_cutoff">3.4 Vまでの日数: %1$s</string>
+    <string name="graph_battery_rms">RMS ±%1$s V</string>
+    <!-- Trim dialog -->
+    <string name="graph_trim_delete_description">この日付と現地時間より前に記録されたすべての計測値を削除します。</string>
+    <string name="graph_trim_time_of_day">時刻 (現地時間)</string>
+    <string name="graph_trim_counting">数えています…</string>
+    <string name="graph_trim_nothing_to_delete">削除するものがありません</string>
+    <string name="graph_trim_delete_one">1件の計測値を削除</string>
+    <string name="graph_trim_delete_n">%1$d件の計測値を削除</string>
+    <string name="graph_trimmed_nothing">トリムするものがありません。</string>
+    <string name="graph_deleted_n_readings">%1$d件の計測値を削除しました。</string>
+
+    <!-- ── CalibrationScreen ─────────────────────────────────────────── -->
+    <string name="cal_add_point_title">キャリブレーションポイントを追加</string>
+    <string name="cal_add_point_description">既知のSGの砂糖溶液にiSpindleを沈めます（例: 純水 = 1.000、または屈折計で測定した砂糖水）。計測値が出るまで待ち、傾き角度をここにコピーして既知のSGを入力します。</string>
+    <string name="cal_current_angle">現在の角度: %1$s°</string>
+    <string name="cal_use_this">これを使用</string>
+    <string name="cal_angle_label">角度 (°)</string>
+    <string name="cal_known_sg_label">既知のSG</string>
+    <string name="cal_note_label">メモ (任意)</string>
+    <string name="cal_btn_add_point">ポイントを追加</string>
+    <string name="cal_points_title">ポイント (%1$d)</string>
+    <string name="cal_no_points_yet">キャリブレーションポイントがまだありません。</string>
+    <string name="cal_delete_point_cd">削除</string>
+    <string name="cal_fit_polynomial_title">多項式フィット</string>
+    <string name="cal_degree_chip">次数 %1$d</string>
+    <string name="cal_fit_description">2次（次数2）はiSpindel コミュニティのデフォルトです。少なくとも（次数+1）個の有効なポイントが必要です。</string>
+    <string name="cal_btn_fit_save">フィット &amp; 保存</string>
+    <string name="cal_btn_clear_calibration">キャリブレーションをクリア</string>
+    <string name="cal_cleared">キャリブレーションをクリアしました。</string>
+    <string name="cal_fit_saved">保存しました: %1$s</string>
+    <string name="cal_fit_saved_r2">保存しました: %1$s (R²=%2$s)</string>
+    <string name="cal_fit_not_enough_points">有効なポイントが %1$d 個必要ですが、%2$d 個しかありません。</string>
+    <string name="cal_fit_singular">フィット失敗 — ポイントが共線または重複している可能性があります。</string>
+    <string name="cal_current_polynomial_title">現在の多項式</string>
+    <string name="cal_sg_function">SG(角度) = %1$s</string>
+
+    <!-- ── SetupScreen ───────────────────────────────────────────────── -->
+    <string name="setup_title">iSpindleのペアリング</string>
+    <string name="setup_auto_configure_title">自動設定 (Android 10以降)</string>
+    <string name="setup_auto_configure_description">iSpindleの設定ポータルを直接操作します: APに接続し、ホームネットワークをスキャンし、フォームを送信し、デバイスがオンラインになるのを待ちます。手動のブラウザ手順を完全にスキップします。</string>
+    <string name="setup_btn_configure_now">今すぐiSpindleを設定</string>
+    <string name="setup_or_manually">または手動で:</string>
+    <string name="setup_manual_intro">MTB iSpindel PCB 4.0はESP8266上で標準iSpindle ファームウェアを実行します。Bluetoothはなく、計測値はWiFi経由でHTTP POSTとして送信されます。</string>
+    <string name="setup_this_phone_ip">このスマートフォンのIP: %1$s</string>
+    <string name="setup_server_port">サーバーポート: %1$s</string>
+    <string name="setup_tap_ip_to_copy">IPをタップしてコピー。</string>
+    <string name="setup_steps_title">手順</string>
+    <string name="setup_step_1">「ホーム」タブで「開始」をタップしてHTTPサーバーを起動します。持続的な通知がリッスン中であることを確認します。</string>
+    <string name="setup_step_2">iSpindleを設定モードにします: 電源投入時に水平に約20秒保持します。「iSpindel」という名前のAPが起動します。</string>
+    <string name="setup_step_3">このスマートフォンを「iSpindel」 WiFi APに接続し、ブラウザで http://192.168.4.1/ を開いて設定ポータルを読み込みます。</string>
+    <string name="setup_step_4">ポータルで: ホームネットワークのWiFi認証情報を設定し、「サービスタイプ」= HTTP、「サーバーアドレス」= %1$s、「サーバーポート」= %2$s、短いサンプル間隔（テスト用は60秒が適切）を設定します。</string>
+    <string name="setup_step_5">保存します。iSpindleが再起動し、ホームネットワークに接続し、起動し、JSONをPOSTして、スリープします。スマートフォンを同じホームネットワークに再接続します。</string>
+    <string name="setup_step_6">1インターバル以内に「ホーム」タブに最初の計測値が表示されます。「デバイス」タブで一覧に表示されるのを確認し、その後「キャリブレーション」と「グラフ」を使用します。</string>
+    <string name="setup_calibration_workflow_title">キャリブレーションの手順</string>
+    <string name="setup_calibration_intro">キャリブレーションは傾き角度を比重に変換します。2次フィットには少なくとも3つの基準液が必要です。</string>
+    <string name="setup_cal_step_1">20°Cの純水 = SG 1.000。iSpindleが安定するまで待ち、「ホーム」から角度を読み取り、「キャリブレーション」タブで (角度, 1.000) として追加します。</string>
+    <string name="setup_cal_step_2">砂糖水を作り、屈折計または比重計でSGを測定し、iSpindleを浮かべて (角度, SG) を記録します。</string>
+    <string name="setup_cal_step_3">期待されるSG範囲 (1.000 → 1.080) で2〜3個の基準点を繰り返します。</string>
+    <string name="setup_cal_step_4">「フィット &amp; 保存」をタップします。クリーンなフィットではR²が0.999以上である必要があります。以降の計測値にはSGが自動入力されます。</string>
+    <string name="setup_stable_address_title">安定したアドレス</string>
+    <string name="setup_stable_address_intro">iSpindleが生のIPで設定されており、DHCPの更新後にスマートフォンが別のIPを取得した場合、次の計測値が失われます。IP変更後もリンクを維持する2つの方法:</string>
+    <string name="setup_stable_step_1">ルーターでスマートフォンのIPを予約します。通常「DHCP予約」、「静的リース」、「常に同じIPを割り当て」などと呼ばれます。</string>
+    <string name="setup_stable_step_2">IPの代わりにホスト名を使用します。多くのホームルーターは各DHCPクライアントにDNS名を発行します。「設定」画面で「ホスト名を検索」をタップ — ルーターがこのスマートフォンに固有の名前を発行している場合、それをiSpindleのサーバーアドレスとして使用できます。</string>
+    <string name="setup_stable_step_3">「ホスト名を検索」が名前が曖昧と報告した場合、ルーターには以前のデバイスの古いエントリがあります。ルーターのDHCP設定でこのスマートフォンに固有の名前を付け、古いエントリを削除するか、予約済みIPを使用してください。</string>
+    <string name="setup_troubleshooting_title">トラブルシューティング</string>
+    <string name="setup_trouble_same_subnet">• スマートフォンとiSpindleは同じサブネットにある必要があります。ルーターのゲストネットワーク分離を確認してください。</string>
+    <string name="setup_trouble_dhcp">• スマートフォンのIPが変更された場合（DHCPリース期限切れ）、iSpindleポータルに新しいIPを再入力してください。</string>
+    <string name="setup_trouble_deep_sleep">• iSpindleはインターバル間でディープスリープします。サイクル中にpingすることはできません。</string>
+    <string name="setup_trouble_static_ip">• 静的IPの場合、ルーターでスマートフォンのMACを予約してください。</string>
+    <string name="setup_copied_toast">%1$s をコピーしました</string>
+
+    <!-- ── ConfigureScreen ──────────────────────────────────────────── -->
+    <string name="configure_joining_title">iSpindle APに接続中…</string>
+    <string name="configure_joining_body">表示されたらシステムダイアログを承認してください。最初は10〜20秒かかる場合があります。</string>
+    <string name="configure_unsupported_title">このデバイスではサポートされていません</string>
+    <string name="configure_unsupported_body">プログラムによるWiFi接続にはAndroid 10 (API 29)以降が必要です。</string>
+    <string name="configure_failed_title">接続できませんでした</string>
+    <string name="configure_saving_title">保存してiSpindleの接続を待っています…</string>
+    <string name="configure_saving_body">デバイスが再起動してホームネットワークに接続します。45秒間1.5秒ごとにポーリングします。</string>
+    <string name="configure_joined_title">iSpindleが %1$s に接続しました</string>
+    <string name="configure_joined_body">ステーションIP: %1$s\n\n計測値を受信するために、このスマートフォンを同じホームWiFiに再接続してください。</string>
+    <string name="configure_joined_ip_unknown">(まだ不明)</string>
+    <string name="configure_save_timeout_title">保存は送信されましたが、接続が確認されていません</string>
+    <string name="configure_save_timeout_body">iSpindleはフォームを受け付けましたが、ポーリングウィンドウ内にホームネットワークに現れませんでした。しばらくすると接続する可能性があります。スマートフォンをホームWiFiに再接続して「ホーム」タブを確認してください。</string>
+    <!-- Idle / auto-pair card -->
+    <string name="configure_auto_pair_title">iSpindleと自動ペアリング</string>
+    <string name="configure_auto_pair_instructions">1. 電源投入時にiSpindleを水平に約20秒保持 — iSpindel_&lt;chipID&gt; という名前のAPが起動します。\n2. 「接続」をタップします。複数のiSpindleが範囲内にある場合、Androidが選択画面を表示します。\n3. ホームネットワークを選択し、パスワードを入力して保存します。iSpindleが再起動して接続します。</string>
+    <string name="configure_ap_ssid_prefix_label">AP SSIDプレフィックス</string>
+    <string name="configure_ap_ssid_prefix_hint">デフォルトファームウェアはiSpindel_&lt;chipID&gt;を使用します。名前を変更した場合のみ調整してください。</string>
+    <string name="configure_btn_connect">接続</string>
+    <string name="configure_permission_denied">WiFiスキャンの許可が拒否されました。許可なしに自動ペアリングは続行できません。</string>
+    <!-- Connected card -->
+    <string name="configure_connected_title">iSpindleに接続済み</string>
+    <string name="configure_pick_home_network">iSpindleを接続するホームネットワークを選択して保存してください。</string>
+    <string name="configure_scanning">  スキャン中…</string>
+    <string name="configure_home_ssid_label">ホームWiFi SSID</string>
+    <string name="configure_home_password_label">ホームWiFiパスワード</string>
+    <string name="configure_server_description">iSpindleが計測値をPOSTする場所 — デフォルトはこのスマートフォンで、通常はそれが目的です。「このスマートフォンのIPを使用」でデフォルトに戻せます。</string>
+    <string name="configure_pointing_at_phone">スマートフォンを指定中 ✓</string>
+    <string name="configure_use_this_phone_ip">このスマートフォンのIPを使用</string>
+    <string name="configure_no_home_ip">(ホームIPが検出されません — まずスマートフォンをホームWiFiに接続してください)</string>
+    <string name="configure_server_host_label">サーバーホスト</string>
+    <string name="configure_port_label">ポート</string>
+    <string name="configure_uri_label">URI</string>
+    <string name="configure_sleep_interval_label">スリープ間隔 (秒)</string>
+    <string name="configure_device_name_label">デバイス名 (任意)</string>
+    <string name="configure_btn_save_reboot">保存 &amp; 再起動</string>
+    <string name="configure_service_type_label">サービスタイプ</string>
+    <string name="configure_http_warning">⚠ このアプリはiSpindleがGeneric HTTP（またはHTTPS）を使用する場合のみ計測値を受信します。他のサービスは独自のクラウドにPOSTし、スマートフォンをバイパスします。</string>
+    <!-- Hostname row -->
+    <string name="configure_btn_find_hostname">ホスト名を検索</string>
+    <string name="configure_hostname_idle_hint">ルーターが公開する名前を使用すると、iSpindleはDHCP変更後も動作します。</string>
+    <string name="configure_hostname_resolving">解決中…</string>
+    <string name="configure_hostname_not_found">このスマートフォンの逆引きDNSレコードが見つかりません — IPを使用するか、ルーターでホスト名を設定してください。</string>
+    <string name="configure_hostname_ambiguous">%1$s は %2$d 個のIPに解決されます — 名前が共有されています。</string>
+    <string name="configure_hostname_other_ips">その名前に応答している他のIP: %1$s</string>
+    <string name="configure_btn_use_hostname">%1$s を使用</string>
+    <!-- Network list -->
+    <string name="configure_signal_quality">シグナル %1$d%%</string>
+    <string name="configure_signal_wpa2"> · WPA2</string>
+    <string name="configure_signal_open"> · 開放</string>
+    <!-- Live reading -->
+    <string name="configure_live_reading_title">iSpindleのリアルタイム計測値</string>
+    <string name="configure_live_tilt">傾き: %1$s°</string>
+    <string name="configure_live_temperature">温度: %1$s</string>
+    <string name="configure_live_battery">バッテリー: %1$s V</string>
+    <string name="configure_live_gravity">比重: %1$s</string>
+    <!-- Firmware calibration card -->
+    <string name="configure_on_device_cal_title">デバイス上のキャリブレーション</string>
+    <string name="configure_imported">インポートしました。ペアリング後の最初のPOSTでこのデバイスに適用されます。</string>
+    <string name="configure_parsed_as">解析結果: %1$s</string>
+    <string name="configure_btn_import_cal">キャリブレーションをインポート</string>
+    <string name="configure_parse_failed">この式を傾きの3次関数として解析できませんでした — ファームウェアのコピーはそのままです。必要であれば「キャリブレーション」タブでキャリブレーションポイントを手動で再入力してください。</string>
+    <!-- Push calibration card -->
+    <string name="configure_push_cal_title">デバイスにキャリブレーションを送信</string>
+    <string name="configure_push_cal_description">「保存 &amp; 再起動」時に選択した多項式をiSpindleのPOLYNフィールドに書き込みます。ファームウェア自体が他のレシーバーにも適切な比重を報告できるようにするのに便利です。</string>
+    <string name="configure_dont_change_polynomial">デバイスの多項式を変更しない</string>
+    <!-- Pick SSID error -->
+    <string name="configure_no_ssid_error">まずホームネットワークのSSIDを選択してください</string>
+</resources>

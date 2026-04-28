@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ── App / system ─────────────────────────────────────────────── -->
+    <string name="app_name">iSpindle Plotter</string>
+    <string name="server_notification_channel">iSpindle 服务器</string>
+    <string name="server_running">正在监听 iSpindle 数据</string>
+
+    <!-- ── Server service notification ─────────────────────────────── -->
+    <string name="server_notif_starting">正在启动…</string>
+    <string name="server_notif_stopped">已停止</string>
+    <string name="server_notif_listening">正在监听 http://%1$s:%2$d</string>
+    <string name="server_notif_error">错误：%1$s</string>
+
+    <!-- ── Navigation labels ─────────────────────────────────────────── -->
+    <string name="nav_home">主页</string>
+    <string name="nav_devices">设备</string>
+    <string name="nav_setup">设置指南</string>
+    <string name="nav_graph">图表</string>
+    <string name="nav_calibrate">校准</string>
+    <string name="nav_configure">配置</string>
+
+    <!-- ── Common ────────────────────────────────────────────────────── -->
+    <string name="common_cancel">取消</string>
+    <string name="common_save">保存</string>
+    <string name="common_delete">删除</string>
+    <string name="common_close">关闭</string>
+    <string name="common_label">标签</string>
+
+    <!-- ── HomeScreen ────────────────────────────────────────────────── -->
+    <string name="home_section_http_server">HTTP 服务器</string>
+    <string name="home_status_running">运行中</string>
+    <string name="home_status_stopped">已停止</string>
+    <string name="home_status_error_prefix">错误：%1$s</string>
+    <string name="home_endpoint_point_ispindle">iSpindle → %1$s</string>
+    <string name="home_tap_to_copy">点击复制</string>
+    <string name="home_btn_start">启动</string>
+    <string name="home_btn_stop">停止</string>
+    <string name="home_section_latest_reading">最新读数</string>
+    <string name="home_no_readings_yet">暂无读数。请将您的 iSpindle 配置为向上述 URL 发送 POST 请求。</string>
+    <string name="home_section_known_devices">已知设备（%1$d）</string>
+    <string name="home_devices_appear_automatically">设备在首次 POST 后将自动显示。</string>
+    <string name="home_reading_time">时间：%1$s</string>
+    <string name="home_reading_angle">角度：%1$s°</string>
+    <string name="home_reading_temperature">温度：%1$s °C</string>
+    <string name="home_reading_battery">电池：%1$s V</string>
+    <string name="home_reading_rssi">信号强度：%1$s dBm</string>
+    <string name="home_reading_sg_calibrated">比重（已校准）：%1$s</string>
+    <string name="home_reading_sg_reported">比重（设备上报）：%1$s</string>
+    <string name="home_reading_sg_none">比重：—（无校准）</string>
+    <string name="home_copied_toast">已复制 %1$s</string>
+
+    <!-- ── DevicesScreen ─────────────────────────────────────────────── -->
+    <string name="devices_no_devices_yet">暂无设备 — 首次 POST 后将显示。</string>
+    <string name="devices_rename_dialog_title">重命名设备</string>
+    <string name="devices_delete_dialog_title">删除"%1$s"？</string>
+    <string name="devices_counting_readings">正在统计读数…</string>
+    <string name="devices_no_readings_stored">没有存储的读数。</string>
+    <string name="devices_one_reading_will_be_deleted">1 条读数将被永久删除。</string>
+    <string name="devices_n_readings_will_be_deleted">%1$d 条读数将被永久删除。</string>
+    <string name="devices_calibration_also_removed">校准点也将被删除。如果 iSpindle 再次发送数据，它将作为新条目重新出现。</string>
+    <string name="devices_action_graph">图表</string>
+    <string name="devices_action_calibrate">校准</string>
+    <string name="devices_action_rename">重命名</string>
+    <string name="devices_action_delete">删除</string>
+    <string name="devices_hw_id_reported">硬件ID %1$s · 上报名称"%2$s"</string>
+    <string name="devices_calibration_degree">校准：阶数 %1$d</string>
+    <string name="devices_calibration_none">校准：无</string>
+    <string name="devices_last_reported_from">上次上报来自 %1$s</string>
+
+    <!-- ── GraphScreen ────────────────────────────────────────────────── -->
+    <string name="graph_readings_in_window">窗口内 %1$d 条读数 · 共 %2$d 条</string>
+    <string name="graph_btn_trim_before">删除之前数据…</string>
+    <string name="graph_btn_export_csv">导出 CSV…</string>
+    <string name="graph_nothing_to_export">没有可导出的数据。</string>
+    <string name="graph_exported_n_readings">已导出 %1$d 条读数。</string>
+    <string name="graph_export_failed">导出失败。</string>
+    <string name="graph_no_readings_in_window">此时间窗口内无读数。</string>
+    <string name="graph_section_tilt_angle">倾斜角（°）</string>
+    <string name="graph_section_temperature">温度（°C）</string>
+    <string name="graph_section_specific_gravity">比重 / 潜在酒精度%</string>
+    <string name="graph_section_battery">电池（V）</string>
+    <string name="graph_sg_no_data_hint">暂无比重数据 — 请添加校准点以从倾斜角计算比重。</string>
+    <string name="graph_latest_label">最新：%1$s</string>
+    <string name="graph_not_enough_data">数据不足（%1$d 个点）</string>
+    <string name="graph_time_window_24h">24小时</string>
+    <string name="graph_time_window_7d">7天</string>
+    <string name="graph_time_window_30d">30天</string>
+    <string name="graph_time_window_all">全部</string>
+    <string name="graph_all_ferments">全部发酵（%1$d）</string>
+    <string name="graph_ferment_label">发酵 %1$d/%2$d · %3$s → %4$s · −%5$s SG</string>
+    <string name="graph_all_chip_label">全部</string>
+    <string name="graph_phase_active">活跃</string>
+    <string name="graph_phase_slowing">减速</string>
+    <string name="graph_phase_conditioning">后发酵</string>
+    <string name="graph_phase_lag">迟滞期</string>
+    <string name="graph_phase_stuck">停滞</string>
+    <string name="graph_sg_insufficient">比重：趋势数据不足 — 请等待更多读数或扩大时间窗口。</string>
+    <string name="graph_sg_lag_phase">迟滞期 · 初始比重 %1$s · 当前 %2$s · 首次读数已过 %3$s 小时，尚无下降</string>
+    <string name="graph_sg_og_to_fg">初始比重 %1$s → 预计终止比重 %2$s</string>
+    <string name="graph_sg_now_fragment"> · 当前 %1$s · </string>
+    <string name="graph_sg_rate_fragment">速率 %1$s SG/h · </string>
+    <string name="graph_sg_eta_fragment">预计完成 %1$s</string>
+    <string name="graph_sg_abv_fragment"> · 酒精度 %1$s%% → %2$s%%</string>
+    <string name="graph_sg_paused_at"> · 在 %1$s 处停滞 %2$s 小时</string>
+    <string name="graph_sg_conditioning">后发酵 · 初始比重 %1$s · 终止比重 %2$s · 酒精度 %3$s%% · 酵母仍在清理 — 装瓶前请确认读数稳定</string>
+    <string name="graph_sg_stuck">⚠ 停滞 · 初始比重 %1$s · 当前 %2$s · 预期约 %3$s · 已停滞 %4$s 小时 · 当前酒精度 %5$s%%</string>
+    <string name="graph_model_prefix">模型：</string>
+    <string name="graph_sg_eta_ci">（95%% 置信区间 %1$s–%2$s）</string>
+    <string name="graph_sg_meas_sigma"> · σ_meas %1$s</string>
+    <string name="graph_source_gompertz">修正 Gompertz</string>
+    <string name="graph_source_expdecay">指数</string>
+    <string name="graph_source_linear">基于速率（75%% 衰减先验）</string>
+    <string name="graph_source_default">75%% 衰减先验</string>
+    <string name="graph_dur_em_dash">—</string>
+    <string name="graph_dur_days">%1$s 天</string>
+    <string name="graph_dur_hours">%1$s 小时</string>
+    <string name="graph_dur_min">%1$s 分钟</string>
+    <string name="graph_plateau_lag">停滞期</string>
+    <string name="graph_plateau_paused">暂停 %1$s</string>
+    <string name="graph_plateau_asymptote">渐近线 %1$s</string>
+    <string name="graph_battery_prefix">电池：</string>
+    <string name="graph_battery_no_discharge">趋势 %1$s V/天（无放电可推算）</string>
+    <string name="graph_battery_drop_per_day">%1$s V/天下降 · </string>
+    <string name="graph_battery_days_to_cutoff">距 3.4 V 截止的天数：%1$s</string>
+    <string name="graph_battery_rms">均方根误差 ±%1$s V</string>
+    <string name="graph_trim_delete_description">删除此日期和本地时间之前记录的所有读数。</string>
+    <string name="graph_trim_time_of_day">当天时间（本地）</string>
+    <string name="graph_trim_counting">正在统计…</string>
+    <string name="graph_trim_nothing_to_delete">没有可删除的内容</string>
+    <string name="graph_trim_delete_one">删除 1 条读数</string>
+    <string name="graph_trim_delete_n">删除 %1$d 条读数</string>
+    <string name="graph_trimmed_nothing">没有需要修剪的内容。</string>
+    <string name="graph_deleted_n_readings">已删除 %1$d 条读数。</string>
+
+    <!-- ── CalibrationScreen ──────────────────────────────────────────── -->
+    <string name="cal_add_point_title">添加校准点</string>
+    <string name="cal_add_point_description">将 iSpindle 浸入已知比重的糖溶液中（例如纯水 = 1.000，或用折光仪测量糖水混合物）。等待一次读数，将倾斜角复制到此处并输入已知比重。</string>
+    <string name="cal_current_angle">当前角度：%1$s°</string>
+    <string name="cal_use_this">使用此值</string>
+    <string name="cal_angle_label">角度（°）</string>
+    <string name="cal_known_sg_label">已知比重</string>
+    <string name="cal_note_label">备注（可选）</string>
+    <string name="cal_btn_add_point">添加校准点</string>
+    <string name="cal_points_title">校准点（%1$d）</string>
+    <string name="cal_no_points_yet">暂无校准点。</string>
+    <string name="cal_delete_point_cd">删除</string>
+    <string name="cal_fit_polynomial_title">拟合多项式</string>
+    <string name="cal_degree_chip">阶数 %1$d</string>
+    <string name="cal_fit_description">二次方（阶数 2）是 iSpindel 社区默认值。至少需要（阶数+1）个启用的校准点。</string>
+    <string name="cal_btn_fit_save">拟合并保存</string>
+    <string name="cal_btn_clear_calibration">清除校准</string>
+    <string name="cal_cleared">校准已清除。</string>
+    <string name="cal_fit_saved">已保存：%1$s</string>
+    <string name="cal_fit_saved_r2">已保存：%1$s（R²=%2$s）</string>
+    <string name="cal_fit_not_enough_points">需要 %1$d 个启用的校准点，当前有 %2$d 个。</string>
+    <string name="cal_fit_singular">拟合失败 — 校准点可能共线或重复。</string>
+    <string name="cal_current_polynomial_title">当前多项式</string>
+    <string name="cal_sg_function">SG（角度）= %1$s</string>
+
+    <!-- ── SetupScreen ────────────────────────────────────────────────── -->
+    <string name="setup_title">配对您的 iSpindle</string>
+    <string name="setup_auto_configure_title">自动配置（Android 10+）</string>
+    <string name="setup_auto_configure_description">直接驱动 iSpindle 的配置门户：加入其热点、扫描您的家庭网络、提交表单并等待设备上线。完全跳过手动浏览器步骤。</string>
+    <string name="setup_btn_configure_now">立即配置 iSpindle</string>
+    <string name="setup_or_manually">或手动配置：</string>
+    <string name="setup_manual_intro">MTB iSpindel PCB 4.0 在 ESP8266 上运行标准 iSpindel 固件。没有蓝牙 — 读数通过 WiFi 以 HTTP POST 方式传送。</string>
+    <string name="setup_this_phone_ip">本机当前 IP：%1$s</string>
+    <string name="setup_server_port">服务器端口：%1$s</string>
+    <string name="setup_tap_ip_to_copy">点击 IP 地址复制。</string>
+    <string name="setup_steps_title">步骤</string>
+    <string name="setup_step_1">在主页标签中，点击"启动"以启动 HTTP 服务器。持续通知将确认服务器正在监听。</string>
+    <string name="setup_step_2">将 iSpindle 进入配置模式：上电时水平放置约 20 秒。它会发出名为"iSpindel"的热点。</string>
+    <string name="setup_step_3">将手机连接到"iSpindel"WiFi 热点，并在浏览器中打开 http://192.168.4.1/ 以加载配置门户。</string>
+    <string name="setup_step_4">在门户中：设置家庭网络的 WiFi 凭据，将"服务类型"设为 HTTP，"服务器地址"设为 %1$s，"服务器端口"设为 %2$s，并设置较短的采样间隔（60 秒适合测试）。</string>
+    <string name="setup_step_5">保存。iSpindle 重启，加入您的家庭网络，唤醒后发送 JSON，然后休眠。将手机重新连接到同一家庭网络。</string>
+    <string name="setup_step_6">在一个采样间隔内，主页标签将显示第一条读数。打开设备标签查看列表，然后进行校准和查看图表。</string>
+    <string name="setup_calibration_workflow_title">校准流程</string>
+    <string name="setup_calibration_intro">校准将倾斜角转换为比重。二次拟合至少需要 3 个参考溶液。</string>
+    <string name="setup_cal_step_1">20°C 纯水 = SG 1.000。让 iSpindle 稳定后，从主页读取角度，并在校准标签中添加（角度，1.000）。</string>
+    <string name="setup_cal_step_2">混合糖水溶液，用折光仪或酒精度计测量比重，将 iSpindle 放入溶液，记录（角度，SG）。</string>
+    <string name="setup_cal_step_3">在预期 SG 范围（1.000 → 1.080）内再重复 2–3 个参考点。</string>
+    <string name="setup_cal_step_4">点击"拟合并保存"。R² 应大于 0.999 才算良好拟合。未来的读数将自动填充 SG。</string>
+    <string name="setup_stable_address_title">固定地址</string>
+    <string name="setup_stable_address_intro">如果 iSpindle 配置了原始 IP 地址，而手机在 DHCP 续期后获取了不同的 IP，下一条读数将被丢弃。保持 IP 变更后链路正常的两种方法：</string>
+    <string name="setup_stable_step_1">在路由器上为手机 IP 设置预留。该设置通常称为"DHCP 预留"、"静态租约"或"始终分配相同 IP"。</string>
+    <string name="setup_stable_step_2">使用主机名代替 IP。许多家用路由器会为每个 DHCP 客户端发布 DNS 名称。在配置屏幕中，点击"查找主机名" — 如果路由器为本机发布了唯一名称，您可以将其用作 iSpindle 的服务器地址，IP 变更后仍可用。</string>
+    <string name="setup_stable_step_3">如果"查找主机名"报告名称不明确，则路由器存在来自之前设备的陈旧条目。在路由器的 DHCP 设置中为本机设置唯一名称并删除旧条目，或回退到预留 IP。</string>
+    <string name="setup_troubleshooting_title">故障排除</string>
+    <string name="setup_trouble_same_subnet">• 手机和 iSpindle 必须在同一子网内。检查路由器的访客网络隔离设置。</string>
+    <string name="setup_trouble_dhcp">• 如果手机 IP 发生变化（DHCP 租约到期），请在 iSpindle 门户中重新输入新 IP。</string>
+    <string name="setup_trouble_deep_sleep">• iSpindle 在采样间隔之间会深度休眠；在休眠周期内您将无法 ping 到它。</string>
+    <string name="setup_trouble_static_ip">• 如需静态 IP，请在路由器上为手机 MAC 地址设置预留。</string>
+    <string name="setup_copied_toast">已复制 %1$s</string>
+
+    <!-- ── ConfigureScreen ───────────────────────────────────────────── -->
+    <string name="configure_joining_title">正在加入 iSpindle 热点…</string>
+    <string name="configure_joining_body">出现系统对话框时请批准。首次连接可能需要 10–20 秒。</string>
+    <string name="configure_unsupported_title">此设备不支持</string>
+    <string name="configure_unsupported_body">程序化 WiFi 连接需要 Android 10（API 29）或更高版本。</string>
+    <string name="configure_failed_title">无法连接</string>
+    <string name="configure_saving_title">正在保存并等待 iSpindle 加入…</string>
+    <string name="configure_saving_body">设备正在重启并加入您的家庭网络。每 1.5 秒轮询一次，最长 45 秒。</string>
+    <string name="configure_joined_title">iSpindle 已加入 %1$s</string>
+    <string name="configure_joined_body">设备 IP：%1$s\n\n请将本机重新连接到同一家庭 WiFi 以接收读数。</string>
+    <string name="configure_joined_ip_unknown">（尚未知道）</string>
+    <string name="configure_save_timeout_title">已提交保存，但未确认加入</string>
+    <string name="configure_save_timeout_body">iSpindle 已接受表单，但在轮询窗口内未出现在家庭网络中。它可能在更长时间后加入。将本机重新连接到家庭 WiFi 并检查主页标签。</string>
+    <string name="configure_auto_pair_title">与 iSpindle 自动配对</string>
+    <string name="configure_auto_pair_instructions">1. 上电时水平放置 iSpindle 约 20 秒 — 它会发出名为 iSpindel_&lt;chipID&gt; 的热点。\n2. 点击连接。如果范围内有多个 iSpindle，Android 将显示选择器供您选择正确的设备。\n3. 选择您的家庭网络，输入密码，保存。iSpindle 重启并加入。</string>
+    <string name="configure_ap_ssid_prefix_label">热点 SSID 前缀</string>
+    <string name="configure_ap_ssid_prefix_hint">默认固件使用 iSpindel_&lt;chipID&gt;；仅在您重命名时调整。</string>
+    <string name="configure_btn_connect">连接</string>
+    <string name="configure_permission_denied">WiFi 扫描权限被拒绝。自动配对无法在没有权限的情况下进行。</string>
+    <string name="configure_connected_title">已连接到 iSpindle</string>
+    <string name="configure_pick_home_network">选择您希望 iSpindle 加入的家庭网络，然后保存。</string>
+    <string name="configure_scanning">  正在扫描…</string>
+    <string name="configure_home_ssid_label">家庭 WiFi SSID</string>
+    <string name="configure_home_password_label">家庭 WiFi 密码</string>
+    <string name="configure_server_description">iSpindle 应发送读数的目标 — 默认为本机，通常这就是您想要的。点击"使用本机"以恢复默认值。</string>
+    <string name="configure_pointing_at_phone">指向本机 ✓</string>
+    <string name="configure_use_this_phone_ip">使用本机 IP</string>
+    <string name="configure_no_home_ip">（未检测到家庭 IP — 请先将本机连接到家庭 WiFi）</string>
+    <string name="configure_server_host_label">服务器地址</string>
+    <string name="configure_port_label">端口</string>
+    <string name="configure_uri_label">URI</string>
+    <string name="configure_sleep_interval_label">休眠间隔（秒）</string>
+    <string name="configure_device_name_label">设备名称（可选）</string>
+    <string name="configure_btn_save_reboot">保存并重启</string>
+    <string name="configure_service_type_label">服务类型</string>
+    <string name="configure_http_warning">⚠ 仅当 iSpindle 使用通用 HTTP（或 HTTPS）时，此应用才接收读数。其他服务将数据发送到各自的云端，绕过本机。</string>
+    <string name="configure_btn_find_hostname">查找主机名</string>
+    <string name="configure_hostname_idle_hint">使用路由器发布的名称，以便 iSpindle 在 DHCP 变更后仍可访问。</string>
+    <string name="configure_hostname_resolving">正在解析…</string>
+    <string name="configure_hostname_not_found">此手机没有反向 DNS 记录 — 请使用 IP，或在路由器中设置主机名。</string>
+    <string name="configure_hostname_ambiguous">%1$s 解析到 %2$d 个 IP — 名称共享。</string>
+    <string name="configure_hostname_other_ips">其他响应该名称的 IP：%1$s</string>
+    <string name="configure_btn_use_hostname">使用 %1$s</string>
+    <string name="configure_signal_quality">信号 %1$d%%</string>
+    <string name="configure_signal_wpa2"> · WPA2</string>
+    <string name="configure_signal_open"> · 开放</string>
+    <string name="configure_live_reading_title">iSpindle 实时读数</string>
+    <string name="configure_live_tilt">倾斜：%1$s°</string>
+    <string name="configure_live_temperature">温度：%1$s</string>
+    <string name="configure_live_battery">电池：%1$s V</string>
+    <string name="configure_live_gravity">比重：%1$s</string>
+    <string name="configure_on_device_cal_title">设备内校准</string>
+    <string name="configure_imported">已导入。将在此设备首次 POST 配对后应用。</string>
+    <string name="configure_parsed_as">解析为：%1$s</string>
+    <string name="configure_btn_import_cal">导入校准</string>
+    <string name="configure_parse_failed">无法将此表达式解析为倾斜角的三次方程 — 保留固件中的副本。如需重新校准，请在校准标签中手动输入校准点。</string>
+    <string name="configure_push_cal_title">将校准发送到设备</string>
+    <string name="configure_push_cal_description">在保存并重启时将所选多项式写入 iSpindle 的 POLYN 字段。这样固件本身也能向其他接收方报告合理的比重，而不仅仅是此应用。</string>
+    <string name="configure_dont_change_polynomial">不更改设备多项式</string>
+    <string name="configure_no_ssid_error">请先选择家庭网络 SSID</string>
+</resources>
