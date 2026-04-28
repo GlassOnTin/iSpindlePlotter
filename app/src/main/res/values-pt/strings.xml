@@ -71,6 +71,10 @@
     <string name="graph_readings_in_window">%1$d leituras na janela · %2$d no total</string>
     <string name="graph_btn_trim_before">Cortar antes de…</string>
     <string name="graph_btn_export_csv">Exportar CSV…</string>
+    <string name="graph_btn_import_csv">Importar CSV…</string>
+    <string name="graph_import_read_failed">Não foi possível ler o arquivo.</string>
+    <string name="graph_import_succeeded">%1$d novas leituras importadas (%2$d ignoradas).</string>
+    <string name="graph_import_failed">Falha na importação: %1$s</string>
     <string name="graph_nothing_to_export">Nada para exportar.</string>
     <string name="graph_exported_n_readings">%1$d leituras exportadas.</string>
     <string name="graph_export_failed">Falha na exportação.</string>
@@ -190,7 +194,15 @@
     <string name="setup_stable_address_intro">Se o iSpindle estiver configurado com um IP fixo e o celular obtiver um diferente após renovação de DHCP, a próxima leitura será descartada. Duas formas de manter o link após mudanças de IP:</string>
     <string name="setup_stable_step_1">Reserve o IP do celular no roteador. A configuração geralmente se chama "reserva DHCP", "arrendamento estático" ou "atribuir sempre o mesmo IP".</string>
     <string name="setup_stable_step_2">Use um nome de host em vez de IP. Muitos roteadores domésticos publicam um nome DNS para cada cliente DHCP. Na tela Configurar, toque em "Encontrar nome de host" — se o roteador publicar um nome único para este celular, você pode usá-lo como endereço do servidor do iSpindle e ele sobreviverá a mudanças de IP.</string>
-    <string name="setup_stable_step_3">Se "Encontrar nome de host" relatar que o nome é ambíguo, o roteador tem entradas obsoletas de dispositivos anteriores. Dê a este celular um nome distinto nas configurações DHCP do roteador e remova as entradas antigas, ou use um IP reservado.</string>
+    <string name="setup_stable_step_3">Se "Encontrar nome de host" relatar que o nome é ambíguo, o roteador tem entradas obsoletas de dispositivos anteriores. Dê a este celular um nome distinto nas configurações DHCP do roteador e remova as entradas antigas, ou use um IP reservado.</string>    <string name="setup_backup_title">Backup e restauração</string>
+    <string name="setup_backup_intro">Salve rótulos de dispositivos, polinômios de calibração e pontos de calibração brutos em um arquivo JSON. Histórico de leituras não é incluído — use a exportação CSV por dispositivo para isso.</string>
+    <string name="setup_btn_backup">Salvar configurações…</string>
+    <string name="setup_btn_restore">Restaurar configurações…</string>
+    <string name="setup_backup_succeeded">%1$d dispositivos salvos.</string>
+    <string name="setup_backup_failed">Falha ao salvar.</string>
+    <string name="setup_restore_succeeded">%1$d dispositivos restaurados.</string>
+    <string name="setup_restore_failed">Falha na restauração: %1$s</string>
+
     <string name="setup_troubleshooting_title">Solução de problemas</string>
     <string name="setup_trouble_same_subnet">• O celular e o iSpindle devem estar na mesma sub-rede. Verifique o isolamento de rede de convidados do roteador.</string>
     <string name="setup_trouble_dhcp">• Se o IP do celular mudar (expiração de arrendamento DHCP), insira o novo IP no portal do iSpindle.</string>

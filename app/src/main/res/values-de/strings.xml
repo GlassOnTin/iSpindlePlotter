@@ -71,6 +71,10 @@
     <string name="graph_readings_in_window">%1$d Messwerte im Fenster · %2$d gesamt</string>
     <string name="graph_btn_trim_before">Kürzen bis…</string>
     <string name="graph_btn_export_csv">CSV exportieren…</string>
+    <string name="graph_btn_import_csv">CSV importieren…</string>
+    <string name="graph_import_read_failed">Datei konnte nicht gelesen werden.</string>
+    <string name="graph_import_succeeded">%1$d neue Messwerte importiert (%2$d übersprungen).</string>
+    <string name="graph_import_failed">Import fehlgeschlagen: %1$s</string>
     <string name="graph_nothing_to_export">Nichts zu exportieren.</string>
     <string name="graph_exported_n_readings">%1$d Messwerte exportiert.</string>
     <string name="graph_export_failed">Export fehlgeschlagen.</string>
@@ -199,7 +203,15 @@
     <string name="setup_stable_address_intro">Wenn der iSpindle mit einer rohen IP konfiguriert ist und das Telefon nach einer DHCP-Erneuerung eine andere bekommt, geht der nächste Messwert verloren. Zwei Möglichkeiten, die Verbindung nach IP-Änderungen aufrechtzuerhalten:</string>
     <string name="setup_stable_step_1">Reservieren Sie die IP des Telefons auf Ihrem Router. Die Einstellung heißt meist „DHCP-Reservierung", „statischer Lease" oder „immer dieselbe IP zuweisen".</string>
     <string name="setup_stable_step_2">Verwenden Sie einen Hostnamen statt einer IP. Viele Heimrouter veröffentlichen für jeden DHCP-Client einen DNS-Namen. Tippen Sie im Konfigurieren-Bildschirm auf „Hostnamen suchen" — wenn der Router einen eindeutigen Namen für dieses Telefon veröffentlicht, können Sie diesen als iSpindle-Serveradresse verwenden.</string>
-    <string name="setup_stable_step_3">Wenn „Hostnamen suchen" meldet, dass der Name mehrdeutig ist, hat der Router veraltete Einträge von früheren Geräten. Geben Sie diesem Telefon im DHCP-Bereich des Routers einen eindeutigen Namen und entfernen Sie die alten Einträge, oder verwenden Sie eine reservierte IP.</string>
+    <string name="setup_stable_step_3">Wenn „Hostnamen suchen" meldet, dass der Name mehrdeutig ist, hat der Router veraltete Einträge von früheren Geräten. Geben Sie diesem Telefon im DHCP-Bereich des Routers einen eindeutigen Namen und entfernen Sie die alten Einträge, oder verwenden Sie eine reservierte IP.</string>    <string name="setup_backup_title">Sicherung &amp; Wiederherstellung</string>
+    <string name="setup_backup_intro">Sichern Sie Gerätebezeichnungen, Kalibrierungspolynome und Rohkalibrierungspunkte in einer JSON-Datei. Messwertverlauf wird nicht aufgenommen — nutzen Sie dafür den CSV-Export pro Gerät.</string>
+    <string name="setup_btn_backup">Einstellungen sichern…</string>
+    <string name="setup_btn_restore">Einstellungen wiederherstellen…</string>
+    <string name="setup_backup_succeeded">%1$d Geräte gesichert.</string>
+    <string name="setup_backup_failed">Sicherung fehlgeschlagen.</string>
+    <string name="setup_restore_succeeded">%1$d Geräte wiederhergestellt.</string>
+    <string name="setup_restore_failed">Wiederherstellung fehlgeschlagen: %1$s</string>
+
     <string name="setup_troubleshooting_title">Fehlerbehebung</string>
     <string name="setup_trouble_same_subnet">• Telefon und iSpindle müssen sich im gleichen Subnetz befinden. Prüfen Sie die Gastnetzwerk-Isolation Ihres Routers.</string>
     <string name="setup_trouble_dhcp">• Wenn die IP des Telefons sich ändert (DHCP-Lease abgelaufen), geben Sie die neue IP erneut im iSpindle-Portal ein.</string>

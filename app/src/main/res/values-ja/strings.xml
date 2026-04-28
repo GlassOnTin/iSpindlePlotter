@@ -71,6 +71,10 @@
     <string name="graph_readings_in_window">ウィンドウ内 %1$d件 · 合計 %2$d件</string>
     <string name="graph_btn_trim_before">以前をトリム…</string>
     <string name="graph_btn_export_csv">CSVエクスポート…</string>
+    <string name="graph_btn_import_csv">CSVをインポート…</string>
+    <string name="graph_import_read_failed">ファイルを読み込めませんでした。</string>
+    <string name="graph_import_succeeded">%1$d件の新しい計測値をインポート（%2$d件スキップ）。</string>
+    <string name="graph_import_failed">インポートに失敗しました: %1$s</string>
     <string name="graph_nothing_to_export">エクスポートするものがありません。</string>
     <string name="graph_exported_n_readings">%1$d件の計測値をエクスポートしました。</string>
     <string name="graph_export_failed">エクスポートに失敗しました。</string>
@@ -197,7 +201,15 @@
     <string name="setup_stable_address_intro">iSpindleが生のIPで設定されており、DHCPの更新後にスマートフォンが別のIPを取得した場合、次の計測値が失われます。IP変更後もリンクを維持する2つの方法:</string>
     <string name="setup_stable_step_1">ルーターでスマートフォンのIPを予約します。通常「DHCP予約」、「静的リース」、「常に同じIPを割り当て」などと呼ばれます。</string>
     <string name="setup_stable_step_2">IPの代わりにホスト名を使用します。多くのホームルーターは各DHCPクライアントにDNS名を発行します。「設定」画面で「ホスト名を検索」をタップ — ルーターがこのスマートフォンに固有の名前を発行している場合、それをiSpindleのサーバーアドレスとして使用できます。</string>
-    <string name="setup_stable_step_3">「ホスト名を検索」が名前が曖昧と報告した場合、ルーターには以前のデバイスの古いエントリがあります。ルーターのDHCP設定でこのスマートフォンに固有の名前を付け、古いエントリを削除するか、予約済みIPを使用してください。</string>
+    <string name="setup_stable_step_3">「ホスト名を検索」が名前が曖昧と報告した場合、ルーターには以前のデバイスの古いエントリがあります。ルーターのDHCP設定でこのスマートフォンに固有の名前を付け、古いエントリを削除するか、予約済みIPを使用してください。</string>    <string name="setup_backup_title">バックアップと復元</string>
+    <string name="setup_backup_intro">デバイスラベル、キャリブレーション多項式、生キャリブレーションポイントを JSON ファイルに保存します。計測値履歴は含まれません — それにはデバイスごとの CSV エクスポートを使用してください。</string>
+    <string name="setup_btn_backup">設定を保存…</string>
+    <string name="setup_btn_restore">設定を復元…</string>
+    <string name="setup_backup_succeeded">%1$d 台のデバイスを保存しました。</string>
+    <string name="setup_backup_failed">保存に失敗しました。</string>
+    <string name="setup_restore_succeeded">%1$d 台のデバイスを復元しました。</string>
+    <string name="setup_restore_failed">復元に失敗しました: %1$s</string>
+
     <string name="setup_troubleshooting_title">トラブルシューティング</string>
     <string name="setup_trouble_same_subnet">• スマートフォンとiSpindleは同じサブネットにある必要があります。ルーターのゲストネットワーク分離を確認してください。</string>
     <string name="setup_trouble_dhcp">• スマートフォンのIPが変更された場合（DHCPリース期限切れ）、iSpindleポータルに新しいIPを再入力してください。</string>

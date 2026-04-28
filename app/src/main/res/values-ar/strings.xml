@@ -71,6 +71,10 @@
     <string name="graph_readings_in_window">%1$d قراءات في النافذة · %2$d إجمالاً</string>
     <string name="graph_btn_trim_before">قص ما قبل…</string>
     <string name="graph_btn_export_csv">تصدير CSV…</string>
+    <string name="graph_btn_import_csv">استيراد CSV…</string>
+    <string name="graph_import_read_failed">تعذّر قراءة الملف.</string>
+    <string name="graph_import_succeeded">تم استيراد %1$d قراءة جديدة (%2$d تم تخطيها).</string>
+    <string name="graph_import_failed">فشل الاستيراد: %1$s</string>
     <string name="graph_nothing_to_export">لا شيء للتصدير.</string>
     <string name="graph_exported_n_readings">تم تصدير %1$d قراءات.</string>
     <string name="graph_export_failed">فشل التصدير.</string>
@@ -190,7 +194,15 @@
     <string name="setup_stable_address_intro">إذا كان iSpindle مُعدًّا بعنوان IP مباشر وحصل الهاتف على عنوان مختلف بعد تجديد DHCP، ستُتجاهل القراءة التالية. طريقتان للحفاظ على الاتصال عبر تغييرات IP:</string>
     <string name="setup_stable_step_1">احجز عنوان IP الهاتف في جهاز التوجيه. يُسمى الإعداد عادةً "حجز DHCP" أو "عقد ثابت" أو "تعيين نفس IP دائمًا".</string>
     <string name="setup_stable_step_2">استخدم اسم مضيف بدلًا من IP. تنشر كثير من أجهزة التوجيه المنزلية اسم DNS لكل عميل DHCP. في شاشة الضبط، انقر "البحث عن اسم مضيف" — إذا نشر جهاز التوجيه اسمًا فريدًا لهذا الهاتف يمكنك استخدامه كعنوان خادم iSpindle وسيظل يعمل بعد تغييرات IP.</string>
-    <string name="setup_stable_step_3">إذا أبلغ "البحث عن اسم مضيف" بأن الاسم غامض، فجهاز التوجيه لديه إدخالات قديمة من أجهزة سابقة. امنح هذا الهاتف اسمًا مميزًا في إعدادات DHCP لجهاز التوجيه وأزل الإدخالات القديمة، أو استخدم IP محجوز.</string>
+    <string name="setup_stable_step_3">إذا أبلغ "البحث عن اسم مضيف" بأن الاسم غامض، فجهاز التوجيه لديه إدخالات قديمة من أجهزة سابقة. امنح هذا الهاتف اسمًا مميزًا في إعدادات DHCP لجهاز التوجيه وأزل الإدخالات القديمة، أو استخدم IP محجوز.</string>    <string name="setup_backup_title">النسخ الاحتياطي والاستعادة</string>
+    <string name="setup_backup_intro">احفظ تسميات الأجهزة وكثيرات حدود المعايرة ونقاط المعايرة الخام في ملف JSON. لا يتضمن سجل القراءات — استخدم تصدير CSV لكل جهاز لذلك.</string>
+    <string name="setup_btn_backup">حفظ الإعدادات…</string>
+    <string name="setup_btn_restore">استعادة الإعدادات…</string>
+    <string name="setup_backup_succeeded">تم حفظ %1$d جهاز.</string>
+    <string name="setup_backup_failed">فشل الحفظ.</string>
+    <string name="setup_restore_succeeded">تمت استعادة %1$d جهاز.</string>
+    <string name="setup_restore_failed">فشل الاستعادة: %1$s</string>
+
     <string name="setup_troubleshooting_title">استكشاف الأخطاء وإصلاحها</string>
     <string name="setup_trouble_same_subnet">• يجب أن يكون الهاتف وiSpindle على نفس الشبكة الفرعية. تحقق من عزل الشبكة الضيفية في جهاز التوجيه.</string>
     <string name="setup_trouble_dhcp">• إذا تغير IP الهاتف (انتهاء عقد DHCP)، أعد إدخال IP الجديد في بوابة iSpindle.</string>

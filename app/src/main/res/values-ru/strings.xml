@@ -71,6 +71,10 @@
     <string name="graph_readings_in_window">%1$d показаний в окне · %2$d всего</string>
     <string name="graph_btn_trim_before">Обрезать до…</string>
     <string name="graph_btn_export_csv">Экспорт CSV…</string>
+    <string name="graph_btn_import_csv">Импорт CSV…</string>
+    <string name="graph_import_read_failed">Не удалось прочитать файл.</string>
+    <string name="graph_import_succeeded">Импортировано %1$d новых показаний (%2$d пропущено).</string>
+    <string name="graph_import_failed">Ошибка импорта: %1$s</string>
     <string name="graph_nothing_to_export">Нечего экспортировать.</string>
     <string name="graph_exported_n_readings">Экспортировано %1$d показаний.</string>
     <string name="graph_export_failed">Ошибка экспорта.</string>
@@ -197,7 +201,15 @@
     <string name="setup_stable_address_intro">Если iSpindle настроен с прямым IP и телефон получает другой адрес после обновления DHCP, следующее показание будет потеряно. Два способа сохранить связь при смене IP:</string>
     <string name="setup_stable_step_1">Зарезервируйте IP телефона на роутере. Обычно этот параметр называется «DHCP-резервирование», «статическая аренда» или «всегда назначать один IP».</string>
     <string name="setup_stable_step_2">Используйте имя хоста вместо IP. Многие домашние роутеры публикуют DNS-имя для каждого DHCP-клиента. На экране «Настройка» нажмите «Найти имя хоста» — если роутер публикует уникальное имя для этого телефона, его можно использовать в качестве адреса сервера.</string>
-    <string name="setup_stable_step_3">Если «Найти имя хоста» сообщает о неоднозначности, роутер содержит устаревшие записи от предыдущих устройств. Дайте телефону уникальное имя в настройках DHCP роутера и удалите старые записи, или используйте зарезервированный IP.</string>
+    <string name="setup_stable_step_3">Если «Найти имя хоста» сообщает о неоднозначности, роутер содержит устаревшие записи от предыдущих устройств. Дайте телефону уникальное имя в настройках DHCP роутера и удалите старые записи, или используйте зарезервированный IP.</string>    <string name="setup_backup_title">Резервное копирование и восстановление</string>
+    <string name="setup_backup_intro">Сохраните метки устройств, полиномы калибровки и сырые точки калибровки в JSON-файл. История показаний не включается — используйте экспорт CSV по устройству для этого.</string>
+    <string name="setup_btn_backup">Сохранить настройки…</string>
+    <string name="setup_btn_restore">Восстановить настройки…</string>
+    <string name="setup_backup_succeeded">Сохранено устройств: %1$d.</string>
+    <string name="setup_backup_failed">Ошибка сохранения.</string>
+    <string name="setup_restore_succeeded">Восстановлено устройств: %1$d.</string>
+    <string name="setup_restore_failed">Ошибка восстановления: %1$s</string>
+
     <string name="setup_troubleshooting_title">Устранение неполадок</string>
     <string name="setup_trouble_same_subnet">• Телефон и iSpindle должны быть в одной подсети. Проверьте изоляцию гостевой сети роутера.</string>
     <string name="setup_trouble_dhcp">• Если IP телефона изменился (истечение аренды DHCP), введите новый IP в портале iSpindle.</string>

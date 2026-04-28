@@ -71,9 +71,13 @@
     <string name="graph_readings_in_window">%1$d readings in window · %2$d total</string>
     <string name="graph_btn_trim_before">Trim before…</string>
     <string name="graph_btn_export_csv">Export CSV…</string>
+    <string name="graph_btn_import_csv">Import CSV…</string>
     <string name="graph_nothing_to_export">Nothing to export.</string>
     <string name="graph_exported_n_readings">Exported %1$d readings.</string>
     <string name="graph_export_failed">Export failed.</string>
+    <string name="graph_import_read_failed">Couldn\'t read file.</string>
+    <string name="graph_import_succeeded">Imported %1$d new readings (%2$d skipped).</string>
+    <string name="graph_import_failed">Import failed: %1$s</string>
     <string name="graph_no_readings_in_window">No readings in this window.</string>
     <string name="graph_section_tilt_angle">Tilt angle (°)</string>
     <string name="graph_section_temperature">Temperature (°C)</string>
@@ -202,6 +206,15 @@
     <string name="setup_stable_step_1">Reserve the phone\'s IP on your router. The setting is usually called \"DHCP reservation\", \"static lease\", or \"always assign the same IP\".</string>
     <string name="setup_stable_step_2">Use a hostname instead of an IP. Many home routers publish a DNS name for every DHCP client. On the Configure screen, tap \"Find hostname\" — if the router publishes a unique name for this phone you can use that as the iSpindle\'s server address, and it survives IP changes.</string>
     <string name="setup_stable_step_3">If \"Find hostname\" reports the name is ambiguous, the router has stale entries from previous devices. Give this phone a distinct name in the router\'s DHCP settings and remove the old entries, or fall back to a reserved IP.</string>
+    <!-- Settings backup / restore -->
+    <string name="setup_backup_title">Backup &amp; restore</string>
+    <string name="setup_backup_intro">Save device labels, calibration polynomials, and raw calibration points to a JSON file. Reading history isn\'t included — use the per-device CSV export for that.</string>
+    <string name="setup_btn_backup">Save settings…</string>
+    <string name="setup_btn_restore">Restore settings…</string>
+    <string name="setup_backup_succeeded">Saved %1$d devices.</string>
+    <string name="setup_backup_failed">Save failed.</string>
+    <string name="setup_restore_succeeded">Restored %1$d devices.</string>
+    <string name="setup_restore_failed">Restore failed: %1$s</string>
     <string name="setup_troubleshooting_title">Troubleshooting</string>
     <string name="setup_trouble_same_subnet">• Phone and iSpindle must be on the same subnet. Check your router\'s guest-network isolation.</string>
     <string name="setup_trouble_dhcp">• If the phone\'s IP changes (DHCP lease expiry), re-enter the new IP in the iSpindle portal.</string>

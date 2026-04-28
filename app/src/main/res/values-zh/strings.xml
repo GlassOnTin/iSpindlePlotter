@@ -71,6 +71,10 @@
     <string name="graph_readings_in_window">窗口内 %1$d 条读数 · 共 %2$d 条</string>
     <string name="graph_btn_trim_before">删除之前数据…</string>
     <string name="graph_btn_export_csv">导出 CSV…</string>
+    <string name="graph_btn_import_csv">导入 CSV…</string>
+    <string name="graph_import_read_failed">无法读取文件。</string>
+    <string name="graph_import_succeeded">已导入 %1$d 条新读数（跳过 %2$d 条）。</string>
+    <string name="graph_import_failed">导入失败：%1$s</string>
     <string name="graph_nothing_to_export">没有可导出的数据。</string>
     <string name="graph_exported_n_readings">已导出 %1$d 条读数。</string>
     <string name="graph_export_failed">导出失败。</string>
@@ -190,7 +194,15 @@
     <string name="setup_stable_address_intro">如果 iSpindle 配置了原始 IP 地址，而手机在 DHCP 续期后获取了不同的 IP，下一条读数将被丢弃。保持 IP 变更后链路正常的两种方法：</string>
     <string name="setup_stable_step_1">在路由器上为手机 IP 设置预留。该设置通常称为"DHCP 预留"、"静态租约"或"始终分配相同 IP"。</string>
     <string name="setup_stable_step_2">使用主机名代替 IP。许多家用路由器会为每个 DHCP 客户端发布 DNS 名称。在配置屏幕中，点击"查找主机名" — 如果路由器为本机发布了唯一名称，您可以将其用作 iSpindle 的服务器地址，IP 变更后仍可用。</string>
-    <string name="setup_stable_step_3">如果"查找主机名"报告名称不明确，则路由器存在来自之前设备的陈旧条目。在路由器的 DHCP 设置中为本机设置唯一名称并删除旧条目，或回退到预留 IP。</string>
+    <string name="setup_stable_step_3">如果"查找主机名"报告名称不明确，则路由器存在来自之前设备的陈旧条目。在路由器的 DHCP 设置中为本机设置唯一名称并删除旧条目，或回退到预留 IP。</string>    <string name="setup_backup_title">备份与恢复</string>
+    <string name="setup_backup_intro">将设备标签、校准多项式和原始校准点保存到 JSON 文件。读数历史不包含 — 请使用每个设备的 CSV 导出。</string>
+    <string name="setup_btn_backup">保存设置…</string>
+    <string name="setup_btn_restore">恢复设置…</string>
+    <string name="setup_backup_succeeded">已保存 %1$d 个设备。</string>
+    <string name="setup_backup_failed">保存失败。</string>
+    <string name="setup_restore_succeeded">已恢复 %1$d 个设备。</string>
+    <string name="setup_restore_failed">恢复失败：%1$s</string>
+
     <string name="setup_troubleshooting_title">故障排除</string>
     <string name="setup_trouble_same_subnet">• 手机和 iSpindle 必须在同一子网内。检查路由器的访客网络隔离设置。</string>
     <string name="setup_trouble_dhcp">• 如果手机 IP 发生变化（DHCP 租约到期），请在 iSpindle 门户中重新输入新 IP。</string>

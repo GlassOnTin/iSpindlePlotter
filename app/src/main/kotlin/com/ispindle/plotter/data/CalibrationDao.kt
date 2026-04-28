@@ -23,4 +23,8 @@ interface CalibrationDao {
 
     @Query("SELECT * FROM calibration_points WHERE deviceId = :deviceId AND enabled = 1 ORDER BY angle ASC")
     suspend fun enabledForDevice(deviceId: Long): List<CalibrationPoint>
+
+    /** Synchronous snapshot — used by settings backup. */
+    @Query("SELECT * FROM calibration_points WHERE deviceId = :deviceId ORDER BY angle ASC")
+    suspend fun listForDevice(deviceId: Long): List<CalibrationPoint>
 }

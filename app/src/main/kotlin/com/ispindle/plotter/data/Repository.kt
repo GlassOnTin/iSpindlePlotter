@@ -145,4 +145,93 @@ class Repository(
 
     suspend fun enabledCalibrationPoints(deviceId: Long) =
         calibrationDao.enabledForDevice(deviceId)
+
+    /**
+     * Bulk-insert readings into [deviceId], skipping any whose timestamp
+     * already has a row for this device. Returns (inserted, skipped).
+     * Caller is responsible for parsing the source format.
+     */
+    suspend fun importReadings(deviceId: Long, readings: List<Reading>): Pair<Int, Int> {
+        val existing = readingDao.timestampsFor(deviceId).toHashSet()
+        var inserted = 0
+        var skipped = 0
+        for (r in readings) {
+            if (r.timestampMs in existing) {
+                skipped++
+                continue
+            }
+            // Force the deviceId to the target device — protects against an
+            // import file that carries the original Room id from a different
+            // install.
+            readingDao.insert(r.copy(id = 0, deviceId = deviceId))
+            existing += r.timestampMs
+            inserted++
+        }
+        if (inserted > 0) {
+            // Refresh lastSeenMs so the device sorts correctly post-import.
+            readings.maxOfOrNull { it.timestampMs }?.let { latest ->
+                deviceDao.touch(deviceId, latest)
+            }
+        }
+        return inserted to skipped
+    }
+
+    /** Snapshot of every device for settings backup. */
+    suspend fun allDevices(): List<Device> = deviceDao.listAll()
+
+    /** Snapshot of all calibration points for a device. */
+    suspend fun calibrationSnapshot(deviceId: Long): List<CalibrationPoint> =
+        calibrationDao.listForDevice(deviceId)
+
+    /**
+     * Restore one device's settings (label, calibration polynomial, raw
+     * calibration points). Looks up by `hwId` — creates a new device row
+     * if none exists, otherwise updates the existing row's user label and
+     * polynomial coefficients. Calibration points get cleared and replaced.
+     *
+     * Readings are NOT touched — settings backup is intentionally
+     * lightweight; CSV import is the way to restore reading data.
+     */
+    suspend fun restoreDeviceSettings(
+        hwId: Int,
+        reportedName: String,
+        userLabel: String,
+        calA: Double, calB: Double, calC: Double, calD: Double,
+        calDegree: Int, calRSquared: Double?,
+        calibrationPoints: List<CalibrationPoint>
+    ) {
+        val now = System.currentTimeMillis()
+        val existing = deviceDao.findByHwId(hwId)
+        val deviceId = if (existing == null) {
+            deviceDao.insert(
+                Device(
+                    hwId = hwId,
+                    reportedName = reportedName,
+                    userLabel = userLabel,
+                    firstSeenMs = now,
+                    lastSeenMs = now,
+                    calA = calA, calB = calB, calC = calC, calD = calD,
+                    calDegree = calDegree, calRSquared = calRSquared
+                )
+            )
+        } else {
+            deviceDao.update(
+                existing.copy(
+                    userLabel = userLabel,
+                    calA = calA, calB = calB, calC = calC, calD = calD,
+                    calDegree = calDegree, calRSquared = calRSquared
+                )
+            )
+            existing.id
+        }
+        // Replace calibration points: simplest restore semantics, and the
+        // user's intent for "restore" is "make this device's settings
+        // match the backup" not "merge".
+        for (p in calibrationDao.listForDevice(deviceId)) {
+            calibrationDao.delete(p)
+        }
+        for (p in calibrationPoints) {
+            calibrationDao.insert(p.copy(id = 0, deviceId = deviceId))
+        }
+    }
 }

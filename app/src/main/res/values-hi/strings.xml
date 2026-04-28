@@ -71,6 +71,10 @@
     <string name="graph_readings_in_window">विंडो में %1$d रीडिंग · कुल %2$d</string>
     <string name="graph_btn_trim_before">इससे पहले ट्रिम करें…</string>
     <string name="graph_btn_export_csv">CSV निर्यात करें…</string>
+    <string name="graph_btn_import_csv">CSV आयात करें…</string>
+    <string name="graph_import_read_failed">फ़ाइल पढ़ी नहीं जा सकी।</string>
+    <string name="graph_import_succeeded">%1$d नई रीडिंग आयात (%2$d छोड़ी गईं)।</string>
+    <string name="graph_import_failed">आयात विफल: %1$s</string>
     <string name="graph_nothing_to_export">निर्यात करने के लिए कुछ नहीं।</string>
     <string name="graph_exported_n_readings">%1$d रीडिंग निर्यात की गईं।</string>
     <string name="graph_export_failed">निर्यात विफल।</string>
@@ -190,7 +194,15 @@
     <string name="setup_stable_address_intro">यदि iSpindle एक raw IP के साथ कॉन्फ़िगर है और फ़ोन को DHCP नवीनीकरण के बाद एक अलग IP मिलती है, तो अगली रीडिंग छोड़ दी जाती है। IP परिवर्तनों के बीच लिंक को जीवित रखने के दो तरीके:</string>
     <string name="setup_stable_step_1">राउटर पर फ़ोन की IP रिज़र्व करें। सेटिंग आमतौर पर "DHCP reservation", "static lease", या "always assign the same IP" कहलाती है।</string>
     <string name="setup_stable_step_2">IP के बजाय hostname उपयोग करें। कई होम राउटर प्रत्येक DHCP क्लाइंट के लिए DNS नाम प्रकाशित करते हैं। Configure स्क्रीन पर "Find hostname" टैप करें — यदि राउटर इस फ़ोन के लिए एक अनूठा नाम प्रकाशित करता है तो आप इसे iSpindle के सर्वर पते के रूप में उपयोग कर सकते हैं, और यह IP परिवर्तनों से बचता है।</string>
-    <string name="setup_stable_step_3">यदि "Find hostname" रिपोर्ट करता है कि नाम अस्पष्ट है, तो राउटर में पिछले डिवाइस की पुरानी प्रविष्टियां हैं। राउटर की DHCP सेटिंग में इस फ़ोन को एक अलग नाम दें और पुरानी प्रविष्टियां हटाएं, या एक रिज़र्व IP पर वापस जाएं।</string>
+    <string name="setup_stable_step_3">यदि "Find hostname" रिपोर्ट करता है कि नाम अस्पष्ट है, तो राउटर में पिछले डिवाइस की पुरानी प्रविष्टियां हैं। राउटर की DHCP सेटिंग में इस फ़ोन को एक अलग नाम दें और पुरानी प्रविष्टियां हटाएं, या एक रिज़र्व IP पर वापस जाएं।</string>    <string name="setup_backup_title">बैकअप और पुनर्स्थापना</string>
+    <string name="setup_backup_intro">डिवाइस लेबल, कैलिब्रेशन बहुपद और कच्चे कैलिब्रेशन पॉइंट JSON फ़ाइल में सहेजें। रीडिंग इतिहास शामिल नहीं — इसके लिए प्रति-डिवाइस CSV निर्यात का उपयोग करें।</string>
+    <string name="setup_btn_backup">सेटिंग्स सहेजें…</string>
+    <string name="setup_btn_restore">सेटिंग्स पुनर्स्थापित करें…</string>
+    <string name="setup_backup_succeeded">%1$d डिवाइस सहेजे गए।</string>
+    <string name="setup_backup_failed">सहेजना विफल।</string>
+    <string name="setup_restore_succeeded">%1$d डिवाइस पुनर्स्थापित।</string>
+    <string name="setup_restore_failed">पुनर्स्थापना विफल: %1$s</string>
+
     <string name="setup_troubleshooting_title">समस्या निवारण</string>
     <string name="setup_trouble_same_subnet">• फ़ोन और iSpindle एक ही सबनेट पर होने चाहिए। अपने राउटर के गेस्ट-नेटवर्क आइसोलेशन की जांच करें।</string>
     <string name="setup_trouble_dhcp">• यदि फ़ोन का IP बदलता है (DHCP लीज़ एक्सपायरी), iSpindle पोर्टल में नया IP फिर से दर्ज करें।</string>

@@ -21,6 +21,10 @@ interface DeviceDao {
     @Query("SELECT * FROM devices WHERE id = :id LIMIT 1")
     suspend fun findById(id: Long): Device?
 
+    /** Synchronous snapshot of every device — used by settings backup. */
+    @Query("SELECT * FROM devices ORDER BY firstSeenMs ASC")
+    suspend fun listAll(): List<Device>
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(device: Device): Long
 

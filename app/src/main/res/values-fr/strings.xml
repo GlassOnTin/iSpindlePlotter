@@ -71,6 +71,10 @@
     <string name="graph_readings_in_window">%1$d relevés dans la fenêtre · %2$d au total</string>
     <string name="graph_btn_trim_before">Rogner avant…</string>
     <string name="graph_btn_export_csv">Exporter CSV…</string>
+    <string name="graph_btn_import_csv">Importer CSV…</string>
+    <string name="graph_import_read_failed">Impossible de lire le fichier.</string>
+    <string name="graph_import_succeeded">%1$d nouveaux relevés importés (%2$d ignorés).</string>
+    <string name="graph_import_failed">Échec de l\'import : %1$s</string>
     <string name="graph_nothing_to_export">Rien à exporter.</string>
     <string name="graph_exported_n_readings">%1$d relevés exportés.</string>
     <string name="graph_export_failed">Échec de l\'export.</string>
@@ -199,7 +203,15 @@
     <string name="setup_stable_address_intro">Si l\'iSpindle est configuré avec une IP brute et que le téléphone en obtient une différente après un renouvellement DHCP, le prochain relevé est perdu. Deux façons de maintenir le lien après un changement d\'IP :</string>
     <string name="setup_stable_step_1">Réservez l\'IP du téléphone sur votre routeur. Le paramètre s\'appelle généralement « réservation DHCP », « bail statique » ou « toujours attribuer la même IP ».</string>
     <string name="setup_stable_step_2">Utilisez un nom d\'hôte plutôt qu\'une IP. De nombreux routeurs domestiques publient un nom DNS pour chaque client DHCP. Dans l\'écran Configurer, appuyez sur « Trouver le nom d\'hôte » — si le routeur publie un nom unique pour ce téléphone, vous pouvez l\'utiliser comme adresse serveur.</string>
-    <string name="setup_stable_step_3">Si « Trouver le nom d\'hôte » signale que le nom est ambigu, le routeur a des entrées obsolètes d\'anciens appareils. Donnez un nom distinct à ce téléphone dans les paramètres DHCP du routeur et supprimez les anciennes entrées, ou utilisez une IP réservée.</string>
+    <string name="setup_stable_step_3">Si « Trouver le nom d\'hôte » signale que le nom est ambigu, le routeur a des entrées obsolètes d\'anciens appareils. Donnez un nom distinct à ce téléphone dans les paramètres DHCP du routeur et supprimez les anciennes entrées, ou utilisez une IP réservée.</string>    <string name="setup_backup_title">Sauvegarde et restauration</string>
+    <string name="setup_backup_intro">Sauvegardez les libellés des appareils, les polynômes de calibration et les points de calibration bruts dans un fichier JSON. L\'historique des relevés n\'est pas inclus — utilisez l\'export CSV par appareil pour cela.</string>
+    <string name="setup_btn_backup">Enregistrer les paramètres…</string>
+    <string name="setup_btn_restore">Restaurer les paramètres…</string>
+    <string name="setup_backup_succeeded">%1$d appareils sauvegardés.</string>
+    <string name="setup_backup_failed">Échec de la sauvegarde.</string>
+    <string name="setup_restore_succeeded">%1$d appareils restaurés.</string>
+    <string name="setup_restore_failed">Échec de la restauration : %1$s</string>
+
     <string name="setup_troubleshooting_title">Dépannage</string>
     <string name="setup_trouble_same_subnet">• Le téléphone et l\'iSpindle doivent être sur le même sous-réseau. Vérifiez l\'isolation du réseau invité de votre routeur.</string>
     <string name="setup_trouble_dhcp">• Si l\'IP du téléphone change (expiration du bail DHCP), saisissez à nouveau la nouvelle IP dans le portail iSpindle.</string>

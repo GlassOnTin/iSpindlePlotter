@@ -153,6 +153,29 @@ fun GraphScreen(
                     else ctx.getString(R.string.graph_export_failed)
         }
     }
+    val csvImportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            val csv = withContext(Dispatchers.IO) {
+                runCatching {
+                    ctx.contentResolver.openInputStream(uri)?.use { input ->
+                        input.bufferedReader(Charsets.UTF_8).readText()
+                    }
+                }.getOrNull()
+            }
+            if (csv == null) {
+                toast = ctx.getString(R.string.graph_import_read_failed)
+                return@launch
+            }
+            val result = vm.importReadingsCsv(deviceId, csv)
+            toast = if (result.error != null)
+                ctx.getString(R.string.graph_import_failed, result.error)
+            else
+                ctx.getString(R.string.graph_import_succeeded, result.inserted, result.skipped)
+        }
+    }
 
     val dateFmt = remember { SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()) }
     val xFmt: (Double) -> String = { ms -> dateFmt.format(Date(ms.toLong())) }
@@ -210,6 +233,16 @@ fun GraphScreen(
                 },
                 enabled = readings.isNotEmpty()
             ) { Text(stringResource(R.string.graph_btn_export_csv)) }
+            OutlinedButton(
+                onClick = {
+                    // Some Android device file pickers refuse the strict
+                    // "text/csv" filter when the source file's MIME is
+                    // text/comma-separated-values or text/plain. Accept any
+                    // text-ish file and let the parser reject what it can't
+                    // read.
+                    csvImportLauncher.launch(arrayOf("text/csv", "text/*", "*/*"))
+                }
+            ) { Text(stringResource(R.string.graph_btn_import_csv)) }
         }
         toast?.let {
             Text(it, style = MaterialTheme.typography.labelSmall,

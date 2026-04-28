@@ -106,6 +106,7 @@ fun AppRoot(app: IspindleApp, vm: MainViewModel) {
             composable(Dest.Setup.route) {
                 SetupScreen(
                     padding = padding,
+                    vm = vm,
                     onAutoConfigure = { navController.navigate(Dest.Configure.route) }
                 )
             }

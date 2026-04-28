@@ -1,0 +1,5 @@
+Restore-from-backup support: an Import CSV button on the Graph page picks up a previously-exported CSV (or an equivalent file from another install) and re-ingests its readings. Rows whose timestamp is already stored for the device are skipped, so partially-overlapping imports are idempotent.
+
+Setup Guide also gains a Backup & restore card: save device labels, calibration polynomials, and raw calibration points to a JSON file, and restore them on a fresh install or another phone. Reading history isn't bundled into the JSON — that's what CSV import is for.
+
+Localised in all 10 supported languages.

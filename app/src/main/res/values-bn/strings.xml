@@ -71,6 +71,10 @@
     <string name="graph_readings_in_window">উইন্ডোতে %1$d রিডিং · মোট %2$d</string>
     <string name="graph_btn_trim_before">এর আগে ছাঁটাই…</string>
     <string name="graph_btn_export_csv">CSV রফতানি করুন…</string>
+    <string name="graph_btn_import_csv">CSV আমদানি করুন…</string>
+    <string name="graph_import_read_failed">ফাইল পড়া যায়নি।</string>
+    <string name="graph_import_succeeded">%1$d নতুন রিডিং আমদানি (%2$d বাদ দেওয়া হয়েছে)।</string>
+    <string name="graph_import_failed">আমদানি ব্যর্থ: %1$s</string>
     <string name="graph_nothing_to_export">রফতানির কিছু নেই।</string>
     <string name="graph_exported_n_readings">%1$d রিডিং রফতানি হয়েছে।</string>
     <string name="graph_export_failed">রফতানি ব্যর্থ হয়েছে।</string>
@@ -190,7 +194,15 @@
     <string name="setup_stable_address_intro">যদি iSpindle একটি raw IP দিয়ে কনফিগার করা থাকে এবং DHCP নবায়নের পরে ফোনটি একটি ভিন্ন IP পায়, পরবর্তী রিডিংটি বাতিল হয়। IP পরিবর্তনের মধ্য দিয়ে লিঙ্ক সক্রিয় রাখার দুটি উপায়:</string>
     <string name="setup_stable_step_1">রাউটারে ফোনের IP সংরক্ষণ করুন। সেটিংটি সাধারণত "DHCP reservation", "static lease", বা "always assign the same IP" নামে পরিচিত।</string>
     <string name="setup_stable_step_2">IP-এর পরিবর্তে হোস্টনাম ব্যবহার করুন। অনেক হোম রাউটার প্রতিটি DHCP ক্লায়েন্টের জন্য একটি DNS নাম প্রকাশ করে। Configure স্ক্রিনে "Find hostname" ট্যাপ করুন — যদি রাউটার এই ফোনের জন্য একটি অনন্য নাম প্রকাশ করে তাহলে আপনি এটিকে iSpindle-এর সার্ভার ঠিকানা হিসেবে ব্যবহার করতে পারেন এবং এটি IP পরিবর্তনের মধ্যেও কাজ করবে।</string>
-    <string name="setup_stable_step_3">যদি "Find hostname" জানায় নামটি অস্পষ্ট, তাহলে রাউটারে আগের ডিভাইসগুলির পুরনো এন্ট্রি আছে। রাউটারের DHCP সেটিংসে এই ফোনকে একটি আলাদা নাম দিন এবং পুরনো এন্ট্রিগুলি সরান, অথবা একটি সংরক্ষিত IP-তে ফিরে যান।</string>
+    <string name="setup_stable_step_3">যদি "Find hostname" জানায় নামটি অস্পষ্ট, তাহলে রাউটারে আগের ডিভাইসগুলির পুরনো এন্ট্রি আছে। রাউটারের DHCP সেটিংসে এই ফোনকে একটি আলাদা নাম দিন এবং পুরনো এন্ট্রিগুলি সরান, অথবা একটি সংরক্ষিত IP-তে ফিরে যান।</string>    <string name="setup_backup_title">ব্যাকআপ ও পুনরুদ্ধার</string>
+    <string name="setup_backup_intro">ডিভাইস লেবেল, ক্যালিব্রেশন বহুপদী এবং কাঁচা ক্যালিব্রেশন পয়েন্ট একটি JSON ফাইলে সংরক্ষণ করুন। রিডিং ইতিহাস অন্তর্ভুক্ত নয় — এর জন্য প্রতি-ডিভাইস CSV রপ্তানি ব্যবহার করুন।</string>
+    <string name="setup_btn_backup">সেটিংস সংরক্ষণ করুন…</string>
+    <string name="setup_btn_restore">সেটিংস পুনরুদ্ধার করুন…</string>
+    <string name="setup_backup_succeeded">%1$d টি ডিভাইস সংরক্ষিত।</string>
+    <string name="setup_backup_failed">সংরক্ষণ ব্যর্থ।</string>
+    <string name="setup_restore_succeeded">%1$d টি ডিভাইস পুনরুদ্ধার।</string>
+    <string name="setup_restore_failed">পুনরুদ্ধার ব্যর্থ: %1$s</string>
+
     <string name="setup_troubleshooting_title">সমস্যা সমাধান</string>
     <string name="setup_trouble_same_subnet">• ফোন এবং iSpindle একই সাবনেটে থাকতে হবে। আপনার রাউটারের গেস্ট-নেটওয়ার্ক আইসোলেশন পরীক্ষা করুন।</string>
     <string name="setup_trouble_dhcp">• যদি ফোনের IP পরিবর্তন হয় (DHCP লিজ মেয়াদ শেষ), iSpindle পোর্টালে নতুন IP পুনরায় লিখুন।</string>

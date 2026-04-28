@@ -33,4 +33,8 @@ interface ReadingDao {
 
     @Query("SELECT * FROM readings WHERE deviceId = :deviceId ORDER BY timestampMs ASC")
     suspend fun listForDevice(deviceId: Long): List<Reading>
+
+    /** All timestamps for a device — used by CSV import to dedupe rows. */
+    @Query("SELECT timestampMs FROM readings WHERE deviceId = :deviceId")
+    suspend fun timestampsFor(deviceId: Long): List<Long>
 }
