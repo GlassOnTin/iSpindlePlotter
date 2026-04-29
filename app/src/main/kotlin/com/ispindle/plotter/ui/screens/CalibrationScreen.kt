@@ -43,6 +43,41 @@ import com.ispindle.plotter.calibration.Polynomial
 import com.ispindle.plotter.ui.MainViewModel
 import kotlinx.coroutines.launch
 
+/**
+ * SG → Plato (mass percent sucrose). Hackbarth/Lincoln cubic; accurate to
+ * ~0.05 °P across 1.000–1.130. Used to translate the user's target SG
+ * into the sugar-mass fraction needed to compose the starting solution.
+ */
+private fun sgToPlato(sg: Double): Double =
+    -616.868 + 1111.14 * sg - 630.272 * sg * sg + 135.997 * sg * sg * sg
+
+/**
+ * Returns (sugar_grams, water_grams) for a sucrose solution of [volumeMl]
+ * at [sg]. 1 mL of solution at SG x weighs x g, so total mass is V × SG;
+ * sugar mass = total × Plato/100, water mass = total − sugar.
+ */
+private fun sugarWaterRecipe(volumeMl: Double, sg: Double): Pair<Double, Double> {
+    val totalMassG = volumeMl * sg
+    val plato = sgToPlato(sg).coerceAtLeast(0.0)
+    val sugarG = totalMassG * plato / 100.0
+    return sugarG to (totalMassG - sugarG)
+}
+
+/**
+ * Volume of solution to remove and replace with the same volume of water
+ * to step from [currentSg] to [targetSg] in a fixed [volumeMl] vessel.
+ *
+ * Uses the linear approximation (SG − 1) ∝ sucrose concentration, which
+ * holds within ~1 % over 1.000–1.090 — well below the iSpindle's own
+ * calibration noise floor, and avoids making the user juggle Plato.
+ */
+private fun swapVolumeMl(volumeMl: Double, currentSg: Double, targetSg: Double): Double {
+    val cur = currentSg - 1.0
+    val tgt = targetSg - 1.0
+    if (cur <= 0.0) return 0.0
+    return volumeMl * (1.0 - (tgt / cur)).coerceIn(0.0, 1.0)
+}
+
 @Composable
 fun CalibrationScreen(
     vm: MainViewModel,
@@ -61,6 +96,13 @@ fun CalibrationScreen(
     var degree by remember { mutableStateOf(2) }
     var fitMessage by remember { mutableStateOf<String?>(null) }
 
+    // Sugar/water mixer state — sticky so the helper persists across
+    // recompositions while the user mixes and steps down.
+    var helperVolMl by remember { mutableStateOf("1000") }
+    var helperStartSg by remember { mutableStateOf("1.080") }
+    var helperCurSg by remember { mutableStateOf("1.080") }
+    var helperTargetSg by remember { mutableStateOf("1.060") }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -73,6 +115,91 @@ fun CalibrationScreen(
             device?.userLabel ?: "Device",
             style = androidx.compose.material3.MaterialTheme.typography.titleLarge
         )
+
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    stringResource(R.string.cal_helper_title),
+                    style = androidx.compose.material3.MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    stringResource(R.string.cal_helper_intro),
+                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = helperVolMl,
+                        onValueChange = { helperVolMl = it },
+                        label = { Text(stringResource(R.string.cal_helper_volume)) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.width(160.dp)
+                    )
+                    OutlinedTextField(
+                        value = helperStartSg,
+                        onValueChange = { helperStartSg = it },
+                        label = { Text(stringResource(R.string.cal_helper_start_sg)) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.width(140.dp)
+                    )
+                }
+                val volMl = helperVolMl.toDoubleOrNull()
+                val startSg = helperStartSg.toDoubleOrNull()
+                val recipeText = if (volMl != null && volMl > 0.0 &&
+                    startSg != null && startSg in 1.001..1.130) {
+                    val (sugarG, waterG) = sugarWaterRecipe(volMl, startSg)
+                    stringResource(
+                        R.string.cal_helper_recipe,
+                        "%.1f".format(sugarG),
+                        "%.1f".format(waterG),
+                        "%.0f".format(volMl),
+                        "%.4f".format(startSg)
+                    )
+                } else stringResource(R.string.cal_helper_recipe_invalid)
+                Text(
+                    recipeText,
+                    style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                    fontFamily = FontFamily.Monospace
+                )
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = helperCurSg,
+                        onValueChange = { helperCurSg = it },
+                        label = { Text(stringResource(R.string.cal_helper_current_sg)) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.width(140.dp)
+                    )
+                    OutlinedTextField(
+                        value = helperTargetSg,
+                        onValueChange = { helperTargetSg = it },
+                        label = { Text(stringResource(R.string.cal_helper_target_sg)) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.width(140.dp)
+                    )
+                }
+                val curSg = helperCurSg.toDoubleOrNull()
+                val targetSg = helperTargetSg.toDoubleOrNull()
+                val swapText = if (volMl != null && volMl > 0.0 &&
+                    curSg != null && targetSg != null &&
+                    curSg > 1.0 && targetSg in 1.000..curSg) {
+                    val swapMl = swapVolumeMl(volMl, curSg, targetSg)
+                    stringResource(
+                        R.string.cal_helper_swap,
+                        "%.0f".format(swapMl),
+                        "%.4f".format(targetSg)
+                    )
+                } else stringResource(R.string.cal_helper_swap_invalid)
+                Text(
+                    swapText,
+                    style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                    fontFamily = FontFamily.Monospace
+                )
+            }
+        }
 
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

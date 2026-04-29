@@ -153,6 +153,16 @@
     <!-- Trim dialog -->
 
     <!-- ── CalibrationScreen ─────────────────────────────────────────── -->
+    <string name="cal_helper_title">Sugar / water mixer</string>
+    <string name="cal_helper_intro">Calibrate efficiently by mixing one strong sucrose solution and stepping it down. Float the iSpindle in the starting solution, record (angle, SG), then remove a measured volume and replace with the same volume of water to land on the next target SG. Use ordinary table sugar (sucrose) and let temperature stabilise to ~20 °C before reading angle.</string>
+    <string name="cal_helper_volume">Solution volume (mL)</string>
+    <string name="cal_helper_start_sg">Starting SG</string>
+    <string name="cal_helper_recipe">Mix %1$s g sugar with %2$s g water → %3$s mL of solution at %4$s SG.</string>
+    <string name="cal_helper_recipe_invalid">Enter a starting SG between 1.001 and 1.130.</string>
+    <string name="cal_helper_current_sg">Current SG</string>
+    <string name="cal_helper_target_sg">Target SG</string>
+    <string name="cal_helper_swap">Remove %1$s mL of solution and replace with %1$s mL of water → ~%2$s SG.</string>
+    <string name="cal_helper_swap_invalid">Target SG must be between 1.000 and current SG.</string>
     <string name="cal_add_point_title">Add calibration point</string>
     <string name="cal_add_point_description">Submerge the iSpindle in a sugar solution of known SG (e.g. pure water = 1.000, or a sugar/water mix measured with a refractometer). Wait for a reading, copy the tilt angle here, and enter the known SG.</string>
     <string name="cal_current_angle">Current angle: %1$s°</string>
