@@ -431,6 +431,16 @@ private fun SgEstimateLine(
         DoubleArray(sgPoints.size) { (sgPoints[it].first - tStartMs) / 3_600_000.0 }
     }
     val ys = remember(sgPoints) { DoubleArray(sgPoints.size) { sgPoints[it].second } }
+    // Temperatures aligned to xs/ys — filter [readings] with the same
+    // SG-present condition used to build sgPoints upstream so all three
+    // arrays index the same samples.
+    val temps = remember(readings) {
+        val list = readings.mapNotNull { r ->
+            val sg = r.computedGravity ?: r.reportedGravity
+            if (sg != null && sg > 0.0) r.temperatureC else null
+        }
+        DoubleArray(list.size) { list[it] }
+    }
 
     // Build the timeline once on the full dataset. Cursor lookups index
     // into it instead of re-running the classifier on truncated data —
@@ -438,8 +448,8 @@ private fun SgEstimateLine(
     // Conditioning as the cursor crosses noisy threshold boundaries.
     // Phases are monotonic (Lag → Active → Slowing → Conditioning|Stuck);
     // mid-ferment pauses stay as plateau overlays.
-    val timeline = remember(sgPoints, calRSquared) {
-        Fermentation.buildTimeline(xs, ys, calRSquared)
+    val timeline = remember(sgPoints, calRSquared, temps) {
+        Fermentation.buildTimeline(xs, ys, calRSquared, temps.takeIf { it.size == xs.size })
     }
 
     if (cursorX != null) {
@@ -594,6 +604,19 @@ private fun StateDescription(
                 isError = true
             )
         }
+        is Fermentation.State.ColdCrash -> {
+            EstimateText(
+                stringResource(
+                    R.string.graph_sg_cold_crash,
+                    "%.4f".format(state.og),
+                    "%.4f".format(state.fermentSg),
+                    "%.4f".format(state.apparentSg),
+                    "%.1f".format(state.temperatureC),
+                    "%.1f".format(state.fermentTemperatureC),
+                    "%.1f".format(state.durationH)
+                )
+            )
+        }
     }
 
     // Pause-aware guidance: when the cursor (or live state) sits inside
@@ -627,6 +650,11 @@ private fun StateDescription(
         state is Fermentation.State.Slowing -> stringResource(R.string.graph_guidance_slowing)
         state is Fermentation.State.Conditioning -> stringResource(R.string.graph_guidance_conditioning)
         state is Fermentation.State.Stuck -> stringResource(R.string.graph_guidance_stuck)
+        state is Fermentation.State.ColdCrash -> stringResource(
+            R.string.graph_guidance_cold_crash,
+            "%.1f".format(state.fermentTemperatureC),
+            "%.1f".format(state.temperatureC)
+        )
         else -> null
     }
     if (guidanceText != null) {

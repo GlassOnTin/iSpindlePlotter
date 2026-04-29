@@ -1,0 +1,3 @@
+New phase: Cold crash. When the iSpindle's temperature drops materially below the fermentation reference (≥ 4 °C, sustained ≥ 1.5 h), the state machine switches to Cold crash and the SG description tells you the apparent SG drop is a thermal/density artifact (~0.0001 SG/°C) plus any CO₂ dissolution under pressure — the real FG is the SG you saw just before the crash started.
+
+Guidance under Cold crash explains the 24–48 h flocculation/clarity window, why to re-warm gently before reusing yeast, and how to harvest, refrigerate and revive a yeast cake (warm-jar 2–3 h, optional 1 L 1.040 starter at 20 °C for 12–24 h before pitching).

@@ -14,8 +14,8 @@ android {
         applicationId = "com.ispindle.plotter"
         minSdk = 24
         targetSdk = 35
-        versionCode = 9
-        versionName = "0.5.4"
+        versionCode = 10
+        versionName = "0.5.5"
     }
 
     signingConfigs {

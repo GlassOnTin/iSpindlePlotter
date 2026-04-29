@@ -100,6 +100,7 @@
     <string name="graph_phase_conditioning">Conditioning</string>
     <string name="graph_phase_lag">Lag</string>
     <string name="graph_phase_stuck">Stuck</string>
+    <string name="graph_phase_cold_crash">Cold crash</string>
     <!-- SG estimate fragments -->
     <string name="graph_sg_insufficient">SG: not enough trend yet — wait for more readings or widen the time window.</string>
     <string name="graph_sg_lag_phase">Lag phase · OG %1$s · current %2$s · %3$s h since first reading, no decline yet</string>
@@ -111,6 +112,7 @@
     <string name="graph_sg_paused_at"> · paused at %1$s for %2$s h</string>
     <string name="graph_sg_conditioning">Conditioning · OG %1$s · FG %2$s · %3$s%% ABV · yeast still cleaning up — verify stable readings before packaging</string>
     <string name="graph_sg_stuck">⚠ Stuck · OG %1$s · current %2$s · expected ~%3$s · flat for %4$s h · ABV so far %5$s%%</string>
+    <string name="graph_sg_cold_crash">Cold crash · OG %1$s · FG (pre-crash) %2$s · apparent %3$s now · %4$s °C from %5$s °C · %6$s h in</string>
     <string name="graph_model_prefix">model: </string>
     <string name="graph_sg_eta_ci"> (95 %% CI %1$s–%2$s)</string>
     <string name="graph_sg_meas_sigma"> · σ_meas %1$s</string>
@@ -141,6 +143,7 @@
     <string name="graph_guidance_stuck">Fermentation has plateaued above the expected FG. Common causes: temperature drop, low yeast viability, or unfermentable sugars. Try raising temperature 2–3 °C, gently rousing the yeast, or pitching a fresh starter.</string>
     <string name="graph_guidance_paused_mid">Mid-ferment pause at SG %1$s for %2$s h, well above predicted FG. Most likely a diauxic shift — the yeast is finishing the easy sugars (glucose, maltose) before tackling the harder ones (maltotriose). Hold temperature steady; descent usually resumes within 24–48 h. If the SG hasn\'t resumed dropping after that, raise temperature 2–3 °C or gently rouse the yeast before assuming it\'s stuck.</string>
     <string name="graph_guidance_paused_late">Late-ferment pause at SG %1$s for %2$s h, close to predicted FG. SG is settling onto its asymptote rather than stalling — the yeast is on the harder sugars and starting to clean up flavour compounds (diacetyl, acetaldehyde). Give it 24–48 h; if SG holds, the state will switch to Conditioning. Resist cold-crashing until then.</string>
+    <string name="graph_guidance_cold_crash">Cold crash detected — temperature has dropped from %1$s °C toward %2$s °C. The apparent SG drop you\'re seeing is mostly density change (cooler beer reads denser, ~0.0001 SG per °C) plus CO₂ dissolution if you\'re carbonating, not further fermentation. The true FG is the SG you saw just before the crash started; that\'s what to record for ABV. Cold-crashing for 24–48 h flocculates yeast and clears the beer; raise temperature gently if you plan to reuse the yeast cake. To reuse: harvest some slurry into a sanitised jar, refrigerate; on brew day take the jar out, let it warm at room temp 2–3 hours, optionally make a small starter (1 L of 1.040 wort, oxygenate, hold at 20 °C for 12–24 h), then pitch.</string>
     <!-- Battery estimate -->
     <string name="graph_battery_prefix">Battery: </string>
     <string name="graph_battery_no_discharge">trend %1$s V/day (no discharge to extrapolate)</string>

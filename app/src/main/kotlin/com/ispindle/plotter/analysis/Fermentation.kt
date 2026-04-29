@@ -114,6 +114,32 @@ object Fermentation {
             val expectedFg: Double,
             val flatHours: Double
         ) : State()
+
+        /**
+         * Brewer has dropped vessel temperature substantially, typically
+         * to flocculate yeast and clarify the beer. The iSpindle reads a
+         * lower SG simply because the wort is denser when cold (~0.0001
+         * SG/°C of cooling) and CO2 dissolves more under any pressure
+         * applied — that drop is a thermal/density artifact, not further
+         * fermentation.
+         *
+         * Distinguished from [Conditioning] by a sustained temperature
+         * drop. Surfaced separately so the brewer doesn't read the
+         * apparent SG as a real attenuation gain.
+         */
+        data class ColdCrash(
+            val og: Double,
+            /** Reading-as-the-iSpindle-sees-it right now (cold-affected). */
+            val apparentSg: Double,
+            /** SG observed just before the crash started — the actual FG. */
+            val fermentSg: Double,
+            /** Current temperature. */
+            val temperatureC: Double,
+            /** Pre-crash reference temperature. */
+            val fermentTemperatureC: Double,
+            /** Hours since the crash began. */
+            val durationH: Double
+        ) : State()
     }
 
     enum class PredictionSource {
@@ -392,7 +418,7 @@ object Fermentation {
     // Slowing onset, and one Conditioning (or Stuck) onset per ferment;
     // there can be many paused episodes inside any of those.
 
-    enum class Phase { Lag, Active, Slowing, Conditioning, Stuck }
+    enum class Phase { Lag, Active, Slowing, Conditioning, Stuck, ColdCrash }
 
     /** Tunables for the phase-machine walk-back. */
     private const val MIN_SLOWING_HOLD_HOURS = 3.0
@@ -400,6 +426,17 @@ object Fermentation {
     private const val MIN_STUCK_HOLD_HOURS = 6.0
     /** Magnitude below which the rolling rate counts as "near zero". */
     private const val NEAR_ZERO_RATE = 0.00012
+
+    /** Cold-crash detection. Tuned to pick up clear temperature drops
+     *  (≥ 4 °C below the warm reference, sustained for ≥ 1.5 h) without
+     *  false-positiving on the natural diurnal swing of an unheated
+     *  fermenter (typically 1–3 °C). */
+    private const val COLD_CRASH_DROP_C = 4.0
+    private const val COLD_CRASH_HYSTERESIS_C = 2.0
+    private const val MIN_COLD_CRASH_HOLD_HOURS = 1.5
+    /** Window for averaging temperature so a single noisy reading doesn't
+     *  break a run. */
+    private const val TEMP_SMOOTH_WINDOW_HOURS = 1.0
 
     /**
      * Frozen snapshot of a ferment's phase progression plus everything
@@ -424,6 +461,18 @@ object Fermentation {
         val conditioningOnsetH: Double?,
         /** First hour of the final near-zero-rate-but-above-priorFg run. */
         val stuckOnsetH: Double?,
+        /**
+         * First hour of the sustained temperature drop at end-of-data.
+         * Null when temperatures weren't supplied or no clear cold-crash
+         * signal is present.
+         */
+        val coldCrashOnsetH: Double?,
+        /** Median rolling-temp before the crash. Used to render "from X°C". */
+        val fermentTemperatureC: Double?,
+        /** SG just before the crash started — the actual FG. */
+        val fermentSg: Double?,
+        /** Per-sample current temperature. Null when temps weren't supplied. */
+        val temps: DoubleArray?,
         val gompertz: AttenuationFit.Result?,
         val plateaus: List<Plateau>,
         val predictedFg: Double,
@@ -436,6 +485,9 @@ object Fermentation {
         val etaCredibleHighHours: Double?
     ) {
         fun phaseAt(hoursFromStart: Double): Phase {
+            // ColdCrash overrides everything once entered — the apparent
+            // SG and rate are thermal artifacts, not fermentation signal.
+            if (coldCrashOnsetH != null && hoursFromStart >= coldCrashOnsetH) return Phase.ColdCrash
             // Latest entered onset wins. Stuck and Conditioning are
             // mutually exclusive — only one is non-null.
             if (stuckOnsetH != null && hoursFromStart >= stuckOnsetH) return Phase.Stuck
@@ -454,7 +506,8 @@ object Fermentation {
     fun buildTimeline(
         hours: DoubleArray,
         sgs: DoubleArray,
-        calRSquared: Double? = null
+        calRSquared: Double? = null,
+        temps: DoubleArray? = null
     ): Timeline? {
         require(hours.size == sgs.size)
         val n = hours.size
@@ -536,6 +589,14 @@ object Fermentation {
             }?.coerceAtLeast(activeOnsetH)
         } else null
 
+        // Cold-crash detection. Walk back from end while the rolling
+        // 1-hour-mean temperature stays below (warmRef − hysteresis).
+        // warmRef is the median rolling-mean temperature across the
+        // dataset, robust to the cold tail itself: with cold-crash data
+        // typically a small minority of the run, the median picks the
+        // pre-crash plateau even when the tail is several degrees lower.
+        val (coldCrashOnsetH, fermentTempC, fermentSg) = detectColdCrashOnset(hours, sgs, temps)
+
         val terminalSg = predictedFg + 0.001
         val etaCredible: Pair<Double?, Double?> = if (source == PredictionSource.Gompertz && gompertz != null) {
             val rng = Random(BAYESIAN_SEED)
@@ -556,6 +617,10 @@ object Fermentation {
             slowingOnsetH = slowingOnsetH,
             conditioningOnsetH = conditioningOnsetH,
             stuckOnsetH = stuckOnsetH,
+            coldCrashOnsetH = coldCrashOnsetH,
+            fermentTemperatureC = fermentTempC,
+            fermentSg = fermentSg,
+            temps = temps,
             gompertz = gompertz,
             plateaus = plateaus,
             predictedFg = predictedFg,
@@ -674,7 +739,84 @@ object Fermentation {
                     flatHours = flatHours
                 )
             }
+            Phase.ColdCrash -> {
+                val crashStart = timeline.coldCrashOnsetH ?: tClamped
+                val durationH = (tClamped - crashStart).coerceAtLeast(0.0)
+                val tempAtT = timeline.temps?.getOrNull(idxAtT) ?: Double.NaN
+                State.ColdCrash(
+                    og = timeline.og,
+                    apparentSg = sgAtT,
+                    fermentSg = timeline.fermentSg ?: sgAtT,
+                    temperatureC = tempAtT,
+                    fermentTemperatureC = timeline.fermentTemperatureC ?: tempAtT,
+                    durationH = durationH
+                )
+            }
         }
+    }
+
+    /**
+     * Cold-crash onset detector. Returns:
+     *  - hour from start where the temperature run (≤ warmRef − hysteresis)
+     *    that ends at end-of-data began, or null if no clear crash;
+     *  - the warm reference temperature (median rolling-mean before crash);
+     *  - the SG observed at crash onset (the actual fermentation FG).
+     *
+     * Walks the temperature series in two passes: first computes a 1-hour
+     * rolling mean (drops a single noisy reading), then walks back from
+     * the last sample while the rolling mean stays below threshold.
+     * Hysteresis between the entry threshold (warmRef − DROP) and the
+     * walk-back threshold (warmRef − HYSTERESIS) avoids flickering when
+     * the cold-crash floor is just above warmRef − DROP.
+     */
+    private fun detectColdCrashOnset(
+        hours: DoubleArray,
+        sgs: DoubleArray,
+        temps: DoubleArray?
+    ): Triple<Double?, Double?, Double?> {
+        if (temps == null || temps.size != hours.size || hours.size < 6) {
+            return Triple(null, null, null)
+        }
+        val n = hours.size
+
+        // 1-h rolling mean temperature at each sample.
+        val rollingTemp = DoubleArray(n) { Double.NaN }
+        for (i in 0 until n) {
+            val ws = lookupWindowStart(hours, i, TEMP_SMOOTH_WINDOW_HOURS)
+            var sum = 0.0
+            var count = 0
+            for (j in ws..i) { sum += temps[j]; count++ }
+            if (count > 0) rollingTemp[i] = sum / count
+        }
+        val finite = rollingTemp.filter { it.isFinite() }
+        if (finite.isEmpty()) return Triple(null, null, null)
+
+        // Median of rolling-mean temperatures across the whole dataset
+        // serves as the "warm reference". Robust against the cold tail
+        // because a typical cold-crash region is a small fraction of the
+        // run and lives in the lower tail of the distribution.
+        val warmRef = Fits.median(finite.toDoubleArray()) ?: return Triple(null, null, null)
+
+        val endRolling = rollingTemp[n - 1]
+        if (!endRolling.isFinite() || endRolling >= warmRef - COLD_CRASH_DROP_C) {
+            return Triple(null, warmRef, null)
+        }
+
+        // Walk back while the rolling mean stays below the hysteresis
+        // threshold; stop at the first point that's back in warm range.
+        var earliestIdx = n - 1
+        for (i in n - 1 downTo 0) {
+            val r = rollingTemp[i]
+            if (!r.isFinite()) continue
+            if (r < warmRef - COLD_CRASH_HYSTERESIS_C) earliestIdx = i else break
+        }
+        if (hours[n - 1] - hours[earliestIdx] < MIN_COLD_CRASH_HOLD_HOURS) {
+            return Triple(null, warmRef, null)
+        }
+        // Pre-crash SG = the SG at the sample just before crash onset
+        // (or the first sample if onset is at index 0).
+        val preIdx = (earliestIdx - 1).coerceAtLeast(0)
+        return Triple(hours[earliestIdx], warmRef, sgs[preIdx])
     }
 
     /**
