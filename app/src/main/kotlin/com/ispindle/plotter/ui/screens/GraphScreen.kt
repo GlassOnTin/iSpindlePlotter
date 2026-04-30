@@ -702,7 +702,7 @@ private fun abvFragment(abvNow: Double, abvAtFg: Double): String =
  * Builds a model overlay for the SG chart:
  *   - extends the time axis to the predicted finish (now + ETA)
  *   - extends the SG axis down to predicted FG so the curve fits in
- *   - samples the fit (logistic where trusted, otherwise linear from the
+ *   - samples the fit (Gompertz where trusted, otherwise linear from the
  *     latest reading toward predicted FG)
  *   - dashes the segment past the latest data so the extrapolated portion
  *     is visually distinct.
@@ -765,7 +765,7 @@ private fun buildSgOverlay(
                 overlayMs(predict, eta, fg, low, high, floor, state.plateaus)
             } else {
                 // No future to extrapolate (data already at/past FG) — show
-                // the in-sample logistic fit so the user can still read the
+                // the in-sample Gompertz fit so the user can still read the
                 // ferment shape.
                 buildInSampleOverlay(ctx, xs, ys, fg, tStartMs, state.plateaus)
             }
@@ -785,7 +785,7 @@ private fun buildSgOverlay(
             // The overlay isn't only forward-prediction — it's also a way
             // to read the shape of the ferment after the fact (lag length,
             // fastest-attenuation point, residual-vs-model). Refit the
-            // logistic on the full record and draw the curve through the
+            // Gompertz on the full record and draw the curve through the
             // data window only — no future extension, no dashed segment.
             buildInSampleOverlay(ctx, xs, ys, state.fg, tStartMs, state.plateaus)
         }
@@ -794,9 +794,9 @@ private fun buildSgOverlay(
 }
 
 /**
- * Overlay variant for "we're already at FG" states (Complete, or a
+ * Overlay variant for "we're already at FG" states (Conditioning, or a
  * Slowing/Active where the recent rate has gone non-negative so the
- * predicted ETA is null). Refits the logistic on the full record and
+ * predicted ETA is null). Refits the Gompertz on the full record and
  * draws the curve through the data window only — no future extension,
  * no dashed extrapolated segment.
  */
@@ -875,13 +875,13 @@ private data class OverlayCurves(
 /**
  * Build the predictor and the 95 % credible band for the SG overlay.
  *
- * When `source == Logistic`, refits the logistic so we can pull samples
+ * When `source == Gompertz`, refits the Gompertz so we can pull samples
  * from the Laplace approximation: 256 parameter draws evaluated on a
  * dense time grid, with 2.5 % / 50 % / 97.5 % quantiles taken at each
  * grid point. The band reads off the per-grid quantile arrays via
  * linear interpolation in `t`.
  *
- * When the logistic source isn't available (or the fit doesn't carry a
+ * When the Gompertz source isn't available (or the fit doesn't carry a
  * covariance), falls back to the older single-anchor analytical S-curve
  * with no band.
  */
@@ -953,9 +953,13 @@ private fun predictorFor(
         val fit = AttenuationFit.fit(xs, ys)
         if (fit != null) return { h -> fit.predict(h).coerceAtLeast(fg) }
     }
-    // Fallback when the full-window logistic was rejected: build an analytic
-    // logistic anchored through (nowH, current) with span [fg, og] and the
-    // observed recent rate. Solving for k and tMid:
+    // Fallback when the full-window Gompertz fit was rejected: build an
+    // analytic logistic (sigmoid) anchored through (nowH, current) with
+    // span [fg, og] and the observed recent rate. The fallback uses the
+    // simpler symmetric form because we don't have a converged 4-parameter
+    // fit to read shape from — we only have a point and a slope, and a
+    // logistic is the cheapest S-curve that respects both. Solving for
+    // k and tMid:
     //   s = (current - fg) / (og - fg)
     //   k = -rate / ((og - fg) * s * (1 - s))
     //   tMid = nowH - ln((1-s)/s) / k

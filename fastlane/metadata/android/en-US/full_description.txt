@@ -16,7 +16,7 @@ Plotting and analysis:
 
 * Tilt angle, temperature, specific gravity, and battery voltage charts with a 24h / 7d / 30d / All time-window switcher.
 * Potential-alcohol secondary axis on the SG chart.
-* Robust phase classifier (Lag / Active / Slowing / Complete / Stuck) using a 4-parameter logistic Levenberg-Marquardt fit, with fallback to an attenuation-prior when the data is too early to constrain the asymptote.
+* Robust phase classifier (Lag / Active / Slowing / Conditioning / Stuck / Cold crash) using a modified-Gompertz Levenberg-Marquardt fit (Zwietering et al. 1990), with fallback to an attenuation-prior when the data is too early to constrain the asymptote.
 * Predicted final gravity overlaid on the chart with a tapering uncertainty band derived from short-time noise estimation and the calibration polynomial's residual.
 * Battery runway estimate: linear discharge fit projecting time-to-cutoff at the current sample rate.
 * Trim-before-date-and-time to drop pre-fermentation noise; CSV export via the system file picker.

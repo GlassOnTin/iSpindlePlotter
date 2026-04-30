@@ -177,8 +177,9 @@ quadratically, so individual bad readings stop dragging the fit. No
 explicit outlier rejection step.
 
 **State-space form / online filtering.** Treat SG(t) as a latent
-process with the logistic as the deterministic mean and a Kalman or
-particle filter advancing the state with each new reading. The
+process with the modified-Gompertz attenuation curve as the
+deterministic mean and a Kalman or particle filter advancing the
+state with each new reading. The
 overlay updates incrementally instead of refitting from scratch every
 time. Two practical wins:
 
@@ -187,11 +188,11 @@ time. Two practical wins:
   drops out of the filter's innovation residual rather than the
   current threshold cascade.
 
-## Deferred — biphasic logistic model
+## Deferred — biphasic two-sigmoid model
 
 The mid-plateau detector annotates the chart but doesn't change what the
 LM fits. To actually model the diauxic shift, replace the single
-logistic with a sum of two scaled sigmoids:
+modified-Gompertz curve with a sum of two scaled sigmoids:
 
 ```
 SG(t) = FG + (OG − FG) · [w · σ(k₁·(t − τ₁)) + (1 − w) · σ(k₂·(t − τ₂))]
@@ -203,8 +204,8 @@ parameters (`k₂, τ₂, w`) → 7 total. Identifiability is borderline on a
 30–40 h capture; needs a Beta prior on `w` peaked at 1 so the model
 prefers single-stage and only commits to biphasic when the data really
 demands it. Initialisation comes from the v1.1 detector: anchor `τ₁` /
-`τ₂` on the plateau midpoint when one is detected, otherwise start
-single-logistic-equivalent.
+`τ₂` on the plateau midpoint when one is detected, otherwise start at
+the single-stage Gompertz equivalent.
 
 **Why deferred.** Useful only when we have multiple captured ferments
 showing the biphasic shape generalises across yeast strains and worts.

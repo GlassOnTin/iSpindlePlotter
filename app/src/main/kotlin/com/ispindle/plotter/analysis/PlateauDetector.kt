@@ -12,9 +12,9 @@ package com.ispindle.plotter.analysis
  * - **Mid**: a *diauxic shift* — yeast finishes the easy sugars (glucose,
  *   maltose), pauses while it re-tunes its enzyme machinery, then resumes
  *   on the harder ones (maltotriose). Classic biphasic beer signature.
- *   The single 4-parameter logistic structurally cannot reproduce this:
- *   it has one inflection. We detect it for chart annotation; the model
- *   itself smooths through it.
+ *   A single-stage modified-Gompertz curve structurally cannot reproduce
+ *   this: it has one inflection. We detect it for chart annotation; the
+ *   model itself smooths through it.
  * - **Tail**: an end-of-ferment plateau. Either the asymptote (Complete)
  *   or a stall well above predicted FG (Stuck).
  */
