@@ -112,7 +112,9 @@ object Fermentation {
             val og: Double,
             val current: Double,
             val expectedFg: Double,
-            val flatHours: Double
+            val flatHours: Double,
+            /** See [Active.plateaus]. */
+            val plateaus: List<Plateau> = emptyList()
         ) : State()
 
         /**
@@ -138,7 +140,11 @@ object Fermentation {
             /** Pre-crash reference temperature. */
             val fermentTemperatureC: Double,
             /** Hours since the crash began. */
-            val durationH: Double
+            val durationH: Double,
+            /** See [Active.plateaus]. Carried so historical mid-active
+             *  pauses keep their chart shading after the ferment moves
+             *  on into Slowing / Conditioning / ColdCrash. */
+            val plateaus: List<Plateau> = emptyList()
         ) : State()
     }
 
@@ -670,21 +676,31 @@ object Fermentation {
             else -> linearEta(sgAtT, terminalSg, rateAtT)
         }
 
-        // Plateaus visible at T: any pause whose onset has happened by T.
-        // An ongoing pause (endH > T) is reported with its duration up
-        // *to* T, not its eventual full duration — so a cursor sitting
-        // inside a pause shows "paused for 3 h so far", not "paused for
-        // 5 h" derived from data the cursor hasn't reached yet.
+        // Plateaus visible at T. We surface only *mid-active* pauses —
+        // diauxic shifts inside the actively-fermenting phase. Plateaus
+        // during Slowing / Conditioning / Stuck / ColdCrash are natural
+        // deceleration / asymptote settle / thermal artefacts and don't
+        // tell the brewer something they need to act on, so they aren't
+        // shaded on the chart or called out in the description. An
+        // ongoing pause (endH > T) is clipped so a cursor sitting inside
+        // shows "paused for 3 h so far", not the eventual full duration.
+        val activePhaseEndH = timeline.slowingOnsetH ?: timeline.lastH
         val plateausUpToT = timeline.plateaus
-            .filter { it.startH <= tClamped }
+            .filter { p ->
+                p.kind == Plateau.Kind.Mid &&
+                    p.startH < activePhaseEndH &&
+                    p.startH <= tClamped
+            }
             .map { if (it.endH > tClamped) it.copy(endH = tClamped) else it }
         // The pause the cursor is currently inside, if any. Used to swap
-        // in stuck-ferment guidance instead of generic active advice
-        // when scrubbing into a paused region. Lag plateaus don't count
-        // here — State.Lag covers that case with its own description.
+        // in diauxic-shift guidance instead of generic active advice
+        // when scrubbing into a paused region. Restricted to mid-active
+        // pauses (same filter as plateausUpToT) so a cursor sitting in a
+        // post-slowing flat region doesn't get the "paused" treatment.
         val currentPause = timeline.plateaus
             .firstOrNull {
-                it.kind != Plateau.Kind.Lag &&
+                it.kind == Plateau.Kind.Mid &&
+                    it.startH < activePhaseEndH &&
                     it.startH <= tClamped && it.endH > tClamped
             }
             ?.copy(endH = tClamped)
@@ -736,7 +752,8 @@ object Fermentation {
                     og = timeline.og,
                     current = sgAtT,
                     expectedFg = timeline.priorFg,
-                    flatHours = flatHours
+                    flatHours = flatHours,
+                    plateaus = plateausUpToT
                 )
             }
             Phase.ColdCrash -> {
@@ -749,7 +766,8 @@ object Fermentation {
                     fermentSg = timeline.fermentSg ?: sgAtT,
                     temperatureC = tempAtT,
                     fermentTemperatureC = timeline.fermentTemperatureC ?: tempAtT,
-                    durationH = durationH
+                    durationH = durationH,
+                    plateaus = plateausUpToT
                 )
             }
         }

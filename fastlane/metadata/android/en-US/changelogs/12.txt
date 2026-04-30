@@ -1,0 +1,3 @@
+"Paused" overlays are now reserved for mid-active diauxic shifts only — flat regions in Slowing, Conditioning, Stuck, or Cold crash no longer get shaded as pauses (they're natural deceleration / asymptote settle / thermal artefact, not something to act on). Mid-active pauses still shade through after the ferment moves on into later phases, so the diauxic shift stays visible even during cold crash.
+
+The chart's model overlay now also extends through Stuck and Cold crash regions, drawing the historical Gompertz curve so the shape of the ferment is readable end-to-end.

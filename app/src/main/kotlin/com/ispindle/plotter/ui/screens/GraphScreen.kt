@@ -252,8 +252,19 @@ fun GraphScreen(
             val sg = r.computedGravity ?: r.reportedGravity
             if (sg != null && sg > 0.0) r.timestampMs.toDouble() to sg else null
         }
+        // Temperatures aligned to sgPoints (same SG-present filter as
+        // above) so the overlay's timeline can detect cold-crash regions.
+        val sgTemps = remember(scoped) {
+            val list = scoped.mapNotNull { r ->
+                val sg = r.computedGravity ?: r.reportedGravity
+                if (sg != null && sg > 0.0) r.temperatureC else null
+            }
+            DoubleArray(list.size) { list[it] }
+        }
         val calR2 = device?.calRSquared
-        val sgOverlay = remember(sgPoints, calR2) { buildSgOverlay(ctx, sgPoints, calR2) }
+        val sgOverlay = remember(sgPoints, calR2, sgTemps) {
+            buildSgOverlay(ctx, sgPoints, calR2, sgTemps.takeIf { it.size == sgPoints.size })
+        }
         // Scrubbing cursor — when set, the SG description shows a snapshot
         // of values at that point in time. Reset whenever the underlying
         // segment / window changes so a stale cursor X can't survive into
@@ -713,13 +724,22 @@ private fun abvFragment(abvNow: Double, abvAtFg: Double): String =
 private fun buildSgOverlay(
     ctx: Context,
     sgPoints: List<Pair<Double, Double>>,
-    calRSquared: Double? = null
+    calRSquared: Double? = null,
+    temps: DoubleArray? = null
 ): ChartOverlay? {
     if (sgPoints.size < 6) return null
     val tStartMs = sgPoints.first().first
     val xs = DoubleArray(sgPoints.size) { (sgPoints[it].first - tStartMs) / 3_600_000.0 }
     val ys = DoubleArray(sgPoints.size) { sgPoints[it].second }
-    val state = Fermentation.analyse(xs, ys, calRSquared)
+    // Route through buildTimeline + stateAt instead of analyse() so the
+    // chart shading uses the same "mid-active pause only" plateau filter
+    // that the description does. Without this the chart shaded any flat
+    // run anywhere in the data, including post-slowing settles and
+    // cold-crash regions, which read as untidy "paused" overlays.
+    val timeline = Fermentation.buildTimeline(xs, ys, calRSquared, temps)
+    val state = if (timeline != null)
+        Fermentation.stateAt(timeline, xs, ys, timeline.lastH)
+    else Fermentation.analyse(xs, ys, calRSquared)
     val nowH = xs.last()
     val nowMs = sgPoints.last().first
 
@@ -788,6 +808,19 @@ private fun buildSgOverlay(
             // Gompertz on the full record and draw the curve through the
             // data window only — no future extension, no dashed segment.
             buildInSampleOverlay(ctx, xs, ys, state.fg, tStartMs, state.plateaus)
+        }
+        is Fermentation.State.Stuck -> {
+            // No predicted-finish to extrapolate to, but the historical
+            // Gompertz fit and the mid-active pause shading are still
+            // useful for reading what the ferment did before it stalled.
+            buildInSampleOverlay(ctx, xs, ys, state.expectedFg, tStartMs, state.plateaus)
+        }
+        is Fermentation.State.ColdCrash -> {
+            // Same rationale: the Gompertz fit and any historical mid-
+            // active pauses are still part of the story; the apparent
+            // SG drop in the cold-crash region itself is a thermal
+            // artifact and naturally diverges from the curve.
+            buildInSampleOverlay(ctx, xs, ys, state.fermentSg, tStartMs, state.plateaus)
         }
         else -> null
     }
