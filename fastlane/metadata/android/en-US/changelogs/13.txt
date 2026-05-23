@@ -1,0 +1,5 @@
+Auto-detected ferments now stay whole through cold conditioning. A logging gap (device offline) in the middle of a long cold-conditioning hold no longer splits the brew into pieces — only a real change in gravity across the gap (fresh wort poured in, or a swap to water) starts a new ferment. Previously those gaps cut the conditioning tail off and dropped it, so the brew appeared to end mid-cold-crash.
+
+When a fresh brew has only just started and hasn't built up enough of a drop to be recognised yet, the chart now defaults to the time-window view showing the live readings instead of jumping back to the previous finished brew.
+
+The fermentation model also holds its predicted FG to the warm fermentation curve through a cold crash, instead of being dragged down toward the colder (denser) apparent gravity — so the estimated final gravity and finish time stay sensible during cold conditioning.
