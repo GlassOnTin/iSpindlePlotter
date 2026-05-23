@@ -106,8 +106,17 @@ fun GraphScreen(
             sgs = DoubleArray(sgList.size) { sgList[it].second }
         )
     }
-    var selectedSegmentIdx by remember(segments.size) {
-        mutableStateOf<Int?>(if (segments.isEmpty()) null else segments.lastIndex)
+    // Default to the live brew: the most recent qualified segment, unless a
+    // fresh-but-unqualified episode is logging past it (a brew in its first
+    // hours) — then null, so the time-window view below shows the live data
+    // rather than the stale finished segment. Keying remember on the result
+    // (not segments.size) means a manual selection survives normal polling
+    // and only resets when the episode situation actually changes.
+    val defaultSelection = FermentSegmenter.defaultSelection(
+        segments, readings.lastOrNull()?.timestampMs
+    )
+    var selectedSegmentIdx by remember(defaultSelection) {
+        mutableStateOf<Int?>(defaultSelection)
     }
 
     var window by remember { mutableStateOf(TimeWindow.D7) }
