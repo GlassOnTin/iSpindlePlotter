@@ -529,9 +529,46 @@ object Fermentation {
         val sigma = NoiseModel.combine(sigmaData, sigmaCal)
 
         val recentRate = endRate(hours, sgs, sigma)
-        val gompertz = AttenuationFit.fit(hours, sgs, sigma)
+        // Detect cold-crash *before* fitting Gompertz: post-crash readings
+        // are a thermal/density artifact in the SG channel, not fermentation,
+        // and feeding them to the LM drags FG down to the cold-affected SG
+        // and leaves λ negative. Trim the LM's input to the active span so
+        // the fit stays representative of the actual fermentation curve as
+        // more cold-conditioning data accumulates.
+        val (coldCrashOnsetH, fermentTempC, fermentSg) = detectColdCrashOnset(hours, sgs, temps)
+        val (fitHours, fitSgs) = if (coldCrashOnsetH != null) {
+            val cutIdx = (hours.indexOfLast { it < coldCrashOnsetH } + 1).coerceAtLeast(MIN_POINTS)
+            DoubleArray(cutIdx) { hours[it] } to DoubleArray(cutIdx) { sgs[it] }
+        } else hours to sgs
+        // Pass fermentSg as a hard FG floor when cold-crash is detected.
+        // The trimmed warm slice still uses the default 75 %-attenuation
+        // prior (which lands cleanly when the data covers OG → FG, e.g.
+        // the All view), but the floor stops a windowed slice without
+        // the warm OG from collapsing FG below the brewer's known
+        // pre-crash plateau. Full-capture fits land above the floor on
+        // their own merits and are unaffected.
+        val fgFloor = if (coldCrashOnsetH != null) fermentSg else null
+        val gompertz = AttenuationFit.fit(
+            fitHours, fitSgs, sigma,
+            AttenuationFit.DefaultAttenuationPrior, fgFloor
+        )
         val plateaus = PlateauDetector.detect(hours, sgs)
-        val (predictedFg, source) = pickFgEstimate(og, gompertz, current, recentRate)
+        // Past a detected cold-crash, sgs.last() is a thermal artifact; the
+        // FG that mattered for fermentation was the SG observed just before
+        // the crash. Pass that to the trust gates so they aren't tricked
+        // by the cold-affected current.
+        val effectiveCurrent = if (coldCrashOnsetH != null && fermentSg != null) fermentSg else current
+        val (gompertzFg, source) = pickFgEstimate(og, gompertz, effectiveCurrent, recentRate)
+        // When cold-crash is detected and pickFgEstimate distrusts the
+        // Gompertz fit (typical for windowed slices where observed
+        // attenuation in the warm portion < 50 %), the prior fallback
+        // (≈ OG·0.25 + 1) is below the data. Trust fermentSg instead —
+        // it's the SG the brewer actually saw the ferment plateau at.
+        val predictedFg = when {
+            source == PredictionSource.Gompertz -> gompertzFg
+            coldCrashOnsetH != null && fermentSg != null -> fermentSg
+            else -> gompertzFg
+        }
         val priorFgSigma = 0.06 * (og - 1.000).coerceAtLeast(0.005)
         val predictedFgSigma = when (source) {
             PredictionSource.Gompertz -> gompertz?.fgSigma
@@ -595,13 +632,8 @@ object Fermentation {
             }?.coerceAtLeast(activeOnsetH)
         } else null
 
-        // Cold-crash detection. Walk back from end while the rolling
-        // 1-hour-mean temperature stays below (warmRef − hysteresis).
-        // warmRef is the median rolling-mean temperature across the
-        // dataset, robust to the cold tail itself: with cold-crash data
-        // typically a small minority of the run, the median picks the
-        // pre-crash plateau even when the tail is several degrees lower.
-        val (coldCrashOnsetH, fermentTempC, fermentSg) = detectColdCrashOnset(hours, sgs, temps)
+        // (coldCrashOnsetH, fermentTempC, fermentSg) were detected up front,
+        // before the LM fit, so the warm-only slice could be passed to it.
 
         val terminalSg = predictedFg + 0.001
         val etaCredible: Pair<Double?, Double?> = if (source == PredictionSource.Gompertz && gompertz != null) {
@@ -777,7 +809,7 @@ object Fermentation {
      * Cold-crash onset detector. Returns:
      *  - hour from start where the temperature run (≤ warmRef − hysteresis)
      *    that ends at end-of-data began, or null if no clear crash;
-     *  - the warm reference temperature (median rolling-mean before crash);
+     *  - the warm reference temperature (90th percentile rolling-mean);
      *  - the SG observed at crash onset (the actual fermentation FG).
      *
      * Walks the temperature series in two passes: first computes a 1-hour
@@ -809,11 +841,18 @@ object Fermentation {
         val finite = rollingTemp.filter { it.isFinite() }
         if (finite.isEmpty()) return Triple(null, null, null)
 
-        // Median of rolling-mean temperatures across the whole dataset
-        // serves as the "warm reference". Robust against the cold tail
-        // because a typical cold-crash region is a small fraction of the
-        // run and lives in the lower tail of the distribution.
-        val warmRef = Fits.median(finite.toDoubleArray()) ?: return Triple(null, null, null)
+        // 90th-percentile rolling-mean temperature serves as the "warm
+        // reference". Median was the original choice — it works when the
+        // cold-crash region is a minority of the run, but breaks down on a
+        // chart-windowed slice where most of the visible data is post-
+        // crash (the median then sits in the cold tail and detection
+        // fails). A high percentile is the right shape: it captures the
+        // warm baseline whenever any meaningful warm period exists in the
+        // data, while still ignoring single warm spikes (top 10 %) that
+        // would otherwise inflate the reference.
+        val sortedTemps = finite.sorted()
+        val pctIdx = ((sortedTemps.size - 1) * 0.90).toInt().coerceIn(0, sortedTemps.size - 1)
+        val warmRef = sortedTemps[pctIdx]
 
         val endRolling = rollingTemp[n - 1]
         if (!endRolling.isFinite() || endRolling >= warmRef - COLD_CRASH_DROP_C) {

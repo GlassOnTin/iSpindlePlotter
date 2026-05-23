@@ -188,12 +188,19 @@ object AttenuationFit {
      *        residual std at n - 4 dof.
      * @param attenuationPrior soft Gaussian prior on attenuation; pass
      *        null for a pure data MLE. Default = N(0.75, 0.10²).
+     * @param fgFloor hard lower bound on FG. Use this when an external
+     *        signal pins FG from below — e.g. a detected cold-crash whose
+     *        pre-crash SG is the actual fermentation FG. The LM will not
+     *        let FG drop below this even when the data window doesn't
+     *        contain the warm OG and the attenuation prior would
+     *        otherwise pull FG toward priorFg ≈ OG·0.25 + 1.
      */
     fun fit(
         xs: DoubleArray,
         ys: DoubleArray,
         measurementSigma: Double? = null,
-        attenuationPrior: AttenuationPrior? = DefaultAttenuationPrior
+        attenuationPrior: AttenuationPrior? = DefaultAttenuationPrior,
+        fgFloor: Double? = null
     ): Result? {
         require(xs.size == ys.size)
         val n = xs.size
@@ -211,6 +218,11 @@ object AttenuationFit {
         val lambdaInit = xs.first() + 0.05 * xSpan
 
         var p = doubleArrayOf(ogInit, fgInit, muMaxInit, lambdaInit)
+        // Apply bounds to the initial guess so an external FG floor (e.g.
+        // a fermentSg from a detected cold-crash) is respected even if
+        // the LM never finds an iteration that lowers RSS — otherwise the
+        // unbounded init silently wins and FG stays at the prior FG.
+        applyBounds(p, ogInit, xs.first(), xs.last(), attenuationPrior, fgFloor)
         var damping = 1e-3
         val maxIter = 100
         var prevRss = totalRss(xs, ys, p, attenuationPrior)
@@ -221,7 +233,7 @@ object AttenuationFit {
             val delta = solve4x4(jtj, jtr) ?: break
 
             val candidate = DoubleArray(4) { p[it] + delta[it] }
-            applyBounds(candidate, ogInit, xs.first(), xs.last())
+            applyBounds(candidate, ogInit, xs.first(), xs.last(), attenuationPrior, fgFloor)
             val newRss = totalRss(xs, ys, candidate, attenuationPrior)
 
             if (newRss < prevRss) {
@@ -383,14 +395,22 @@ object AttenuationFit {
         return jtj to jtr
     }
 
-    private fun applyBounds(p: DoubleArray, ogPrior: Double, xMin: Double, xMax: Double) {
+    private fun applyBounds(
+        p: DoubleArray, ogPrior: Double, xMin: Double, xMax: Double,
+        attenuationPrior: AttenuationPrior?, externalFgFloor: Double?
+    ) {
         // OG within ±0.005 of the observed maximum.
         p[0] = p[0].coerceIn(ogPrior - 0.001, ogPrior + 0.005)
         // Wide FG sanity walls — the AttenuationPrior does the primary
         // regularising work. Floor at 90 %-attenuation max stops a sparse
         // dataset from imploding to FG ≪ 1; ceiling at 50 %-atten stops
         // FG → OG when the LM hasn't seen enough data to constrain FG.
-        val fgFloor = max(0.990, 1.000 + 0.10 * (p[0] - 1.000))
+        // [externalFgFloor], when supplied, raises the floor to the SG
+        // observed at cold-crash onset — the actual fermentation FG —
+        // so a windowed fit without the warm OG can't collapse FG below
+        // the brewer's known plateau.
+        val priorFloor = max(0.990, 1.000 + 0.10 * (p[0] - 1.000))
+        val fgFloor = if (externalFgFloor != null) max(priorFloor, externalFgFloor) else priorFloor
         val fgCeiling = min(p[0] - 0.001, 1.000 + 0.50 * (p[0] - 1.000))
         p[1] = p[1].coerceIn(fgFloor, max(fgFloor, fgCeiling))
         // muMax: peak attenuation rate. Beer ferments at 0.0001-0.01 SG/h

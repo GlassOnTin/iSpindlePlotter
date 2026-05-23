@@ -775,19 +775,26 @@ private fun buildSgOverlay(
         )
     }
 
+    // Reuse the timeline's Gompertz fit (already trimmed at any detected
+    // cold-crash onset and primed with a fermentSg-anchored attenuation
+    // prior) so the overlay band doesn't drift as the cold tail grows.
+    // Refit only when the timeline didn't produce one — e.g. a dataset
+    // too short for the timeline classifier.
+    val precomputedFit = timeline?.gompertz
+
     return when (state) {
         is Fermentation.State.Active -> {
             val fg = state.predictedFg
             val eta = state.etaToFinishHours
             if (eta != null) {
                 val (predict, low, high, floor) =
-                    predictorWithBand(state.source, xs, ys, state, fg, nowH, tStartMs, nowMs, eta)
+                    predictorWithBand(state.source, xs, ys, state, fg, nowH, tStartMs, nowMs, eta, precomputedFit)
                 overlayMs(predict, eta, fg, low, high, floor, state.plateaus)
             } else {
                 // No future to extrapolate (data already at/past FG) — show
                 // the in-sample Gompertz fit so the user can still read the
                 // ferment shape.
-                buildInSampleOverlay(ctx, xs, ys, fg, tStartMs, state.plateaus)
+                buildInSampleOverlay(ctx, xs, ys, fg, tStartMs, state.plateaus, precomputedFit)
             }
         }
         is Fermentation.State.Slowing -> {
@@ -795,10 +802,10 @@ private fun buildSgOverlay(
             val eta = state.etaToFinishHours
             if (eta != null) {
                 val (predict, low, high, floor) =
-                    predictorWithBand(state.source, xs, ys, state, fg, nowH, tStartMs, nowMs, eta)
+                    predictorWithBand(state.source, xs, ys, state, fg, nowH, tStartMs, nowMs, eta, precomputedFit)
                 overlayMs(predict, eta, fg, low, high, floor, state.plateaus)
             } else {
-                buildInSampleOverlay(ctx, xs, ys, fg, tStartMs, state.plateaus)
+                buildInSampleOverlay(ctx, xs, ys, fg, tStartMs, state.plateaus, precomputedFit)
             }
         }
         is Fermentation.State.Conditioning -> {
@@ -807,20 +814,20 @@ private fun buildSgOverlay(
             // fastest-attenuation point, residual-vs-model). Refit the
             // Gompertz on the full record and draw the curve through the
             // data window only — no future extension, no dashed segment.
-            buildInSampleOverlay(ctx, xs, ys, state.fg, tStartMs, state.plateaus)
+            buildInSampleOverlay(ctx, xs, ys, state.fg, tStartMs, state.plateaus, precomputedFit)
         }
         is Fermentation.State.Stuck -> {
             // No predicted-finish to extrapolate to, but the historical
             // Gompertz fit and the mid-active pause shading are still
             // useful for reading what the ferment did before it stalled.
-            buildInSampleOverlay(ctx, xs, ys, state.expectedFg, tStartMs, state.plateaus)
+            buildInSampleOverlay(ctx, xs, ys, state.expectedFg, tStartMs, state.plateaus, precomputedFit)
         }
         is Fermentation.State.ColdCrash -> {
             // Same rationale: the Gompertz fit and any historical mid-
             // active pauses are still part of the story; the apparent
             // SG drop in the cold-crash region itself is a thermal
             // artifact and naturally diverges from the curve.
-            buildInSampleOverlay(ctx, xs, ys, state.fermentSg, tStartMs, state.plateaus)
+            buildInSampleOverlay(ctx, xs, ys, state.fermentSg, tStartMs, state.plateaus, precomputedFit)
         }
         else -> null
     }
@@ -839,9 +846,10 @@ private fun buildInSampleOverlay(
     ys: DoubleArray,
     fg: Double,
     tStartMs: Double,
-    plateaus: List<com.ispindle.plotter.analysis.Plateau>
+    plateaus: List<com.ispindle.plotter.analysis.Plateau>,
+    precomputedFit: AttenuationFit.Result? = null
 ): ChartOverlay? {
-    val fit = AttenuationFit.fit(xs, ys) ?: return null
+    val fit = precomputedFit ?: AttenuationFit.fit(xs, ys) ?: return null
     val nowH = xs.last()
     val t0 = xs.first()
 
@@ -927,12 +935,13 @@ private fun predictorWithBand(
     nowH: Double,
     tStartMs: Double,
     nowMs: Double,
-    etaH: Double
+    etaH: Double,
+    precomputedFit: AttenuationFit.Result? = null
 ): OverlayCurves {
     val finishH = nowH + etaH
 
     if (source == Fermentation.PredictionSource.Gompertz) {
-        val fit = AttenuationFit.fit(xs, ys)
+        val fit = precomputedFit ?: AttenuationFit.fit(xs, ys)
         if (fit?.covariance != null) {
             // Dense time grid spanning the whole chart x-extent, in
             // hours from the same anchor as the data array.
