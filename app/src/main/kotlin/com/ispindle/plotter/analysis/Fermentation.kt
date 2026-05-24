@@ -23,6 +23,15 @@ object Fermentation {
     private const val ACTIVE_RATE = -0.0005   // dSG/dt < this → actively dropping
     private const val SLOWING_RATE = -0.00008 // between this and ACTIVE → slowing
     private const val LAG_DROP = 0.003        // OG - current < this AND no decline → lag
+    // "Slowing" means decelerating toward the asymptote, so it must not
+    // fire while the ferment has barely begun to attenuate: an early dip
+    // below the active rate (a diauxic pause, temperature equilibration, or
+    // a noisy patch averaged over the rolling window) is still part of the
+    // Active phase, not slowing. Require this fraction of the way to the
+    // predicted FG before a slow end-rate is read as slowing. The
+    // near-FG/stalled paths (Conditioning/Stuck) are gated separately and
+    // are unaffected.
+    private const val SLOWING_MIN_ATTENUATION = 0.5
     // A drop past LAG_DROP only counts as active onset if it holds over
     // this forward window — a lone float drop-in settling transient can
     // read several mSG below OG for a single sample and must not be read
@@ -677,9 +686,19 @@ object Fermentation {
         // threshold for the run that persists to end-of-data. Conditioning
         // is a subset of Slowing (slow rate ⊃ near-zero rate), so the
         // walk-back naturally places slowingOnsetH ≤ conditioningOnsetH.
+        //
+        // A slow end-rate (endIsSlow) only counts as *slowing toward FG*
+        // once the ferment is meaningfully into its descent — otherwise an
+        // early rate dip (e.g. the rolling window averaging a noisy mid-
+        // ferment patch with a still-active tail) misreads a young, even
+        // re-accelerating, ferment as slowing. Conditioning/Stuck remain
+        // independent triggers; they're inherently late-stage (near or
+        // above FG) so the attenuation gate doesn't apply to them.
+        val attenProgress = (og - endMedSg) / max(og - predictedFg, 1e-6)
+        val endIsSlowingToFg = endIsSlow && attenProgress >= SLOWING_MIN_ATTENUATION
         val slowingOnsetH = if (
             haveDescent && activeOnsetH != null &&
-            (endIsSlow || conditioningOnsetH != null || stuckOnsetH != null)
+            (endIsSlowingToFg || conditioningOnsetH != null || stuckOnsetH != null)
         ) {
             walkBackOnset(hours, n - 1, rollingRate, rollingMedianSg, MIN_SLOWING_HOLD_HOURS) { rate, _ ->
                 rate > ACTIVE_RATE

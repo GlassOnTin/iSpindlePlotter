@@ -2,6 +2,7 @@ package com.ispindle.plotter.analysis
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -80,6 +81,33 @@ class EarlyFermentStartTest {
         val raw = tl.gompertz!!.fgSigma!!
         assertTrue("raw Laplace fgSigma $raw was the overconfident value (< 1 mSG)", raw < 0.001)
         assertTrue("reported sigma $sigma must be ≥ the raw value it floors", sigma >= raw)
+    }
+
+    /**
+     * A few hours further into the same brew (`early_ferment_rate_dip.csv`,
+     * ~19 h, ~11 % attenuated): the active descent began ~h12, slowed across
+     * a noisy mid-ferment patch (~h11–17), then steepened again at the end.
+     * The 6 h rolling rate averages that patch with the still-active tail to
+     * ≈ −0.48 mSG/h — just shy of the −0.5 mSG/h active threshold — which
+     * pre-fix tripped the slowing walk-back and mislabelled this young,
+     * re-accelerating ferment as "Slowing". Slowing now requires the ferment
+     * to be well into its descent toward FG.
+     */
+    @Test fun `an early rate dip is Active, not Slowing`() {
+        val (_, _, tl) = loadCaptureWithTemp("early_ferment_rate_dip.csv").let { (h, s, t) ->
+            Triple(h, s, Fermentation.buildTimeline(h, s, temps = t)!!)
+        }
+        // Only a small fraction of the way to the predicted FG — far too
+        // early for "slowing toward completion" (current ≈ 1.0705).
+        val atten = (tl.og - 1.07054) / (tl.og - tl.predictedFg)
+        assertTrue("attenuation $atten should be well under the 50% slowing gate", atten < 0.2)
+
+        assertEquals(
+            "a young ferment with a momentary rate dip must read Active",
+            Fermentation.Phase.Active, tl.phaseAt(tl.lastH)
+        )
+        assertNull("no slowing onset should be assigned this early", tl.slowingOnsetH)
+        assertNotNull("the active descent should still be detected", tl.activeOnsetH)
     }
 
     private fun loadCaptureWithTemp(name: String): Triple<DoubleArray, DoubleArray, DoubleArray> {
