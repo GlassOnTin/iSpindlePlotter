@@ -1,0 +1,3 @@
+The fermentation model is now robust to the settling spike you get when a fresh iSpindle is first dropped into the wort. Previously that one stray reading could be mistaken for the original gravity, pulling the whole prediction curve up and skewing the estimated final gravity, ABV and finish time. The model now ignores the drop-in transient (a stray gravity reading, or readings taken while the temperature sensor is still equilibrating) and anchors to the true starting gravity.
+
+On a clean log this changes nothing — it only kicks in when there's an obvious artefact to reject.
