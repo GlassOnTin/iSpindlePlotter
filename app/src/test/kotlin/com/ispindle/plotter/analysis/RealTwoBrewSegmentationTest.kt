@@ -71,6 +71,43 @@ class RealTwoBrewSegmentationTest {
         )
     }
 
+    /**
+     * The same two-brew device, captured later (`real_two_brew_live.csv`):
+     * brew 2 is now ~15 h in with a real ~4-6 mSG decline, but its span
+     * still opens with the float drop-in settling transient (an up-spike to
+     * ~1.107 and a down-spike to ~1.072 on a settled ~1.0775 wort).
+     *
+     * Pre-fix, raw max/min read OG off the 1.107 spike and inflated `drop`
+     * to ~35 mSG, so the trend gate (drop/4 ≈ 8.7 mSG) rejected the genuine
+     * ~4 mSG decline and brew 2 never qualified — the selector showed "(1)".
+     * With SeriesClean's MAD spike rejection in the qualification pass, brew
+     * 2 qualifies as a second segment and the selector can navigate both.
+     */
+    @Test fun `mature brew 2 qualifies as a second segment despite the settling spike`() {
+        val (ts, sgs, _) = loadCapture("real_two_brew_live.csv")
+        val segs = FermentSegmenter.detect(ts, sgs)
+
+        assertEquals("both brews must now be detected", 2, segs.size)
+
+        // Segment 2: OG is the settled wort (~1.077), NOT the 1.10657 spike.
+        assertTrue("brew 2 OG ${segs[1].ogObserved} should be the settled ~1.077", segs[1].ogObserved in 1.074..1.085)
+        assertTrue("brew 2 OG ${segs[1].ogObserved} must not be the >1.09 settling spike", segs[1].ogObserved < 1.09)
+        val drop2 = segs[1].ogObserved - segs[1].fgObserved
+        assertTrue("brew 2 drop $drop2 should be the real decline, not the ~35 mSG spurious drop", drop2 in 0.003..0.012)
+        assertTrue("brew 2 should be a live, multi-hour run", segs[1].durationHours >= 6.0)
+        assertTrue("brew 2 must start after brew 1 ends", segs[1].startMs > segs[0].endMs)
+
+        // Segment 1 is unchanged from the earlier capture.
+        assertTrue("brew 1 OG ${segs[0].ogObserved} should still be ~1.0527", segs[0].ogObserved in 1.050..1.055)
+        assertTrue("brew 1 should still span the conditioning hold (> 300 h)", segs[0].durationHours > 300.0)
+
+        // The live brew (index 1) is auto-selected, not the "All" fallback.
+        assertEquals(
+            "default selection should be the live brew 2",
+            1, FermentSegmenter.defaultSelection(segs, ts.last())
+        )
+    }
+
     private fun loadCapture(name: String): Triple<LongArray, DoubleArray, DoubleArray> {
         val rsrc = javaClass.classLoader!!.getResourceAsStream(name)!!
         val lines = rsrc.bufferedReader().readLines()

@@ -143,11 +143,27 @@ object FermentSegmenter {
             val durationH = (timestamps[hi - 1] - timestamps[lo]) / 3_600_000.0
             if (durationH < MIN_FERMENT_HOURS) continue
 
-            var maxSg = sgs[lo]
-            var minSg = sgs[lo]
-            for (i in lo until hi) {
-                if (sgs[i] > maxSg) maxSg = sgs[i]
-                if (sgs[i] < minSg) minSg = sgs[i]
+            // Reject the iSpindle float drop-in settling transient before
+            // measuring the span. A fresh device bobs for a reading or two
+            // emitting SG values tens of mSG off the true wort (an up-spike
+            // and/or a down-spike), and raw max/min would otherwise read OG
+            // off the spike *and* inflate `drop` — which in turn raises the
+            // trend gate (drop/4) above the genuine decline and rejects a
+            // real, freshly-started ferment. SeriesClean's MAD filter drops
+            // those gross outliers (no-op on clean spans / keep-all when the
+            // span is too short, so finished brews are unaffected). The
+            // reported time extent below stays the raw span — only the
+            // observed-SG qualification metrics use the cleaned subset.
+            val spanHours = DoubleArray(hi - lo) { (timestamps[lo + it] - timestamps[lo]) / 3_600_000.0 }
+            val spanSgs = DoubleArray(hi - lo) { sgs[lo + it] }
+            val kept = SeriesClean.keptIndices(spanHours, spanSgs)
+            val cleanSgs = DoubleArray(kept.size) { spanSgs[kept[it]] }
+
+            var maxSg = cleanSgs[0]
+            var minSg = cleanSgs[0]
+            for (v in cleanSgs) {
+                if (v > maxSg) maxSg = v
+                if (v < minSg) minSg = v
             }
             val drop = maxSg - minSg
             if (drop < MIN_FERMENT_DROP) continue
@@ -161,16 +177,16 @@ object FermentSegmenter {
             // the actual start and end of the span — a long flat
             // conditioning tail would otherwise push an index midpoint
             // deep into the plateau and collapse the two medians together.
-            val windowLen = ((hi - lo) * TREND_WINDOW_FRACTION).toInt().coerceAtLeast(1)
-            val headMedian = medianOf(sgs, lo, lo + windowLen)
-            val tailMedian = medianOf(sgs, hi - windowLen, hi)
+            val windowLen = (cleanSgs.size * TREND_WINDOW_FRACTION).toInt().coerceAtLeast(1)
+            val headMedian = medianOf(cleanSgs, 0, windowLen)
+            val tailMedian = medianOf(cleanSgs, cleanSgs.size - windowLen, cleanSgs.size)
             if (headMedian - tailMedian < drop / 4.0) continue
 
             segments += FermentSegment(
                 startMs = timestamps[lo],
                 endMs = timestamps[hi - 1],
                 ogObserved = maxSg,
-                fgObserved = sgs[hi - 1],
+                fgObserved = cleanSgs[cleanSgs.size - 1],
                 pointCount = hi - lo
             )
         }
