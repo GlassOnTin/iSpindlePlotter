@@ -194,13 +194,41 @@ object AttenuationFit {
      *        let FG drop below this even when the data window doesn't
      *        contain the warm OG and the attenuation prior would
      *        otherwise pull FG toward priorFg ≈ OG·0.25 + 1.
+     * @param temps optional per-point temperatures, passed through to
+     *        [SeriesClean] so the float drop-in transient (still-
+     *        equilibrating sensor) can be trimmed in addition to the
+     *        always-on MAD spike rejection.
      */
     fun fit(
         xs: DoubleArray,
         ys: DoubleArray,
         measurementSigma: Double? = null,
         attenuationPrior: AttenuationPrior? = DefaultAttenuationPrior,
-        fgFloor: Double? = null
+        fgFloor: Double? = null,
+        temps: DoubleArray? = null
+    ): Result? {
+        require(xs.size == ys.size)
+        // Strip the float drop-in transient (settling spike, unequilibrated
+        // temperature) before fitting. On a clean capture this is a no-op;
+        // when it isn't, it stops a single artefact from pinning OG to the
+        // observed max and dragging the whole curve. See [SeriesClean].
+        val keep = SeriesClean.keptIndices(xs, ys, temps)
+        if (keep.size in 6 until xs.size) {
+            return fitCore(
+                DoubleArray(keep.size) { xs[keep[it]] },
+                DoubleArray(keep.size) { ys[keep[it]] },
+                measurementSigma, attenuationPrior, fgFloor
+            )
+        }
+        return fitCore(xs, ys, measurementSigma, attenuationPrior, fgFloor)
+    }
+
+    private fun fitCore(
+        xs: DoubleArray,
+        ys: DoubleArray,
+        measurementSigma: Double?,
+        attenuationPrior: AttenuationPrior?,
+        fgFloor: Double?
     ): Result? {
         require(xs.size == ys.size)
         val n = xs.size

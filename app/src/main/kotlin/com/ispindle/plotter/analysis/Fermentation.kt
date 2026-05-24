@@ -174,7 +174,11 @@ object Fermentation {
         if (n < MIN_POINTS) return State.Insufficient
         if (hours.last() - hours.first() < MIN_HOURS) return State.Insufficient
 
-        val og = sgs.max()
+        // Robust OG: max over inliers, so a float drop-in settling spike
+        // can't pin OG to an artefact and inflate the apparent drop (which
+        // otherwise mislabels an early lag as Slowing). No temps here — the
+        // MAD spike filter alone handles the SG outlier. See [SeriesClean].
+        val og = SeriesClean.robustOg(hours, sgs)
         val current = sgs.last()
         val drop = og - current
         val durationH = hours.last() - hours.first()
@@ -520,7 +524,10 @@ object Fermentation {
         if (n < MIN_POINTS) return null
         if (hours.last() - hours.first() < MIN_HOURS) return null
 
-        val og = sgs.max()
+        // Robust OG over inliers (temperature-aware here, so the float
+        // drop-in transient is trimmed as well as any SG spike). See
+        // [SeriesClean] and analyse()'s note.
+        val og = SeriesClean.robustOg(hours, sgs, temps)
         val current = sgs.last()
         val priorFg = max(0.998, 1.000 + 0.25 * (og - 1.000))
 
@@ -536,10 +543,14 @@ object Fermentation {
         // the fit stays representative of the actual fermentation curve as
         // more cold-conditioning data accumulates.
         val (coldCrashOnsetH, fermentTempC, fermentSg) = detectColdCrashOnset(hours, sgs, temps)
-        val (fitHours, fitSgs) = if (coldCrashOnsetH != null) {
+        val (fitHours, fitSgs, fitTemps) = if (coldCrashOnsetH != null) {
             val cutIdx = (hours.indexOfLast { it < coldCrashOnsetH } + 1).coerceAtLeast(MIN_POINTS)
-            DoubleArray(cutIdx) { hours[it] } to DoubleArray(cutIdx) { sgs[it] }
-        } else hours to sgs
+            Triple(
+                DoubleArray(cutIdx) { hours[it] },
+                DoubleArray(cutIdx) { sgs[it] },
+                temps?.let { t -> DoubleArray(cutIdx) { t[it] } }
+            )
+        } else Triple(hours, sgs, temps)
         // Pass fermentSg as a hard FG floor when cold-crash is detected.
         // The trimmed warm slice still uses the default 75 %-attenuation
         // prior (which lands cleanly when the data covers OG → FG, e.g.
@@ -550,7 +561,7 @@ object Fermentation {
         val fgFloor = if (coldCrashOnsetH != null) fermentSg else null
         val gompertz = AttenuationFit.fit(
             fitHours, fitSgs, sigma,
-            AttenuationFit.DefaultAttenuationPrior, fgFloor
+            AttenuationFit.DefaultAttenuationPrior, fgFloor, fitTemps
         )
         val plateaus = PlateauDetector.detect(hours, sgs)
         // Past a detected cold-crash, sgs.last() is a thermal artifact; the

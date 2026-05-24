@@ -63,6 +63,19 @@ class FermentationTest {
         assertEquals(fg, s.fg, 0.002)
     }
 
+    @Test fun `early lag with a float drop-in spike stays Lag, not Slowing`() {
+        // ~4 h of a fresh, barely-fermenting wort flat at 1.0770, but the
+        // first reading is the drop-in settling spike at 1.1070. Raw
+        // max(SG) would make the apparent drop ~0.030 and mislabel this as
+        // Slowing; the robust OG keeps the drop near zero -> Lag.
+        val xs = DoubleArray(48) { it * 0.0833 }   // ~5 min cadence, ~4 h
+        val ys = DoubleArray(48) { if (it == 0) 1.1070 else 1.0770 + 0.0002 * kotlin.math.sin(it * 0.5) }
+        val s = Fermentation.analyse(xs, ys)
+        assertTrue("got $s — spike must not push this past Lag", s is Fermentation.State.Lag)
+        s as Fermentation.State.Lag
+        assertEquals("OG should be the ~1.077 plateau, not the 1.107 spike", 1.0770, s.og, 0.0008)
+    }
+
     @Test fun `under 6 points reports Insufficient`() {
         val xs = doubleArrayOf(0.0, 1.0, 2.0)
         val ys = doubleArrayOf(1.060, 1.058, 1.055)

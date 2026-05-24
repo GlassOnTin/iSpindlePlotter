@@ -118,6 +118,38 @@ class AttenuationFitTest {
         )
     }
 
+    @Test fun `early float drop-in spike does not anchor OG`() {
+        // Real capture: a fresh float dropped into ~1.077 wort reads 1.1066
+        // on its first sample while it settles, then holds ~1.077. Raw
+        // max(SG) would pin OG to 1.1066 (±0.005 bound) and the fit RMS was
+        // ~15 mSG; cleaning rejects the spike so OG tracks the true wort.
+        val (xs, ys) = loadFixture("ferment_capture_brew2_settling.csv")
+        assertEquals("fixture should contain the 1.1066 spike", 1.1066, ys.max(), 0.0005)
+        val r = AttenuationFit.fit(xs, ys)!!
+        assertTrue("OG ${r.og} must track the ~1.077 wort, not the 1.1066 spike", r.og in 1.074..1.083)
+        assertTrue("RMS ${r.rmsResidual} should be small once the spike is gone (was ~0.015)",
+            r.rmsResidual <= 0.003)
+    }
+
+    private fun loadFixture(name: String): Pair<DoubleArray, DoubleArray> {
+        val rsrc = javaClass.classLoader!!.getResourceAsStream(name)!!
+        val lines = rsrc.bufferedReader().readLines()
+        val header = lines.first().split(',')
+        val tIdx = header.indexOf("timestamp_ms")
+        val sgIdx = header.indexOf("computed_gravity")
+        val ts = mutableListOf<Double>()
+        val ys = mutableListOf<Double>()
+        for (line in lines.drop(1)) {
+            if (line.isBlank()) continue
+            val p = line.split(',')
+            ts += p[tIdx].toDouble()
+            ys += p[sgIdx].toDouble()
+        }
+        val t0 = ts.first()
+        val xs = DoubleArray(ts.size) { (ts[it] - t0) / 3_600_000.0 }
+        return xs to ys.toDoubleArray()
+    }
+
     private inline fun assertTrue(message: String, condition: () -> Boolean) {
         if (!condition()) throw AssertionError(message)
     }
