@@ -14,6 +14,15 @@ hydrometer — including the **MTB iSpindel PCB 4.0**.
        width="320">
 </p>
 
+<p align="center">
+  <img src="docs/ferment-progress.png"
+       alt="A live fermentation in progress: the ferment picker selects brew 2 of 2, the modified-Gompertz fit projects OG 1.077 to an estimated FG 1.019 with a 95% credible band, and the phase classifier reads Active out of an early lag plateau"
+       width="320">
+  <br>
+  <em>A live brew in its early hours — the ferment picker (<code>Ferment 2/2</code>) isolates the
+  current run, and the model projects FG and ETA with an honest credible band while still in the lag.</em>
+</p>
+
 > **Protocol note.** The MTB PCB 4.0 uses an ESP8266 and therefore has no
 > Bluetooth. "Pairing" with it is really a WiFi / HTTP handshake: the phone
 > runs an HTTP server, the iSpindle wakes on its interval and POSTs JSON,
