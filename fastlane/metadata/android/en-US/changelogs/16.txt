@@ -1,0 +1,5 @@
+The ferment picker now recognises a freshly-started brew.
+
+When a device has logged more than one brew, the chart lets you step between each ferment and an "All" view. A new brew used to be missed: the settling spike you get when the iSpindle is first dropped into the wort made the app over-estimate how much the gravity had moved, and the new ferment failed the "is this a real ferment?" check until it was well underway. The app now ignores that drop-in spike when sizing up a brew, so a new ferment shows up in the picker within its first few hours and the chart opens on it by default.
+
+On a device with a single brew, or once a ferment is established, nothing changes.
