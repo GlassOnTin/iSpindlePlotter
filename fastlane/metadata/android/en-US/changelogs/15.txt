@@ -1,0 +1,7 @@
+Two fixes to how the model behaves in the first hours of a fresh ferment.
+
+The drop-in settling spike no longer makes the app think fermentation has already started: previously a single stray reading just after the iSpindle was dropped in could flip the phase straight to "active" and hide the lag period. The app now waits for a sustained drop before calling the ferment active, so the lag phase shows correctly.
+
+The predicted final-gravity uncertainty is now honest this early on. Before, it could read "± <0.0001" only a few hours in — far too confident when barely any of the ferment has happened. The displayed ± now reflects how little has actually been observed and tightens as the ferment progresses.
+
+On a ferment that's well underway this changes nothing — both fixes only matter at the very start.
