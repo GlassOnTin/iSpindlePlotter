@@ -1,0 +1,5 @@
+A young ferment is no longer mislabelled "slowing".
+
+In the first day of a brew the gravity can dip and wobble — a pause between sugars, the sensor settling, or just reading noise smoothed over the rolling window. That could briefly read as a rate just under the "active" line and flip the phase to "slowing", even though the beer had barely started attenuating. The phase now stays "active" until the ferment is genuinely well into its descent toward the predicted final gravity, so an early dip reads as active fermentation, not as winding down.
+
+Established and finished ferments are unaffected — the conditioning and stuck phases were already judged separately.
