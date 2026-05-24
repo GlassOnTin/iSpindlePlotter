@@ -23,6 +23,11 @@ object Fermentation {
     private const val ACTIVE_RATE = -0.0005   // dSG/dt < this → actively dropping
     private const val SLOWING_RATE = -0.00008 // between this and ACTIVE → slowing
     private const val LAG_DROP = 0.003        // OG - current < this AND no decline → lag
+    // A drop past LAG_DROP only counts as active onset if it holds over
+    // this forward window — a lone float drop-in settling transient can
+    // read several mSG below OG for a single sample and must not be read
+    // as fermentation having started.
+    private const val ACTIVE_CONFIRM_HOURS = 1.0
     private const val MIN_HOURS = 1.0
     private const val MIN_POINTS = 6
     private const val RECENT_WINDOW_HOURS = 6.0
@@ -310,7 +315,8 @@ object Fermentation {
         //    beer styles) when we're falling back to the prior.
         val priorFgSigma = 0.06 * (og - 1.000).coerceAtLeast(0.005)
         val predictedFgSigma = when (source) {
-            PredictionSource.Gompertz -> gompertz?.fgSigma
+            PredictionSource.Gompertz ->
+                gompertz?.fgSigma?.let { flooredFgSigma(it, og, gompertz.fg, current) }
             else -> priorFgSigma
         }
 
@@ -344,6 +350,28 @@ object Fermentation {
      * (the Hessian and MAP move), but a stable input → stable output.
      */
     private const val BAYESIAN_SEED: Int = 0x5E1ED
+
+    /**
+     * Floor the Gompertz FG sigma at the attenuation prior's FG spread
+     * scaled by the still-unobserved fraction of the OG→FG descent.
+     *
+     * The Laplace covariance reports a *likelihood-only* spread that, very
+     * early in a ferment, collapses far below the attenuation prior's own
+     * uncertainty: the rigid Gompertz form "pins" FG by extrapolating from
+     * the lag/inflection it has sampled, even though almost none of the
+     * descent has actually been observed (e.g. ~12 h in, ~4 mSG of a ~58
+     * mSG drop, the raw fgSigma reads < 0.1 mSG). A posterior must not read
+     * tighter than its prior while the data is uninformative. As the
+     * ferment completes the unobserved fraction → 0 and the floor relaxes,
+     * letting the data-driven spread take over.
+     */
+    private fun flooredFgSigma(rawFgSigma: Double, og: Double, fg: Double, current: Double): Double {
+        val expectedDrop = (og - fg).coerceAtLeast(1e-4)
+        val observedDrop = (og - current).coerceIn(0.0, expectedDrop)
+        val unobserved = 1.0 - observedDrop / expectedDrop
+        val priorFloor = AttenuationFit.DefaultAttenuationPrior.sigma * (og - 1.000) * unobserved
+        return max(rawFgSigma, priorFloor)
+    }
 
     private fun pickFgEstimate(
         og: Double,
@@ -582,12 +610,27 @@ object Fermentation {
         }
         val priorFgSigma = 0.06 * (og - 1.000).coerceAtLeast(0.005)
         val predictedFgSigma = when (source) {
-            PredictionSource.Gompertz -> gompertz?.fgSigma
+            PredictionSource.Gompertz ->
+                gompertz?.fgSigma?.let { flooredFgSigma(it, og, gompertzFg, effectiveCurrent) }
             else -> priorFgSigma
         }
 
-        val activeOnsetH = (0 until n).firstOrNull { (og - sgs[it]) > LAG_DROP }
-            ?.let { hours[it] }
+        // Active onset: the first sample whose drop past LAG_DROP is
+        // *sustained*, confirmed by the median SG over the next
+        // ACTIVE_CONFIRM_HOURS — not a lone float drop-in settling
+        // transient. robustOg already trims that spike for the OG
+        // estimate, but the raw series still carries it; without this
+        // guard the single-sample down-spike trips onset at h≈0 and
+        // erases the visible lag. During genuine descent the forward
+        // points sit lower, so the median condition fires at or slightly
+        // before the raw crossing; a transient recovers, so its forward
+        // median stays above the threshold and is rejected.
+        val activeOnsetH = (0 until n).firstOrNull { i ->
+            if ((og - sgs[i]) <= LAG_DROP) return@firstOrNull false
+            val end = lookupWindowEnd(hours, i, ACTIVE_CONFIRM_HOURS)
+            val med = Fits.median(DoubleArray(end - i + 1) { sgs[i + it] }) ?: sgs[i]
+            (og - med) > LAG_DROP
+        }?.let { hours[it] }
 
         // Rolling stats — OLS slope and median over a 6-hour window
         // ending at each sample. Cheap to precompute (≈ O(n × window))
@@ -915,6 +958,13 @@ object Fermentation {
         val cutoff = hours[endIdx] - windowHours
         for (i in endIdx downTo 0) if (hours[i] < cutoff) return i + 1
         return 0
+    }
+
+    /** Last index whose hour is within [windowHours] forward of startIdx. */
+    private fun lookupWindowEnd(hours: DoubleArray, startIdx: Int, windowHours: Double): Int {
+        val cutoff = hours[startIdx] + windowHours
+        for (i in startIdx until hours.size) if (hours[i] > cutoff) return i - 1
+        return hours.size - 1
     }
 
     private fun lookupIndexAt(hours: DoubleArray, t: Double): Int {
