@@ -1,0 +1,5 @@
+The fermentation estimate no longer changes when you zoom the chart.
+
+Switching the graph between 24h, 7d and All used to refit the model to just the readings on screen, so the original gravity, predicted final gravity and time-to-finish could all jump as you changed the window — a 24-hour view might even read a well-established brew as barely started. The estimate is now always fitted to the whole current ferment, picked out from your logging history automatically. The time window only zooms the chart; the numbers underneath stay put.
+
+If you have more than one brew in the history, the estimate sticks to the live one instead of blending in a previous batch.
