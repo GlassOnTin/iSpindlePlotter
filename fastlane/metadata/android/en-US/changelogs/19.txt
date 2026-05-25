@@ -1,0 +1,7 @@
+A brew that pauses mid-ferment is no longer mistaken for finishing.
+
+When the gravity goes flat for a while but is still well above the predicted final gravity — usually a diauxic shift, where the yeast finishes the easy sugars before tackling the harder ones — the estimate now stays "Active" and shows diauxic-shift guidance, instead of jumping to "Slowing" as if the beer were settling onto its final gravity. The live view recognises an ongoing pause too, so you get that guidance straight away rather than only when scrubbing back over the chart.
+
+The gravity chart now scales to the real data and ignores stray spikes: a single knocked-float or settling reading no longer squashes the whole trace into a thin band, while the model's predicted-finish line still stays in view.
+
+The Home button now reliably returns to the home screen from the graph.
