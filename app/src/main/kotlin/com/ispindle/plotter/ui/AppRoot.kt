@@ -73,9 +73,16 @@ fun AppRoot(app: IspindleApp, vm: MainViewModel) {
                         selected = currentRoute == tab.dest.route,
                         onClick = {
                             navController.navigate(tab.dest.route) {
-                                popUpTo(Dest.Home.route) { saveState = true }
+                                // Pop any pushed detail screen (Graph /
+                                // Calibrate / Configure) so a tab tap lands on
+                                // that tab's root. Deliberately no saveState /
+                                // restoreState: those preserve an independent
+                                // per-tab back stack, but here detail screens
+                                // live on the Home tab's own stack, so
+                                // restoring the saved state re-opened Graph
+                                // instead of returning to Home.
+                                popUpTo(Dest.Home.route)
                                 launchSingleTop = true
-                                restoreState = true
                             }
                         },
                         icon = { Icon(tab.icon, contentDescription = tabLabel) },
