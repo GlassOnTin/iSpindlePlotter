@@ -32,6 +32,19 @@ object Fermentation {
     // near-FG/stalled paths (Conditioning/Stuck) are gated separately and
     // are unaffected.
     private const val SLOWING_MIN_ATTENUATION = 0.5
+    // Largest SG gap to predicted FG that still counts as "slowing toward
+    // FG" (the asymptotic tail). The fractional [SLOWING_MIN_ATTENUATION]
+    // gate scales with beer size, so on a big beer it let "slowing" fire
+    // with 25+ mSG still to drop — e.g. OG 1.077 plateauing at 1.037
+    // (predicted FG ≈ 1.0185) reads 70 % attenuated yet is 18 mSG short of
+    // FG, with its peak descent only hours past: a diauxic / temperature
+    // pause mid-active, not the settle. This absolute gap pins slowing to
+    // the genuine tail regardless of OG (the asymptotic tail is ~10 mSG
+    // whether the beer dropped 30 or 60). ~12 mSG sits comfortably past the
+    // Stuck/Complete near-FG band (≤ 5 mSG) but well inside a half-
+    // attenuated big beer's remaining drop, so the ferment stays Active
+    // until it's genuinely closing on FG.
+    internal const val SLOWING_NEAR_FG_GAP = 0.012
     // A drop past LAG_DROP only counts as active onset if it holds over
     // this forward window — a lone float drop-in settling transient can
     // read several mSG below OG for a single sample and must not be read
@@ -474,6 +487,23 @@ object Fermentation {
     /** Magnitude below which the rolling rate counts as "near zero". */
     private const val NEAR_ZERO_RATE = 0.00012
 
+    /**
+     * Live-edge pause recognition. [PlateauDetector] can't measure slope in
+     * the trailing half-window, so an ongoing flat run has its detected
+     * `endH` frozen short of the last reading — and the gap only grows as
+     * the pause persists, so no fixed `endH`-to-now tolerance can hold. An
+     * ongoing pause therefore never strictly contains the latest sample, and
+     * the headline "now" view would never show diauxic-shift guidance (only
+     * cursor-scrubbing into a *past* pause did).
+     *
+     * Instead, anchor on the SG: fermentation is monotonic-down, so the
+     * ferment is still sitting in a trailing Mid plateau iff its current SG
+     * is still on that plateau (hasn't dropped more than [PAUSE_RESUME_DROP]
+     * below it) and the rate hasn't gone active — regardless of how long ago
+     * the detector's flat run technically ended.
+     */
+    private const val PAUSE_RESUME_DROP = 0.002
+
     /** Cold-crash detection. Tuned to pick up clear temperature drops
      *  (≥ 4 °C below the warm reference, sustained for ≥ 1.5 h) without
      *  false-positiving on the natural diurnal swing of an unheated
@@ -694,8 +724,16 @@ object Fermentation {
         // re-accelerating, ferment as slowing. Conditioning/Stuck remain
         // independent triggers; they're inherently late-stage (near or
         // above FG) so the attenuation gate doesn't apply to them.
+        // "Slowing toward FG" is the asymptotic approach: meaningfully
+        // attenuated AND within striking distance of predicted FG. Without
+        // the absolute-gap clause a big beer paused well above FG (slow
+        // window-averaged rate, ≥ 50 % attenuated) misreads as slowing —
+        // see [SLOWING_NEAR_FG_GAP].
         val attenProgress = (og - endMedSg) / max(og - predictedFg, 1e-6)
-        val endIsSlowingToFg = endIsSlow && attenProgress >= SLOWING_MIN_ATTENUATION
+        val fgGap = endMedSg - predictedFg
+        val endIsSlowingToFg = endIsSlow &&
+            attenProgress >= SLOWING_MIN_ATTENUATION &&
+            fgGap <= SLOWING_NEAR_FG_GAP
         val slowingOnsetH = if (
             haveDescent && activeOnsetH != null &&
             (endIsSlowingToFg || conditioningOnsetH != null || stuckOnsetH != null)
@@ -781,34 +819,52 @@ object Fermentation {
             else -> linearEta(sgAtT, terminalSg, rateAtT)
         }
 
-        // Plateaus visible at T. We surface only *mid-active* pauses —
-        // diauxic shifts inside the actively-fermenting phase. Plateaus
-        // during Slowing / Conditioning / Stuck / ColdCrash are natural
-        // deceleration / asymptote settle / thermal artefacts and don't
-        // tell the brewer something they need to act on, so they aren't
-        // shaded on the chart or called out in the description. An
-        // ongoing pause (endH > T) is clipped so a cursor sitting inside
-        // shows "paused for 3 h so far", not the eventual full duration.
+        // The pause T is currently inside, if any. Used to swap in diauxic-
+        // shift guidance instead of generic active advice. Restricted to
+        // mid-active pauses so a cursor in a post-slowing flat region doesn't
+        // get the "paused" treatment. Two ways T can be "inside" a pause:
+        //  - strictly within [startH, endH): a cursor scrubbed into a past
+        //    pause, or any pause that genuinely brackets T;
+        //  - the live edge: the trailing plateau's detected endH stops short
+        //    of T (PlateauDetector's trailing blind spot, gap growing as the
+        //    pause persists), but SG is still sitting on the plateau and the
+        //    rate hasn't gone active — the ferment is still in it. See
+        //    [PAUSE_RESUME_DROP]. The SG anchor excludes earlier plateaus at
+        //    other SG levels, so this picks the trailing one the ferment is
+        //    actually at. endH is clipped to T so the duration reads "paused
+        //    for N h so far", not an eventual full span.
         val activePhaseEndH = timeline.slowingOnsetH ?: timeline.lastH
+        val currentPause = timeline.plateaus
+            .firstOrNull { p ->
+                p.kind == Plateau.Kind.Mid &&
+                    p.startH < activePhaseEndH &&
+                    p.startH <= tClamped &&
+                    (p.endH > tClamped ||
+                        (sgAtT >= p.sg - PAUSE_RESUME_DROP && rateAtT > ACTIVE_RATE))
+            }
+            ?.copy(endH = tClamped)
+
+        // Mid-active pauses visible at T, for the chart shading and the
+        // "paused at X for Y h" note. Plateaus during Slowing / Conditioning
+        // / Stuck / ColdCrash are natural deceleration / asymptote settle /
+        // thermal artefacts and aren't surfaced. The ongoing [currentPause]
+        // is substituted in (endH already extended to T) so its shading and
+        // duration match the guidance — otherwise the detector's frozen
+        // flat-run end would read a shorter, stale span than the guidance's
+        // "for N h".
         val plateausUpToT = timeline.plateaus
             .filter { p ->
                 p.kind == Plateau.Kind.Mid &&
                     p.startH < activePhaseEndH &&
                     p.startH <= tClamped
             }
-            .map { if (it.endH > tClamped) it.copy(endH = tClamped) else it }
-        // The pause the cursor is currently inside, if any. Used to swap
-        // in diauxic-shift guidance instead of generic active advice
-        // when scrubbing into a paused region. Restricted to mid-active
-        // pauses (same filter as plateausUpToT) so a cursor sitting in a
-        // post-slowing flat region doesn't get the "paused" treatment.
-        val currentPause = timeline.plateaus
-            .firstOrNull {
-                it.kind == Plateau.Kind.Mid &&
-                    it.startH < activePhaseEndH &&
-                    it.startH <= tClamped && it.endH > tClamped
+            .map { p ->
+                when {
+                    currentPause != null && p.startH == currentPause.startH -> currentPause
+                    p.endH > tClamped -> p.copy(endH = tClamped)
+                    else -> p
+                }
             }
-            ?.copy(endH = tClamped)
 
         return when (phase) {
             Phase.Lag -> State.Lag(
