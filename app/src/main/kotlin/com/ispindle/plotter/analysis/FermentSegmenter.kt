@@ -93,13 +93,21 @@ object FermentSegmenter {
     private const val RISE_LOOKBACK_HOURS = 6.0
     private const val RISE_LOOKBACK_TOLERANCE = 0.001
 
-    fun detect(timestamps: LongArray, sgs: DoubleArray): List<FermentSegment> {
-        require(timestamps.size == sgs.size)
+    /**
+     * Pass-1 boundary detection: the start indices of each contiguous
+     * episode. Always begins with 0; a cut at index `i` means span
+     * [prevCut, i) ends and a new episode starts at `i`. The trailing
+     * sentinel `n` is *not* included — callers that iterate spans append
+     * it themselves.
+     *
+     * "Episode" here is the raw contiguous run between regime changes
+     * (gap-with-discontinuity or single-step SG rise); it is *not* yet
+     * qualified as a ferment. [detect] qualifies; [latestEpisodeStartMs]
+     * uses the raw boundary so the analyser can scope to the current run
+     * even before it meets the ferment floor.
+     */
+    private fun cutIndices(timestamps: LongArray, sgs: DoubleArray): List<Int> {
         val n = timestamps.size
-        if (n < MIN_POINTS_PER_SEGMENT) return emptyList()
-
-        // Pass 1: collect cut indices. Each cut splits the array at index
-        // `i`, meaning span [prevCut, i) ends and the next span starts at i.
         val cuts = mutableListOf(0)
         for (i in 1 until n) {
             val gapH = (timestamps[i] - timestamps[i - 1]) / 3_600_000.0
@@ -132,6 +140,36 @@ object FermentSegmenter {
             }
             if (!foundPriorPeak) cuts += i
         }
+        return cuts
+    }
+
+    /**
+     * Timestamp at which the contiguous episode containing the most recent
+     * reading begins — i.e. the start of the run since the last regime
+     * change (new wort, swap to water, or a logging gap across an SG
+     * discontinuity). Null only when there are no readings.
+     *
+     * The graph scopes its fermentation model to this so the fit depends
+     * on the data partition, not on the chart's time-window selector: a
+     * 24 h view and a 7 day view of the same brew feed the analyser the
+     * identical episode. Unlike [detect] this does not require the run to
+     * qualify as a ferment, so a brew still in its first hours is scoped
+     * to itself rather than to a stale earlier episode or a time slice.
+     */
+    fun latestEpisodeStartMs(timestamps: LongArray, sgs: DoubleArray): Long? {
+        require(timestamps.size == sgs.size)
+        if (timestamps.isEmpty()) return null
+        return timestamps[cutIndices(timestamps, sgs).last()]
+    }
+
+    fun detect(timestamps: LongArray, sgs: DoubleArray): List<FermentSegment> {
+        require(timestamps.size == sgs.size)
+        val n = timestamps.size
+        if (n < MIN_POINTS_PER_SEGMENT) return emptyList()
+
+        // Pass 1: episode boundaries, plus the trailing sentinel so the
+        // qualification loop can read each span as [cuts[b], cuts[b+1]).
+        val cuts = cutIndices(timestamps, sgs).toMutableList()
         cuts += n
 
         // Pass 2: qualify each span.

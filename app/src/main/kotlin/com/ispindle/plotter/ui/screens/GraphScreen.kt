@@ -106,6 +106,20 @@ fun GraphScreen(
             sgs = DoubleArray(sgList.size) { sgList[it].second }
         )
     }
+    // Start of the contiguous episode the latest reading belongs to. The
+    // SG model is scoped to this (or to an explicitly selected segment),
+    // never to the chart's time window — see [modelScoped] below.
+    val episodeStartMs = remember(readings) {
+        val sgList = readings.mapNotNull { r ->
+            val sg = r.computedGravity ?: r.reportedGravity
+            if (sg != null && sg > 0.0) r.timestampMs to sg else null
+        }
+        if (sgList.isEmpty()) null
+        else FermentSegmenter.latestEpisodeStartMs(
+            timestamps = LongArray(sgList.size) { sgList[it].first },
+            sgs = DoubleArray(sgList.size) { sgList[it].second }
+        )
+    }
     // Default to the live brew: the most recent qualified segment, unless a
     // fresh-but-unqualified episode is logging past it (a brew in its first
     // hours) — then null, so the time-window view below shows the live data
@@ -129,6 +143,24 @@ fun GraphScreen(
         } else {
             val cutoff = window.hours?.let { now - it * 3_600_000L } ?: Long.MIN_VALUE
             readings.filter { it.timestampMs >= cutoff }
+        }
+    }
+    // Data the SG model is fitted to. Deliberately independent of the
+    // time-window chip: the window only zooms the chart, it must not
+    // change what the analyser sees. When a segment is explicitly
+    // selected this matches [scoped]; in time-window mode it stays the
+    // whole current episode instead of the (24 h / 7 d / …) slice, so the
+    // OG/FG/ETA estimate and the overlay curve don't flip between windows.
+    val modelScoped = run {
+        val sel = selectedSegmentIdx
+        when {
+            sel != null && sel in segments.indices -> {
+                val seg = segments[sel]
+                readings.filter { it.timestampMs in seg.startMs..seg.endMs }
+            }
+            episodeStartMs != null ->
+                readings.filter { it.timestampMs >= episodeStartMs }
+            else -> scoped
         }
     }
 
@@ -256,23 +288,35 @@ fun GraphScreen(
         }
 
         // SG with the model overlay leads — it's the headline chart for
-        // brewers actively watching a ferment.
+        // brewers actively watching a ferment. The dots show the chart's
+        // time window ([scoped]); the model overlay and the estimate line
+        // are fitted to the whole episode ([modelScoped]) so they don't
+        // depend on which window is selected.
         val sgPoints = scoped.mapNotNull { r ->
             val sg = r.computedGravity ?: r.reportedGravity
             if (sg != null && sg > 0.0) r.timestampMs.toDouble() to sg else null
         }
-        // Temperatures aligned to sgPoints (same SG-present filter as
-        // above) so the overlay's timeline can detect cold-crash regions.
-        val sgTemps = remember(scoped) {
-            val list = scoped.mapNotNull { r ->
+        // SG points and aligned temperatures for the model fit, scoped to
+        // the episode. Absolute-ms x means the overlay still registers
+        // against the windowed chart even when the episode starts earlier.
+        val modelSgPoints = remember(modelScoped) {
+            modelScoped.mapNotNull { r ->
+                val sg = r.computedGravity ?: r.reportedGravity
+                if (sg != null && sg > 0.0) r.timestampMs.toDouble() to sg else null
+            }
+        }
+        // Temperatures aligned to modelSgPoints (same SG-present filter)
+        // so the overlay's timeline can detect cold-crash regions.
+        val modelSgTemps = remember(modelScoped) {
+            val list = modelScoped.mapNotNull { r ->
                 val sg = r.computedGravity ?: r.reportedGravity
                 if (sg != null && sg > 0.0) r.temperatureC else null
             }
             DoubleArray(list.size) { list[it] }
         }
         val calR2 = device?.calRSquared
-        val sgOverlay = remember(sgPoints, calR2, sgTemps) {
-            buildSgOverlay(ctx, sgPoints, calR2, sgTemps.takeIf { it.size == sgPoints.size })
+        val sgOverlay = remember(modelSgPoints, calR2, modelSgTemps) {
+            buildSgOverlay(ctx, modelSgPoints, calR2, modelSgTemps.takeIf { it.size == modelSgPoints.size })
         }
         // Scrubbing cursor — when set, the SG description shows a snapshot
         // of values at that point in time. Reset whenever the underlying
@@ -302,7 +346,7 @@ fun GraphScreen(
             cursorX = sgCursorX,
             onCursorChange = { sgCursorX = it }
         )
-        SgEstimateLine(scoped, sgPoints, calR2, sgCursorX, onClearCursor = { sgCursorX = null })
+        SgEstimateLine(modelScoped, modelSgPoints, calR2, sgCursorX, onClearCursor = { sgCursorX = null })
 
         MetricCard(
             title = stringResource(R.string.graph_section_tilt_angle),
