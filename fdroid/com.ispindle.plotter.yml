@@ -133,7 +133,14 @@ Builds:
     gradle:
       - yes
 
+  - versionName: 0.5.14
+    versionCode: 19
+    commit: 6aefcdc165b81266148a04cab4432c1a3a516934
+    subdir: app
+    gradle:
+      - yes
+
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 0.5.13
-CurrentVersionCode: 18
+CurrentVersion: 0.5.14
+CurrentVersionCode: 19
