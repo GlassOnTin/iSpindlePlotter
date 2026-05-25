@@ -70,7 +70,7 @@ object SeriesClean {
         if (n < MIN_KEEP) return all
 
         val trimEnd = leadingTrimEnd(hours, temps, n)
-        val spike = madOutliers(hours, sgs, n)
+        val spike = madOutliers(sgs, n)
 
         val kept = ArrayList<Int>(n)
         for (i in trimEnd until n) if (!spike[i]) kept.add(i)
@@ -93,8 +93,36 @@ object SeriesClean {
         return if (m.isFinite()) m else sgs.max()
     }
 
+    /**
+     * Spike-free `[min, max]` over [values], ignoring the same gross MAD
+     * outliers [keptIndices] strips before fitting. Use to scale a chart's
+     * y-axis so a single knocked-float / settling-transient reading doesn't
+     * compress the whole trace into a sliver.
+     *
+     * Applies only the index-based spike filter — not the temperature-gated
+     * startup trim — because the goal here is to drop obvious spikes from
+     * the axis extent, not to reshape the series. [values] must be in
+     * series (time) order so the detrending rolling median follows the
+     * curve. Returns null when there are fewer than [MIN_FOR_MAD] points (or
+     * every point reads as a spike), so the caller can fall back to the raw
+     * extent.
+     */
+    fun spikeFreeRange(values: DoubleArray): Pair<Double, Double>? {
+        val n = values.size
+        if (n < MIN_FOR_MAD) return null
+        val spike = madOutliers(values, n)
+        var lo = Double.POSITIVE_INFINITY
+        var hi = Double.NEGATIVE_INFINITY
+        for (i in 0 until n) {
+            if (spike[i]) continue
+            if (values[i] < lo) lo = values[i]
+            if (values[i] > hi) hi = values[i]
+        }
+        return if (lo.isFinite() && hi.isFinite()) lo to hi else null
+    }
+
     /** Boolean mask of MAD spike outliers (true = outlier). */
-    private fun madOutliers(hours: DoubleArray, sgs: DoubleArray, n: Int): BooleanArray {
+    private fun madOutliers(sgs: DoubleArray, n: Int): BooleanArray {
         val out = BooleanArray(n)
         if (n < MIN_FOR_MAD) return out
         // Residual from a short rolling median (index window, clamped).

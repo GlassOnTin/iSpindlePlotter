@@ -204,18 +204,13 @@ fun LineChart(
     // see the model line crossing the FG threshold rather than just
     // running off the right edge.
     val xMax = kotlin.math.max(xs.max(), overlay?.extendXTo ?: Double.NEGATIVE_INFINITY)
-    // The uncertainty band can dip below the line's own extendYDownTo, so
-    // pull the y range down to whichever floor is lower.
-    val bandFloor = overlay?.bandLow?.let { low ->
-        val xEnd = overlay.extendXTo ?: xs.max()
-        low(xEnd)
-    }
-    val yMinRaw = kotlin.math.min(
-        ys.min(),
-        kotlin.math.min(overlay?.extendYDownTo ?: Double.POSITIVE_INFINITY,
-                        bandFloor ?: Double.POSITIVE_INFINITY)
+    // Y-extent ignores gross spikes (knocked float, settling transient) the
+    // same way the fit does, then unions the robustly-fitted overlay's own
+    // range — so one bad reading can't squash the trace and a prediction
+    // that runs past the clipped data still stays on-screen.
+    val (yMinRaw, yMaxRaw) = chartYExtent(
+        ys.toDoubleArray(), overlay, xMin, overlay?.extendXTo ?: xs.max()
     )
-    val yMaxRaw = ys.max()
 
     // Sticky autoscale: keep the y-axis still as new points come in.
     // Range only widens on out-of-range data, and re-snaps when the
@@ -569,6 +564,46 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawTextAt(
         style = androidx.compose.ui.text.TextStyle(color = color, fontSize = 10.sp)
     )
     drawText(layout, topLeft = Offset(x, y))
+}
+
+/**
+ * Y-extent the chart should span: the spike-free data range unioned with
+ * the model overlay's own range.
+ *
+ * [dataYs] is reduced to its spike-free min/max via [SeriesClean] — the
+ * same robust outlier rejection the Gompertz fit applies — so a single
+ * knocked-float reading doesn't blow the axis out and flatten the real
+ * trace. The overlay is itself robustly fitted and therefore trustworthy
+ * past the clipped data, so its sampled curve, uncertainty band, and
+ * explicit [ChartOverlay.extendYDownTo] floor are unioned across
+ * `[xStart, xEnd]` — the curve's predicted FG floor or OG asymptote stays
+ * visible even when it sits beyond the surviving data points.
+ *
+ * Falls back to the raw data min/max when there are too few points for a
+ * robust estimate. Pure, for testability.
+ */
+internal fun chartYExtent(
+    dataYs: DoubleArray,
+    overlay: ChartOverlay?,
+    xStart: Double,
+    xEnd: Double,
+    sampleCount: Int = 48
+): Pair<Double, Double> {
+    val robust = com.ispindle.plotter.analysis.SeriesClean.spikeFreeRange(dataYs)
+    var lo = robust?.first ?: (dataYs.minOrNull() ?: 0.0)
+    var hi = robust?.second ?: (dataYs.maxOrNull() ?: 1.0)
+    if (overlay != null && xEnd > xStart && sampleCount > 0) {
+        val step = (xEnd - xStart) / sampleCount
+        for (i in 0..sampleCount) {
+            val x = xStart + i * step
+            val c = overlay.sample(x)
+            if (c.isFinite()) { lo = kotlin.math.min(lo, c); hi = kotlin.math.max(hi, c) }
+            overlay.bandLow?.invoke(x)?.let { if (it.isFinite()) lo = kotlin.math.min(lo, it) }
+            overlay.bandHigh?.invoke(x)?.let { if (it.isFinite()) hi = kotlin.math.max(hi, it) }
+        }
+    }
+    overlay?.extendYDownTo?.let { if (it.isFinite()) lo = kotlin.math.min(lo, it) }
+    return lo to hi
 }
 
 /**

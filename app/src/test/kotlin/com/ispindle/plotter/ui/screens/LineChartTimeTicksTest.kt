@@ -77,6 +77,38 @@ class LineChartTimeTicksTest {
         }
     }
 
+    @Test fun `chartYExtent ignores a data spike`() {
+        // Descent 1.060 -> ~1.0405 with one 1.200 spike; no overlay.
+        val ys = DoubleArray(40) { 1.060 - 0.0005 * it }
+        ys[20] = 1.200
+        val (lo, hi) = chartYExtent(ys, overlay = null, xStart = 0.0, xEnd = 39.0)
+        assertEquals("spike must not set the top of the axis", 1.060, hi, 1e-6)
+        assertEquals(ys.last(), lo, 1e-6)
+    }
+
+    @Test fun `chartYExtent unions the model range below the clipped data`() {
+        // Data bottoms out at 1.040; the overlay predicts a lower FG floor
+        // (1.030) the data hasn't reached yet. The axis must reach the
+        // model floor so the predicted curve stays on-screen.
+        val ys = DoubleArray(20) { 1.060 - 0.001 * it }   // 1.060 -> 1.041
+        val overlay = ChartOverlay(
+            color = androidx.compose.ui.graphics.Color(0xFFD1495B),
+            sample = { x -> (1.060 - 0.0015 * x).coerceAtLeast(1.030) },
+            extendXTo = 40.0,
+            extendYDownTo = 1.030
+        )
+        val (lo, hi) = chartYExtent(ys, overlay, xStart = 0.0, xEnd = 40.0)
+        assertTrue("axis floor $lo should reach the model FG (1.030)", lo <= 1.0301)
+        assertEquals("top stays at the observed OG", 1.060, hi, 1e-6)
+    }
+
+    @Test fun `chartYExtent falls back to raw extent without enough points`() {
+        val ys = doubleArrayOf(1.05, 1.04, 1.03)
+        val (lo, hi) = chartYExtent(ys, overlay = null, xStart = 0.0, xEnd = 2.0)
+        assertEquals(1.03, lo, 1e-9)
+        assertEquals(1.05, hi, 1e-9)
+    }
+
     @Test fun `tiny degenerate ranges return no ticks`() {
         assertEquals(0, clockAlignedTicks(0.0, 0.0).first.size)
         assertEquals(0, clockAlignedTicks(100.0, 50.0).first.size)
