@@ -1,0 +1,7 @@
+The gravity model now matches biphasic ferments properly.
+
+Many brews don't follow a single S-curve from OG to FG — yeast finishes the easy sugars, pauses at the diauxic shift, then resumes on the harder ones at very different kinetics. A single Gompertz curve can't represent that, so the chart had to compromise — the modelled curve missed the slowing tail's shape and the predicted FG drifted.
+
+When the data clearly shows a diauxic pause and enough run past it to characterise the second phase, the chart now fits a two-component Gompertz: phase 1 (the easy-sugar pass) and phase 2 (the slower maltotriose pass), summed. The headline calls it out — "biphasic · phase 1 73% of drop" — and the model curve hugs the actual data shape instead of papering over the bend. Unimodal ferments stay on the single-component fit, so this is a free upgrade for anything biphasic and no change for anything that isn't.
+
+Underneath, a latent sign bug in the existing single-component fitter's attenuation-prior contribution was also fixed. The 4-parameter Jacobian's data columns were dominant enough that it never noticed; the new 7-parameter fitter wasn't, so the bug surfaced. Both fitters now apply the prior correctly.
