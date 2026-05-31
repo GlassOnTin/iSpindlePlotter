@@ -248,16 +248,18 @@ object Fermentation {
             return State.Lag(og = og, current = current, durationHours = durationH)
         }
 
-        // 3. Try the full-window modified-Gompertz fit. May be unreliable
-        //    while we're still inside the active phase, but worth a shot —
-        //    the bounded LM is conservative. Pass measurement σ so the
-        //    result carries an FG uncertainty.
-        val gompertz = AttenuationFit.fit(hours, sgs, sigma)
-
-        // 3b. Detect sustained flat segments (lag / diauxic shift / tail).
-        //     Independent of the parametric fit — the model can't reproduce
-        //     a mid plateau, but the chart and the estimate text can.
+        // 3. Detect plateaus first so the selector can decide whether a
+        //    two-component (biphasic) Gompertz is the better fit for the
+        //    data. Plateaus are independent of the parametric fit — they
+        //    surface the diauxic shift either way.
         val plateaus = PlateauDetector.detect(hours, sgs)
+
+        // 3b. Polymorphic attenuation fit: single-component by default,
+        //     promoted to two-component when the data shows a diauxic
+        //     plateau plus enough post-pause span and the BIC justifies
+        //     the extra parameters. Pass measurement σ so the result
+        //     carries an FG uncertainty for downstream use.
+        val gompertz = AttenuationModelSelector.fit(hours, sgs, plateaus, sigma)
 
         // 4. Predicted FG with graceful degradation.
         val (predictedFg, source) = pickFgEstimate(
@@ -397,7 +399,7 @@ object Fermentation {
 
     private fun pickFgEstimate(
         og: Double,
-        gompertz: AttenuationFit.Result?,
+        gompertz: AttenuationModel?,
         current: Double,
         recentRate: Double?
     ): Pair<Double, PredictionSource> {
@@ -550,7 +552,14 @@ object Fermentation {
         val fermentSg: Double?,
         /** Per-sample current temperature. Null when temps weren't supplied. */
         val temps: DoubleArray?,
-        val gompertz: AttenuationFit.Result?,
+        /**
+         * Polymorphic attenuation fit — either the 4-parameter single
+         * Gompertz or, when the data is clearly biphasic (a detected
+         * diauxic plateau and enough post-pause data, plus a BIC margin
+         * well past noise), the 7-parameter two-component variant. See
+         * [AttenuationModelSelector] for the promotion gates.
+         */
+        val gompertz: AttenuationModel?,
         val plateaus: List<Plateau>,
         val predictedFg: Double,
         val predictedFgSigma: Double?,
@@ -626,11 +635,15 @@ object Fermentation {
         // pre-crash plateau. Full-capture fits land above the floor on
         // their own merits and are unaffected.
         val fgFloor = if (coldCrashOnsetH != null) fermentSg else null
-        val gompertz = AttenuationFit.fit(
-            fitHours, fitSgs, sigma,
+        // Plateaus first — the selector uses them to decide whether to
+        // attempt the two-component fit. Detect on the full (un-trimmed)
+        // hours/sgs so a diauxic shift inside the active span isn't lost
+        // when the post-cold-crash tail is cut from the fit window.
+        val plateaus = PlateauDetector.detect(hours, sgs)
+        val gompertz = AttenuationModelSelector.fit(
+            fitHours, fitSgs, plateaus, sigma,
             AttenuationFit.DefaultAttenuationPrior, fgFloor, fitTemps
         )
-        val plateaus = PlateauDetector.detect(hours, sgs)
         // Past a detected cold-crash, sgs.last() is a thermal artifact; the
         // FG that mattered for fermentation was the SG observed just before
         // the crash. Pass that to the trust gates so they aren't tricked

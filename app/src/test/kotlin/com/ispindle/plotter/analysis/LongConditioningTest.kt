@@ -40,40 +40,46 @@ class LongConditioningTest {
     @Test fun `Gompertz fit on the long capture stays anchored to the warm-fermentation curve`() {
         val (hours, sgs, temps) = loadCaptureWithTemp("ferment_capture_long_cold.csv")
         val timeline = Fermentation.buildTimeline(hours, sgs, temps = temps)!!
-        val fit = timeline.gompertz
-        assertNotNull("Gompertz fit must not be null", fit)
-        fit!!
+        val model = timeline.gompertz
+        assertNotNull("Attenuation fit must not be null", model)
+        model!!
+        // OG / FG / attenuation / RMS apply to either fit shape via the
+        // polymorphic AttenuationModel surface — the selector may pick
+        // single or two-component depending on whether the plateau
+        // detector found a Mid plateau inside the warm phase (this
+        // capture has a mid-temperature dip the detector picks up, so
+        // the selector lands on two-component with α ≈ 0.83 — phase 1
+        // carries the bulk of the descent, phase 2 the rest).
         assertTrue(
-            "OG ${fit.og} should be within 0.002 of the observed max ~1.0524",
-            abs(fit.og - sgs.max()) < 0.002
-        )
-        // The warm-only fit lands FG ≈ 1.0135 (≈ 75 % attenuation).
-        // Pre-fix, the full-data fit collapsed FG to ~1.008 (the cold-
-        // affected SG). The ±5 mSG window here distinguishes those two.
-        assertTrue(
-            "FG ${fit.fg} should sit near the warm-stable plateau ~1.0135 (66–80 % atten)",
-            fit.fg in 1.012..1.018
-        )
-        val atten = (fit.og - fit.fg) / (fit.og - 1.000)
-        assertTrue(
-            "attenuation $atten should be in the 65–82 % band",
-            atten in 0.65..0.82
-        )
-        assertTrue("lambda ${fit.lambda} should be positive (lag is in the past)", fit.lambda > 0.0)
-        assertTrue(
-            "lambda ${fit.lambda} should be early in the run (< 30 h)",
-            fit.lambda < 30.0
-        )
-        // muMax peaks around 1–2 mSG/h on this brew. Pre-fix the full-data
-        // collapse pushed it down to ~3.7e-4. Floor at 0.0008 here.
-        assertTrue(
-            "muMax ${fit.muMax} should be ≥ 0.0008 SG/h (real descent rate)",
-            fit.muMax >= 0.0008
+            "OG ${model.og} should be within 0.002 of the observed max ~1.0524",
+            abs(model.og - sgs.max()) < 0.002
         )
         assertTrue(
-            "RMS residual ${fit.rmsResidual} on the trimmed active span should be ≤ 2 mSG",
-            fit.rmsResidual <= 0.002
+            "FG ${model.fg} should sit near the warm-stable plateau ~1.0135 (66–80 % atten)",
+            model.fg in 1.012..1.018
         )
+        val atten = (model.og - model.fg) / (model.og - 1.000)
+        assertTrue("attenuation $atten should be in the 65–82 % band", atten in 0.65..0.82)
+        assertTrue(
+            "RMS residual ${model.rmsResidual} on the trimmed active span should be ≤ 2 mSG",
+            model.rmsResidual <= 0.002
+        )
+        when (model) {
+            is AttenuationModel.SingleGompertz -> {
+                val fit = model.fit
+                assertTrue("lambda ${fit.lambda} should be positive (lag is in the past)", fit.lambda > 0.0)
+                assertTrue("lambda ${fit.lambda} should be early in the run (< 30 h)", fit.lambda < 30.0)
+                assertTrue("muMax ${fit.muMax} should be ≥ 0.0008 SG/h (real descent rate)",
+                    fit.muMax >= 0.0008)
+            }
+            is AttenuationModel.TwoComponent -> {
+                val fit = model.fit
+                assertTrue("λ₁ ${fit.lambda1} should be positive (lag is in the past)", fit.lambda1 > 0.0)
+                assertTrue("λ₁ ${fit.lambda1} should be early in the run (< 30 h)", fit.lambda1 < 30.0)
+                assertTrue("μ₁ ${fit.mu1} should be ≥ 0.0008 SG/h (real phase-1 descent)",
+                    fit.mu1 >= 0.0008)
+            }
+        }
     }
 
     @Test fun `fit is dominated by active-phase residuals not by cold-tail readings`() {

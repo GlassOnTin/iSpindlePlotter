@@ -551,7 +551,7 @@ private fun SgEstimateLine(
             Fermentation.stateAt(timeline, xs, ys, cursorH)
         }
         CursorHeader(cursorTimeStr, onClearCursor)
-        StateDescription(state, showCitation = false)
+        StateDescription(state, showCitation = false, model = timeline.gompertz)
         return
     }
 
@@ -559,7 +559,7 @@ private fun SgEstimateLine(
         if (timeline != null) Fermentation.stateAt(timeline, xs, ys, timeline.lastH)
         else Fermentation.analyse(xs, ys, calRSquared)
     }
-    StateDescription(state, showCitation = true)
+    StateDescription(state, showCitation = true, model = timeline?.gompertz)
 }
 
 @Composable
@@ -587,7 +587,8 @@ private fun CursorHeader(
 @Composable
 private fun StateDescription(
     state: Fermentation.State,
-    showCitation: Boolean
+    showCitation: Boolean,
+    model: com.ispindle.plotter.analysis.AttenuationModel? = null
 ) {
     val ctx = LocalContext.current
     val phaseActive = stringResource(R.string.graph_phase_active)
@@ -736,12 +737,25 @@ private fun StateDescription(
                 state is Fermentation.State.Conditioning
             )
     ) {
+        // Use the model's own citation rather than the static one — when
+        // the selector promoted to two-component, the reference line
+        // changes to reflect that. The headline detail line surfaces the
+        // biphasic phase-split alongside it.
+        val citation = model?.citation ?: AttenuationFit.ReferenceCitation
         Text(
-            text = stringResource(R.string.graph_model_prefix) + AttenuationFit.ReferenceCitation,
+            text = stringResource(R.string.graph_model_prefix) + citation,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
             modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
         )
+        model?.headlineDetail?.let { detail ->
+            Text(
+                text = detail,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+            )
+        }
     }
 }
 
@@ -900,9 +914,13 @@ private fun buildInSampleOverlay(
     fg: Double,
     tStartMs: Double,
     plateaus: List<com.ispindle.plotter.analysis.Plateau>,
-    precomputedFit: AttenuationFit.Result? = null
+    precomputedFit: com.ispindle.plotter.analysis.AttenuationModel? = null
 ): ChartOverlay? {
-    val fit = precomputedFit ?: AttenuationFit.fit(xs, ys) ?: return null
+    val fit: com.ispindle.plotter.analysis.AttenuationModel = precomputedFit
+        ?: AttenuationFit.fit(xs, ys)?.let {
+            com.ispindle.plotter.analysis.AttenuationModel.SingleGompertz(it)
+        }
+        ?: return null
     val nowH = xs.last()
     val t0 = xs.first()
 
@@ -911,7 +929,7 @@ private fun buildInSampleOverlay(
         fit.predict(h)
     }
 
-    val (bandLowFn, bandHighFn, sampledFloor) = if (fit.covariance != null) {
+    val (bandLowFn, bandHighFn, sampledFloor) = if (fit.hasBand) {
         val gridSize = 96
         val grid = DoubleArray(gridSize) { t0 + (nowH - t0) * it.toDouble() / (gridSize - 1) }
         val rng = Random(0x5E1ED)
@@ -989,13 +1007,16 @@ private fun predictorWithBand(
     tStartMs: Double,
     nowMs: Double,
     etaH: Double,
-    precomputedFit: AttenuationFit.Result? = null
+    precomputedFit: com.ispindle.plotter.analysis.AttenuationModel? = null
 ): OverlayCurves {
     val finishH = nowH + etaH
 
     if (source == Fermentation.PredictionSource.Gompertz) {
-        val fit = precomputedFit ?: AttenuationFit.fit(xs, ys)
-        if (fit?.covariance != null) {
+        val fit: com.ispindle.plotter.analysis.AttenuationModel? = precomputedFit
+            ?: AttenuationFit.fit(xs, ys)?.let {
+                com.ispindle.plotter.analysis.AttenuationModel.SingleGompertz(it)
+            }
+        if (fit != null && fit.hasBand) {
             // Dense time grid spanning the whole chart x-extent, in
             // hours from the same anchor as the data array.
             val gridSize = 96
