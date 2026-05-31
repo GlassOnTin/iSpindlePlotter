@@ -1,5 +1,6 @@
 package com.ispindle.plotter.data
 
+import androidx.room.withTransaction
 import com.ispindle.plotter.calibration.Polynomial
 import java.util.concurrent.atomic.AtomicReference
 
@@ -11,6 +12,14 @@ class Repository(
     private val deviceDao: DeviceDao,
     private val readingDao: ReadingDao,
     private val calibrationDao: CalibrationDao,
+    /**
+     * Database handle used for [withTransaction]-wrapped bulk operations
+     * (CSV import). Optional so unit-test fakes and the in-process
+     * fixtures don't have to construct a Room database — the bulk path
+     * falls back to per-row inserts when null, matching the pre-batched
+     * behaviour exactly.
+     */
+    private val database: AppDatabase? = null,
     private val pendingCalibration: AtomicReference<PendingCalibration?> =
         AtomicReference(null)
 ) {
@@ -144,30 +153,53 @@ class Repository(
      * Bulk-insert readings into [deviceId], skipping any whose timestamp
      * already has a row for this device. Returns (inserted, skipped).
      * Caller is responsible for parsing the source format.
+     *
+     * Done in a single Room transaction with one batched [ReadingDao.insertAll]
+     * call: a 15 k-row CSV that previously took hours of per-row inserts
+     * (each one its own transaction commit, each commit firing the Flow
+     * observers and re-fitting the chart against the growing list) finishes
+     * in well under a second. The deduplication HashSet is built once at
+     * the start, the import filters against it in-memory, and only the
+     * survivors hit the DB.
      */
     suspend fun importReadings(deviceId: Long, readings: List<Reading>): Pair<Int, Int> {
         val existing = readingDao.timestampsFor(deviceId).toHashSet()
-        var inserted = 0
-        var skipped = 0
-        for (r in readings) {
-            if (r.timestampMs in existing) {
-                skipped++
-                continue
+        val (toInsert, skipped) = run {
+            val keep = ArrayList<Reading>(readings.size)
+            val seenInBatch = HashSet<Long>()
+            var skip = 0
+            for (r in readings) {
+                if (r.timestampMs in existing || !seenInBatch.add(r.timestampMs)) {
+                    skip++
+                    continue
+                }
+                // Force the deviceId to the target device — protects against
+                // an import file that carries the original Room id from a
+                // different install.
+                keep += r.copy(id = 0, deviceId = deviceId)
             }
-            // Force the deviceId to the target device — protects against an
-            // import file that carries the original Room id from a different
-            // install.
-            readingDao.insert(r.copy(id = 0, deviceId = deviceId))
-            existing += r.timestampMs
-            inserted++
+            keep to skip
         }
-        if (inserted > 0) {
-            // Refresh lastSeenMs so the device sorts correctly post-import.
+        if (toInsert.isEmpty()) return 0 to skipped
+
+        val db = database
+        if (db != null) {
+            db.withTransaction {
+                readingDao.insertAll(toInsert)
+                readings.maxOfOrNull { it.timestampMs }?.let { latest ->
+                    deviceDao.touch(deviceId, latest)
+                }
+            }
+        } else {
+            // Fallback for tests / fixtures that construct Repository without
+            // a database handle. Per-row insert preserves the old behaviour
+            // exactly; tests don't care about throughput.
+            for (r in toInsert) readingDao.insert(r)
             readings.maxOfOrNull { it.timestampMs }?.let { latest ->
                 deviceDao.touch(deviceId, latest)
             }
         }
-        return inserted to skipped
+        return toInsert.size to skipped
     }
 
     /** Snapshot of every device for settings backup. */

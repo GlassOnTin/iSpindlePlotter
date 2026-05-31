@@ -30,6 +30,7 @@ class IspindleApp : Application() {
             deviceDao = db.deviceDao(),
             readingDao = db.readingDao(),
             calibrationDao = db.calibrationDao(),
+            database = db,
             pendingCalibration = pendingCalibration
         )
         httpServer = IspindleHttpServer(repository)
