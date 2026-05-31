@@ -1,0 +1,3 @@
+Pause detection is calmer.
+
+A brew that's gradually slowing toward final gravity used to pick up a "paused at X" stripe every few hours of the long tail, and any logging outage spawned a phantom pause stripe at each end of the gap. The detector now only calls something a pause when descent measurably resumes after it — a real diauxic shift, not just one of many flat patches in the slowing tail — and stripes can't bleed into a logging gap. Live pauses with no post-data yet still get the headline guidance, so an ongoing diauxic shift isn't hidden.
