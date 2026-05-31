@@ -18,3 +18,8 @@ local.properties
 
 # Local exports / debug captures dropped in the repo root
 /ispindle--*.csv
+
+# Release signing material — must never enter the repo
+*.jks
+*.keystore
+*release*.password

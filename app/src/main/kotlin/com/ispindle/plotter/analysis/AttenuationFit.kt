@@ -412,8 +412,16 @@ object AttenuationFit {
             val denom = max(og - 1.000, 1e-9)
             val atten = (og - fg) / denom
             val r = (prior.mean - atten) / prior.sigma
-            val dOg = -((1.0 - fg) / (denom * denom)) / prior.sigma
-            val dFg = -(-1.0 / denom) / prior.sigma
+            // Partials of atten = (OG−FG)/(OG−1) :
+            //   ∂atten/∂OG = (FG − 1)/(OG − 1)²
+            //   ∂atten/∂FG = −1/(OG − 1)
+            // Pre-fix the signs were ((1−FG)/…, +1/…), i.e. flipped — the
+            // 4-parameter data Jacobian's column magnitudes dominated the
+            // prior contribution so the LM still converged here, but the
+            // 7-parameter two-component fitter has smaller per-column
+            // partials and the wrong sign sent every step the wrong way.
+            val dOg = ((fg - 1.0) / (denom * denom)) / prior.sigma
+            val dFg = (-1.0 / denom) / prior.sigma
             val js = doubleArrayOf(dOg, dFg, 0.0, 0.0)
             for (aIdx in 0..3) {
                 jtr[aIdx] += js[aIdx] * r

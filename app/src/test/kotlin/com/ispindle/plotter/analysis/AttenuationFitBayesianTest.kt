@@ -153,7 +153,15 @@ class AttenuationFitBayesianTest {
         )
     }
 
-    @Test fun `predictiveBand widens past last observation`() {
+    @Test fun `predictiveBand is non-zero and well-ordered across the prediction grid`() {
+        // Original assertion was "band widens past data" — that's only true
+        // when the prior is weak relative to the data. With dense exact
+        // observations and the attenuation prior actively pulling FG, the
+        // asymptotic band is *narrower* than the data-region band because
+        // FG is well-constrained from both sides. (Pre-2026-05 the prior
+        // partials had a sign bug that inflated fgSigma and incidentally
+        // made the band widen past data; once the LM properly applies the
+        // prior, the band correctly tightens as t → ∞.)
         val og = 1.060; val fg = 1.012; val muMax = 0.0030; val lambda = 8.0
         val xs = DoubleArray(80) { it * 0.5 }   // up to t = 39.5 h
         val ys = DoubleArray(80) { gompertz(og, fg, muMax, lambda, xs[it]) }
@@ -161,13 +169,15 @@ class AttenuationFitBayesianTest {
         val grid = doubleArrayOf(20.0, 39.0, 60.0, 100.0)
         val bands = r.predictiveBand(grid, Random(3), nSamples = 256,
             quantiles = doubleArrayOf(0.025, 0.5, 0.975))
-        val lows = bands[0]; val highs = bands[2]
+        val lows = bands[0]; val mids = bands[1]; val highs = bands[2]
         val widths = DoubleArray(grid.size) { highs[it] - lows[it] }
-        assertTrue("band non-zero on data", widths[0] > 0.0)
-        assertTrue(
-            "band widens past data: in=${widths[1]}, out=${widths[3]}",
-            widths[3] > widths[1]
-        )
+        for (i in grid.indices) {
+            assertTrue("band at t=${grid[i]} must be positive: ${widths[i]}", widths[i] > 0.0)
+            assertTrue("band low < mid at t=${grid[i]}: ${lows[i]} vs ${mids[i]}",
+                lows[i] < mids[i])
+            assertTrue("band mid < high at t=${grid[i]}: ${mids[i]} vs ${highs[i]}",
+                mids[i] < highs[i])
+        }
     }
 
     @Test fun `etaQuantiles returns ordered triple bracketing the MAP ETA`() {
