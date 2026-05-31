@@ -1,0 +1,3 @@
+CSV import is now fast — minutes-to-hours becomes well under a second on the largest captures.
+
+The previous importer inserted readings one at a time, each one its own database transaction; the chart and segmenter re-ran every time a row landed. A 15 000-row backup that should restore in moments was taking hours. The whole import now runs in a single transaction with one batched insert, so it actually finishes.
