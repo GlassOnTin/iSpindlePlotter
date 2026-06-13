@@ -1,0 +1,3 @@
+Optional buffering proxy — never lose a reading while your phone is away.
+
+The iSpindle wakes, sends one reading, and deep-sleeps; if the phone is off or off-network at that moment, the reading was simply lost. You can now point the iSpindle at a small always-on proxy — a Raspberry Pi, a NAS, or your router — that buffers every reading. The app pulls everything it missed and catches up, discovering the proxy automatically on your network with no address to type. Turn it on under Setup; build and install steps for the proxy are in the proxy/ folder of the source.
