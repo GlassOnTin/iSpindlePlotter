@@ -12,8 +12,10 @@ DB=/root/readings.jsonl
 start_service() {
 	procd_open_instance
 	# --mdns-iface br-lan: announce only the LAN address so the app doesn't
-	# resolve to the router's WAN/other subnets.
-	procd_set_param command "$PROG" --addr :9501 --db "$DB" --mdns-iface br-lan
+	#   resolve to the router's WAN/other subnets.
+	# --max 50000: ~35 days of buffer at a 60s reading interval (~10 MB), so a
+	#   full ferment survives even if the phone is away for weeks.
+	procd_set_param command "$PROG" --addr :9501 --db "$DB" --mdns-iface br-lan --max 50000
 	procd_set_param respawn          # restart if it dies
 	procd_set_param stdout 1
 	procd_set_param stderr 1
