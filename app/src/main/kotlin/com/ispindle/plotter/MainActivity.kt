@@ -42,4 +42,11 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onStart() {
+        super.onStart()
+        // Coming to the foreground: in proxy mode, sync immediately instead of
+        // waiting out the poll interval (no-op otherwise).
+        IspindleServerService.pullNow(this)
+    }
 }

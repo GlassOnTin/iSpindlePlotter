@@ -21,6 +21,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -36,7 +38,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.ispindle.plotter.R
+import com.ispindle.plotter.data.ProxyPrefs
 import com.ispindle.plotter.network.IspindleHttpServer
+import com.ispindle.plotter.network.IspindleServerService
 import com.ispindle.plotter.network.NetworkUtils
 import com.ispindle.plotter.ui.MainViewModel
 import kotlinx.coroutines.Dispatchers
@@ -77,6 +81,8 @@ fun SetupScreen(
                 Button(onClick = onAutoConfigure) { Text(stringResource(R.string.setup_btn_configure_now)) }
             }
         }
+
+        ProxyCard()
 
         Text(stringResource(R.string.setup_or_manually), style = MaterialTheme.typography.titleMedium)
 
@@ -229,6 +235,57 @@ private fun BackupRestoreCard(vm: MainViewModel) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun ProxyCard() {
+    val ctx = LocalContext.current
+    var enabled by remember { mutableStateOf(ProxyPrefs.enabled(ctx)) }
+    var url by remember { mutableStateOf(ProxyPrefs.manualUrl(ctx) ?: "") }
+
+    fun apply() {
+        ProxyPrefs.setEnabled(ctx, enabled)
+        ProxyPrefs.setManualUrl(ctx, url.ifBlank { null })
+        // Re-evaluate the service mode now (start proxy poll, fall back to the
+        // listener, or stop if neither is wanted).
+        IspindleServerService.refresh(ctx)
+    }
+
+    Card {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(stringResource(R.string.setup_proxy_title), style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.setup_proxy_intro), style = MaterialTheme.typography.bodySmall)
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            ) {
+                Text(stringResource(R.string.setup_proxy_enable))
+                Switch(checked = enabled, onCheckedChange = { enabled = it; apply() })
+            }
+            if (enabled) {
+                OutlinedTextField(
+                    value = url,
+                    onValueChange = { url = it },
+                    singleLine = true,
+                    label = { Text(stringResource(R.string.setup_proxy_url_label)) },
+                    placeholder = { Text("http://192.168.0.2:9501") },
+                    supportingText = { Text(stringResource(R.string.setup_proxy_url_hint)) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Button(onClick = { apply() }) { Text(stringResource(R.string.setup_proxy_btn_save)) }
+            }
+            Text(
+                text = when {
+                    !enabled -> stringResource(R.string.setup_proxy_status_off)
+                    url.isNotBlank() -> stringResource(R.string.setup_proxy_status_manual, url.trim())
+                    else -> stringResource(R.string.setup_proxy_status_auto)
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

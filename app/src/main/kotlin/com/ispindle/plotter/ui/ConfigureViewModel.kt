@@ -12,6 +12,7 @@ import com.ispindle.plotter.calibration.CubicParser
 import com.ispindle.plotter.calibration.Polynomial
 import com.ispindle.plotter.data.Device
 import com.ispindle.plotter.data.PendingCalibration
+import com.ispindle.plotter.data.ProxyPrefs
 import com.ispindle.plotter.network.ConfigForm
 import com.ispindle.plotter.network.IspindleApBinder
 import com.ispindle.plotter.network.IspindleConfigClient
@@ -261,10 +262,16 @@ class ConfigureViewModel(
         // Prefer the snapshot taken before binding to the AP, since
         // NetworkUtils.preferredIpv4() now returns the iSpindle subnet.
         val phoneIp = _state.value.homeIpSnapshot ?: NetworkUtils.preferredIpv4()
+        // In proxy mode the device should POST to the proxy, not this phone.
+        val proxyHost = if (ProxyPrefs.enabled(appContext)) ProxyPrefs.host(appContext) else null
+        val defaultHost = proxyHost ?: phoneIp
+        val defaultPort =
+            if (proxyHost != null) ProxyPrefs.port(appContext) ?: IspindleHttpServer.DEFAULT_PORT
+            else IspindleHttpServer.DEFAULT_PORT
         val current = _state.value.form
         return current.copy(
-            serverHost = current.serverHost?.takeUnless { it.isBlank() } ?: phoneIp,
-            serverPort = current.serverPort ?: IspindleHttpServer.DEFAULT_PORT,
+            serverHost = current.serverHost?.takeUnless { it.isBlank() } ?: defaultHost,
+            serverPort = current.serverPort ?: defaultPort,
             serverPath = current.serverPath?.takeUnless { it.isBlank() } ?: "/",
             sleepSeconds = current.sleepSeconds ?: 900,
             serviceTypeIndex = current.serviceTypeIndex ?: IspindleService.GenericHttp.selApi

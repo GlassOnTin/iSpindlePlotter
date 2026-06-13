@@ -69,6 +69,11 @@ or install from source below.
   English, French, German, Hindi, Japanese, Portuguese, Russian,
   Spanish. Follows the system locale.
 - Room-backed storage, so readings persist across app restarts.
+- Optional **buffering proxy** — point the iSpindle at a tiny always-on
+  proxy (a single static Go binary that runs on a Pi, NAS, or OpenWrt
+  router) so readings survive while your phone is off or away. The app
+  discovers it on the LAN via mDNS and pulls everything it missed. See
+  [`proxy/`](proxy/) and the section below.
 
 ## Build from source
 
@@ -121,7 +126,38 @@ automatically.
 Phone and iSpindle must share a subnet. If your router isolates guest
 WiFi or uses AP isolation, turn it off for the iSpindle's SSID. DHCP lease
 changes on the phone will break reception — reserve the phone's MAC in
-the router for a static address.
+the router for a static address, **or** use the buffering proxy below,
+which lives at a stable address and removes the phone-IP dependency.
+
+## Buffering proxy (optional)
+
+The iSpindle has no retry: it wakes, POSTs once, and deep-sleeps. If the
+phone is off, asleep, or off-network at that moment, the reading is lost.
+The optional proxy is an always-on collector that buffers every reading so
+the phone can catch up whenever it's next online.
+
+```
+iSpindle ──POST──▶ proxy (always-on) ──append──▶ readings.jsonl
+                      ▲                               │
+                      └──GET /readings?since=N────────┘ ◀── phone app
+```
+
+- **Run it** on any always-on box — a Raspberry Pi, a NAS, or an OpenWrt
+  router. It's a single static Go binary (stdlib + mDNS, no database) with
+  `systemd` and OpenWrt `procd` init scripts. Build and install steps are
+  in [`proxy/README.md`](proxy/README.md).
+- **Point the iSpindle** at the proxy's `host:9501` instead of the phone —
+  the same Generic-HTTP settings as above. The app's Configure flow fills
+  this in for you once proxy mode is on.
+- **Enable in the app**: **Setup → Use buffering proxy**. Leave the URL
+  blank and the app finds the proxy automatically over mDNS
+  (`_ispindle-proxy._tcp`); or type `http://host:9501` to pin it. The graph
+  then auto-refreshes as the app pulls — every ~2 minutes, plus immediately
+  when you bring the app to the foreground.
+
+LAN-only by design — no auth, no TLS. To collect readings while away from
+home, reach the proxy through your router's VPN (e.g. WireGuard) rather
+than forwarding a port.
 
 ## Calibrate
 
@@ -175,9 +211,11 @@ app/src/main/
 │   ├── MainActivity.kt
 │   ├── calibration/              # Polynomial + least-squares fitter
 │   ├── data/                     # Room entities, DAOs, Repository, DTO
-│   ├── network/                  # Ktor HTTP server + foreground service
+│   ├── network/                  # Ktor HTTP server, foreground service, proxy poll + mDNS discovery
 │   └── ui/                       # Compose screens (Home / Devices / Graph / Calibrate / Setup)
 └── res/                          # Themes, icon, manifest XML
+
+proxy/                            # Optional always-on buffering proxy (static Go binary + init scripts)
 ```
 
 ## License

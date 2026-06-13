@@ -1,0 +1,16 @@
+[Unit]
+Description=iSpindle buffering proxy
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# Adjust paths to where you copied the binary / want the buffer.
+ExecStart=/usr/local/bin/ispindle-proxy --addr :9501 --db /var/lib/ispindle-proxy/readings.jsonl
+Restart=on-failure
+RestartSec=5
+DynamicUser=yes
+StateDirectory=ispindle-proxy
+# StateDirectory gives DynamicUser write access to /var/lib/ispindle-proxy.
+
+[Install]
+WantedBy=multi-user.target

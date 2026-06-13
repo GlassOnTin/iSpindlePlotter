@@ -10,6 +10,22 @@
     <string name="server_notif_stopped">Stopped</string>
     <string name="server_notif_listening">Listening on http://%1$s:%2$d</string>
     <string name="server_notif_error">Error: %1$s</string>
+    <string name="server_notif_proxy_starting">Proxy mode — connecting…</string>
+    <string name="server_notif_proxy_searching">Proxy mode — searching for proxy…</string>
+    <string name="server_notif_proxy_synced">Proxy mode — synced %1$s (+%2$d)</string>
+    <string name="server_notif_proxy_error">Proxy mode — sync failed at %1$s</string>
+
+    <!-- ── Proxy setup card ───────────────────────────────────────── -->
+    <string name="setup_proxy_title">Buffering proxy</string>
+    <string name="setup_proxy_intro">Point the iSpindle at an always-on proxy that stores readings while your phone is off or away. The app then pulls everything it missed. With this off, readings are received directly on this phone.</string>
+    <string name="setup_proxy_enable">Use buffering proxy</string>
+    <string name="setup_proxy_url_label">Proxy URL (optional)</string>
+    <string name="setup_proxy_url_hint">Leave blank to find the proxy automatically on your network.</string>
+    <string name="setup_proxy_btn_save">Save</string>
+    <string name="setup_proxy_status_manual">Using %1$s</string>
+    <string name="setup_proxy_status_auto">Auto-discovering the proxy on your network…</string>
+    <string name="setup_proxy_status_off">Receiving directly on this phone.</string>
+    <string name="home_proxy_active">Buffering via proxy — readings pull automatically.</string>
 
     <!-- ── Navigation labels ────────────────────────────────────────── -->
     <string name="nav_home">Home</string>

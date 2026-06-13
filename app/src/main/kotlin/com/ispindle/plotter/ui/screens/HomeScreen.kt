@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.ispindle.plotter.R
 import com.ispindle.plotter.data.Device
+import com.ispindle.plotter.data.ProxyPrefs
 import com.ispindle.plotter.data.Reading
 import com.ispindle.plotter.network.IspindleHttpServer
 import com.ispindle.plotter.network.IspindleServerService
@@ -83,41 +84,54 @@ fun HomeScreen(
                     stringResource(R.string.home_section_http_server),
                     style = MaterialTheme.typography.titleMedium
                 )
-                val (status, endpoint) = when (val s = state) {
-                    is IspindleHttpServer.State.Running -> {
-                        val ip = NetworkUtils.preferredIpv4() ?: "<no network>"
-                        stringResource(R.string.home_status_running) to "http://$ip:${s.port}/"
-                    }
-                    IspindleHttpServer.State.Stopped -> stringResource(R.string.home_status_stopped) to null
-                    is IspindleHttpServer.State.Error -> stringResource(R.string.home_status_error_prefix, s.message) to null
-                }
-                Text(status)
-                endpoint?.let { url ->
+                if (ProxyPrefs.enabled(ctx)) {
+                    // Proxy mode: the local listener is intentionally off; the
+                    // app pulls from the buffering proxy instead.
+                    Text(stringResource(R.string.home_proxy_active))
+                    val purl = ProxyPrefs.effectiveUrl(ctx)
                     Text(
-                        text = stringResource(R.string.home_endpoint_point_ispindle, url),
-                        fontFamily = FontFamily.Monospace,
-                        textDecoration = TextDecoration.Underline,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(role = Role.Button) {
-                                copyToClipboard(ctx, label = "iSpindle endpoint", text = url)
-                            }
-                    )
-                    Text(
-                        text = stringResource(R.string.home_tap_to_copy),
-                        style = MaterialTheme.typography.labelSmall,
+                        text = purl?.let { stringResource(R.string.setup_proxy_status_manual, it) }
+                            ?: stringResource(R.string.setup_proxy_status_auto),
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Button(onClick = { IspindleServerService.start(ctx) }) {
-                        Text(stringResource(R.string.home_btn_start))
+                } else {
+                    val (status, endpoint) = when (val s = state) {
+                        is IspindleHttpServer.State.Running -> {
+                            val ip = NetworkUtils.preferredIpv4() ?: "<no network>"
+                            stringResource(R.string.home_status_running) to "http://$ip:${s.port}/"
+                        }
+                        IspindleHttpServer.State.Stopped -> stringResource(R.string.home_status_stopped) to null
+                        is IspindleHttpServer.State.Error -> stringResource(R.string.home_status_error_prefix, s.message) to null
                     }
-                    OutlinedButton(onClick = { IspindleServerService.stop(ctx) }) {
-                        Text(stringResource(R.string.home_btn_stop))
+                    Text(status)
+                    endpoint?.let { url ->
+                        Text(
+                            text = stringResource(R.string.home_endpoint_point_ispindle, url),
+                            fontFamily = FontFamily.Monospace,
+                            textDecoration = TextDecoration.Underline,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(role = Role.Button) {
+                                    copyToClipboard(ctx, label = "iSpindle endpoint", text = url)
+                                }
+                        )
+                        Text(
+                            text = stringResource(R.string.home_tap_to_copy),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Button(onClick = { IspindleServerService.start(ctx) }) {
+                            Text(stringResource(R.string.home_btn_start))
+                        }
+                        OutlinedButton(onClick = { IspindleServerService.stop(ctx) }) {
+                            Text(stringResource(R.string.home_btn_stop))
+                        }
                     }
                 }
             }

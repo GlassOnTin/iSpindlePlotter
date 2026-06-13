@@ -1,0 +1,21 @@
+#!/bin/sh /etc/rc.common
+# OpenWrt procd init script. Install as /etc/init.d/ispindle-proxy, then:
+#   /etc/init.d/ispindle-proxy enable
+#   /etc/init.d/ispindle-proxy start
+
+START=95
+USE_PROCD=1
+
+PROG=/root/ispindle-proxy
+DB=/root/readings.jsonl
+
+start_service() {
+	procd_open_instance
+	# --mdns-iface br-lan: announce only the LAN address so the app doesn't
+	# resolve to the router's WAN/other subnets.
+	procd_set_param command "$PROG" --addr :9501 --db "$DB" --mdns-iface br-lan
+	procd_set_param respawn          # restart if it dies
+	procd_set_param stdout 1
+	procd_set_param stderr 1
+	procd_close_instance
+}
