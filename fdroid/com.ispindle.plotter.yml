@@ -168,6 +168,13 @@ Builds:
     gradle:
       - yes
 
+  - versionName: 0.5.19
+    versionCode: 24
+    commit: 3544435a9deb7bffb86fdfe39f58622416ba0deb
+    subdir: app
+    gradle:
+      - yes
+
 # AllowedAPKSigningKeys pins F-Droid to refuse any APK that isn't signed
 # with the iSpindlePlotter release key — guards against an upstream-builder
 # substitution attack. Cert SHA-256 of the keystore generated 2026-05-31.
@@ -175,5 +182,5 @@ AllowedAPKSigningKeys: 1e148d06321b6ae0cef711d66858fe7478eaff5845a955e01dc843e3f
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 0.5.18
-CurrentVersionCode: 23
+CurrentVersion: 0.5.19
+CurrentVersionCode: 24
