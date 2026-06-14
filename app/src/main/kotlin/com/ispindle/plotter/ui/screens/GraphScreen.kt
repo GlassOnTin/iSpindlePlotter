@@ -15,9 +15,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -134,6 +140,7 @@ fun GraphScreen(
     }
 
     var window by remember { mutableStateOf(TimeWindow.D7) }
+    var deletingSegment by remember { mutableStateOf<FermentSegment?>(null) }
     val now = System.currentTimeMillis()
     val scoped = run {
         val sel = selectedSegmentIdx
@@ -234,6 +241,72 @@ fun GraphScreen(
                 segments = segments,
                 selectedIdx = selectedSegmentIdx,
                 onSelect = { selectedSegmentIdx = it }
+            )
+        }
+        // Dismissing the confirmation dialog when the user switches segments
+        // avoids acting on a stale selection.
+        LaunchedEffect(selectedSegmentIdx) { deletingSegment = null }
+        selectedSegmentIdx?.takeIf { it in segments.indices }?.let { idx ->
+            val seg = segments[idx]
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                IconButton(
+                    onClick = { deletingSegment = seg }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = stringResource(R.string.graph_delete_ferment_cd),
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        }
+        deletingSegment?.let { seg ->
+            val count = scoped.count { it.timestampMs in seg.startMs..seg.endMs }
+            AlertDialog(
+                onDismissRequest = { deletingSegment = null },
+                title = {
+                    Text(
+                        stringResource(
+                            R.string.graph_delete_ferment_title,
+                            (selectedSegmentIdx ?: 0) + 1,
+                            segments.size
+                        )
+                    )
+                },
+                text = {
+                    Text(
+                        stringResource(
+                            R.string.graph_delete_ferment_body,
+                            count,
+                            dateFmt.format(Date(seg.startMs)),
+                            dateFmt.format(Date(seg.endMs))
+                        )
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            vm.deleteReadingsForDeviceInRange(deviceId, seg.startMs, seg.endMs)
+                            deletingSegment = null
+                            // Clear the now-stale selection; the deleted segment's
+                            // index would otherwise point at a different ferment.
+                            selectedSegmentIdx = null
+                        },
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text(stringResource(R.string.common_delete))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { deletingSegment = null }) {
+                        Text(stringResource(R.string.common_cancel))
+                    }
+                }
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

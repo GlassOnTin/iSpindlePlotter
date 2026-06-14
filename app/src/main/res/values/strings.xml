@@ -110,6 +110,9 @@
     <string name="graph_all_ferments">All ferments (%1$d)</string>
     <string name="graph_ferment_label">Ferment %1$d/%2$d · %3$s → %4$s · −%5$s SG</string>
     <string name="graph_all_chip_label">All</string>
+    <string name="graph_delete_ferment_cd">Delete this ferment</string>
+    <string name="graph_delete_ferment_title">Delete ferment %1$d/%2$d?</string>
+    <string name="graph_delete_ferment_body">This will permanently delete %1$d readings from %2$s to %3$s. This cannot be undone.</string>
     <!-- Phase labels -->
     <string name="graph_phase_active">Active</string>
     <string name="graph_phase_slowing">Slowing</string>

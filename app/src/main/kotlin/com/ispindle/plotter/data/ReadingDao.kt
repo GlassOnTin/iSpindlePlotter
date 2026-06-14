@@ -39,6 +39,14 @@ interface ReadingDao {
     @Query("DELETE FROM readings WHERE deviceId = :deviceId")
     suspend fun deleteForDevice(deviceId: Long)
 
+    /**
+     * Delete every reading for [deviceId] whose timestamp falls inside the
+     * inclusive range [startMs, endMs]. Used to remove a false-positive
+     * ferment window without touching the rest of the device's history.
+     */
+    @Query("DELETE FROM readings WHERE deviceId = :deviceId AND timestampMs BETWEEN :startMs AND :endMs")
+    suspend fun deleteForDeviceInRange(deviceId: Long, startMs: Long, endMs: Long)
+
     @Query("SELECT * FROM readings WHERE deviceId = :deviceId ORDER BY timestampMs ASC")
     suspend fun listForDevice(deviceId: Long): List<Reading>
 

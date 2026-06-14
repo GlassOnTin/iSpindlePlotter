@@ -36,6 +36,10 @@ class MainViewModel(private val repo: Repository) : ViewModel() {
         viewModelScope.launch { repo.deleteDevice(deviceId) }
     }
 
+    fun deleteReadingsForDeviceInRange(deviceId: Long, startMs: Long, endMs: Long) {
+        viewModelScope.launch { repo.deleteReadingsForDeviceInRange(deviceId, startMs, endMs) }
+    }
+
     suspend fun readingCount(deviceId: Long): Int = repo.readingCount(deviceId)
 
     /**

@@ -140,6 +140,11 @@ class Repository(
     /** Removes the device. ON DELETE CASCADE drops its readings and calibration points. */
     suspend fun deleteDevice(deviceId: Long) = deviceDao.deleteById(deviceId)
 
+    /** Removes all readings for [deviceId] whose timestamp falls in the inclusive range. */
+    suspend fun deleteReadingsForDeviceInRange(deviceId: Long, startMs: Long, endMs: Long) {
+        readingDao.deleteForDeviceInRange(deviceId, startMs, endMs)
+    }
+
     suspend fun readingCount(deviceId: Long) = readingDao.countForDevice(deviceId)
 
     /** Snapshot for export. Ordered ASC so CSV consumers see chronological rows. */

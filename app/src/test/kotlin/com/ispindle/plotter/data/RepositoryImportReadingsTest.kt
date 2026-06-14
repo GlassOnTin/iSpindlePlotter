@@ -127,6 +127,13 @@ class RepositoryImportReadingsTest {
         override fun observeLatestAny(): Flow<Reading?> = flowOf(null)
         override suspend fun countForDevice(deviceId: Long): Int = existing.size
         override suspend fun deleteForDevice(deviceId: Long) { existing.clear() }
+        override suspend fun deleteForDeviceInRange(
+            deviceId: Long,
+            startMs: Long,
+            endMs: Long
+        ) {
+            existing.removeAll { it in startMs..endMs }
+        }
         override suspend fun listForDevice(deviceId: Long): List<Reading> = emptyList()
         override suspend fun timestampsFor(deviceId: Long): List<Long> = existing.toList()
     }
