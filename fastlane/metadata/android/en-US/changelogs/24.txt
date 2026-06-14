@@ -1,0 +1,3 @@
+Remove a false-positive ferment in one tap.
+
+Sometimes the chart flags a ferment that wasn't one — the iSpindle was knocked, bumped, or lifted out for cleaning, and the brief tilt change reads like the start of a brew. Select that ferment and tap the new trash button to delete just its readings; a confirmation shows how many points and the date range first. The rest of the device's history stays untouched.
