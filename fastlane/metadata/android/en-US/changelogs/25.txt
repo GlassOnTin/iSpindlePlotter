@@ -1,0 +1,5 @@
+More accurate OG, and a mid-ferment pause that was hiding behind a cold crash.
+
+Two fixes to the fermentation analysis. First, original gravity now reads the settled pitching value rather than the brief krausen rise at the start: as fermentation kicks off, CO2 and early krausen lift the iSpindle a couple of points, and OG was taking that peak. It now uses the settled level, so OG matches what you measured and the fitted curve no longer bumps up at the start.
+
+Second, a real mid-ferment pause (a diauxic shift) that runs straight into a cold crash is no longer missed. The crash's density rise used to look like the pause merely petering out, so the chart skipped it; the pause is now detected and annotated.
