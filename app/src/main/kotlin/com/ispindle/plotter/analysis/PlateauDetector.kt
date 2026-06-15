@@ -84,7 +84,19 @@ object PlateauDetector {
      */
     private const val RESUMED_DESCENT_THRESHOLD = 2.0 * FLAT_RATE_THRESHOLD
 
-    fun detect(hours: DoubleArray, sgs: DoubleArray): List<Plateau> {
+    /**
+     * How far before a Mid plateau's end a cold-crash onset may sit and still
+     * be treated as "the crash that masked this pause's resume". Small slack
+     * so a flat run that overlaps the first gentle hours of the crash still
+     * qualifies, without letting the crash explain a pause it precedes by much.
+     */
+    private const val COLD_CRASH_OVERLAP_H = 2.0
+
+    fun detect(
+        hours: DoubleArray,
+        sgs: DoubleArray,
+        coldCrashOnsetH: Double? = null
+    ): List<Plateau> {
         require(hours.size == sgs.size)
         val n = hours.size
         if (n < 6) return emptyList()
@@ -155,12 +167,12 @@ object PlateauDetector {
                 runStart = -1
             }
         }
-        return mergeOverlapping(plateaus, hours, sgs)
+        return mergeOverlapping(plateaus, hours, sgs, coldCrashOnsetH)
             .filter { p ->
                 // Only Mid plateaus need the resume gate. Lag and Tail are
                 // boundary-anchored regions where "did descent resume?"
                 // doesn't apply.
-                p.kind != Plateau.Kind.Mid || isFollowedByActiveDescent(hours, sgs, p.endH)
+                p.kind != Plateau.Kind.Mid || isFollowedByActiveDescent(hours, sgs, p.endH, coldCrashOnsetH)
             }
     }
 
@@ -182,10 +194,24 @@ object PlateauDetector {
     private fun isFollowedByActiveDescent(
         hours: DoubleArray,
         sgs: DoubleArray,
-        plateauEndH: Double
+        plateauEndH: Double,
+        coldCrashOnsetH: Double?
     ): Boolean {
         val lastH = hours.last()
         if (lastH - plateauEndH < RESUME_CHECK_HOURS) return true
+        // A cold crash beginning right around the pause's end masks the resume:
+        // the gentle post-pause slope is the crash pulling apparent density up,
+        // not a slowing tail. The crash is itself evidence the ferment ran past
+        // the pause — you don't cold-crash mid-tail — so accept it as a real
+        // diauxic Mid rather than demanding a vigorous (warm) resumption that
+        // the crash has pre-empted. The onset must sit near the pause END (a
+        // little before, to allow the flat run to overlap the early crash, up
+        // to RESUME_CHECK_HOURS after); otherwise every flat patch in the
+        // post-crash cold-conditioning tail would qualify.
+        if (coldCrashOnsetH != null &&
+            coldCrashOnsetH >= plateauEndH - COLD_CRASH_OVERLAP_H &&
+            coldCrashOnsetH <= plateauEndH + RESUME_CHECK_HOURS
+        ) return true
         val slope = slopeInWindow(hours, sgs, plateauEndH, plateauEndH + RESUME_CHECK_HOURS)
         return !slope.isNaN() && slope < -RESUMED_DESCENT_THRESHOLD
     }
@@ -206,14 +232,21 @@ object PlateauDetector {
     private fun mergeOverlapping(
         plateaus: List<Plateau>,
         hours: DoubleArray,
-        sgs: DoubleArray
+        sgs: DoubleArray,
+        coldCrashOnsetH: Double? = null
     ): List<Plateau> {
         if (plateaus.size < 2) return plateaus
         val sorted = plateaus.sortedBy { it.startH }
         val merged = mutableListOf<Plateau>()
         var cur = sorted.first()
         for (next in sorted.drop(1)) {
-            if (next.kind == cur.kind && next.startH - cur.endH < WINDOW_HOURS) {
+            // Never let a pre-crash plateau absorb a post-crash one: a real
+            // diauxic pause that runs into the cold crash would otherwise be
+            // merged into the long flat cold-conditioning tail and lose the
+            // crash-adjacent end the resume gate needs to keep it.
+            val bridgesCrash = coldCrashOnsetH != null &&
+                cur.endH <= coldCrashOnsetH && next.endH > coldCrashOnsetH
+            if (!bridgesCrash && next.kind == cur.kind && next.startH - cur.endH < WINDOW_HOURS) {
                 val newEnd = maxOf(cur.endH, next.endH)
                 cur = cur.copy(
                     endH = newEnd,

@@ -638,8 +638,10 @@ object Fermentation {
         // Plateaus first — the selector uses them to decide whether to
         // attempt the two-component fit. Detect on the full (un-trimmed)
         // hours/sgs so a diauxic shift inside the active span isn't lost
-        // when the post-cold-crash tail is cut from the fit window.
-        val plateaus = PlateauDetector.detect(hours, sgs)
+        // when the post-cold-crash tail is cut from the fit window. Pass the
+        // cold-crash onset so a pause running straight into the crash (its
+        // resume masked by the crash's density rise) still registers as a Mid.
+        val plateaus = PlateauDetector.detect(hours, sgs, coldCrashOnsetH)
         val gompertz = AttenuationModelSelector.fit(
             fitHours, fitSgs, plateaus, sigma,
             AttenuationFit.DefaultAttenuationPrior, fgFloor, fitTemps

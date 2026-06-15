@@ -168,7 +168,11 @@ object AttenuationModelSelector {
             ?: return null
         val singleModel = AttenuationModel.SingleGompertz(single)
 
-        val midPause = plateaus.firstOrNull { it.kind == Plateau.Kind.Mid }
+        // Anchor on the most prominent diauxic pause, not merely the first.
+        // A brief flat blip on the early steep descent can register as a Mid
+        // ahead of the real, much longer pause; promoting on the longest Mid
+        // keeps phase 1 / phase 2 split at the true shift.
+        val midPause = plateaus.filter { it.kind == Plateau.Kind.Mid }.maxByOrNull { it.durationH }
             ?: return singleModel
         // Need enough post-pause data to identify phase 2's inflection.
         if (xs.isEmpty() || xs.last() - midPause.endH < MIN_PHASE_2_HOURS) return singleModel
