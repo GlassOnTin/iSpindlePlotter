@@ -47,6 +47,15 @@ class HefeweizenDiagnosticTest {
             tl.og in 1.0470..1.0500
         )
         assertNull("no cold crash in this ferment", tl.coldCrashOnsetH)
+
+        // The fitted curve must also bypass the false rise: its OG parameter and
+        // its value at the krausen-peak time (~h8.5) stay near the true OG, not
+        // pulled up toward the ~1.052 bump.
+        val g = tl.gompertz
+        assertNotNull("a fit should be produced", g)
+        println("fitted gompertz.og=${"%.4f".format(g!!.og)}  predict(8.5)=${"%.4f".format(g.predict(8.5))}")
+        assertTrue("fitted Gompertz OG should be ~1.049, not the krausen peak; was ${g.og}", g.og <= 1.0505)
+        assertTrue("curve at the bump (h8.5) should sit near OG, not 1.052; was ${g.predict(8.5)}", g.predict(8.5) <= 1.0505)
     }
 
     @Test

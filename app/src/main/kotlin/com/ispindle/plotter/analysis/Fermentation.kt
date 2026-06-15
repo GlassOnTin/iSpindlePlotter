@@ -2,6 +2,7 @@ package com.ispindle.plotter.analysis
 
 import kotlin.math.abs
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.random.Random
 
 /**
@@ -638,10 +639,14 @@ object Fermentation {
         // peak krausen but pitched at 1.049).
         val ogRaw = SeriesClean.robustOg(hours, sgs, temps)
         val lagSg = plateaus.firstOrNull { it.kind == Plateau.Kind.Lag }?.sg
-        val og = if (lagSg != null && lagSg < ogRaw - KRAUSEN_OG_MARGIN) lagSg else ogRaw
+        // A krausen / CO2-onset rise lifts early readings a few mSG above the
+        // true OG; the lag plateau's settled level is truer. Detect once: this
+        // sets both the OG estimate and the fit-input clamp below.
+        val krausenRise = lagSg != null && lagSg < ogRaw - KRAUSEN_OG_MARGIN
+        val og = if (krausenRise) lagSg!! else ogRaw
         val priorFg = max(0.998, 1.000 + 0.25 * (og - 1.000))
 
-        val (fitHours, fitSgs, fitTemps) = if (coldCrashOnsetH != null) {
+        val (fitHours, fitSgsWindow, fitTemps) = if (coldCrashOnsetH != null) {
             val cutIdx = (hours.indexOfLast { it < coldCrashOnsetH } + 1).coerceAtLeast(MIN_POINTS)
             Triple(
                 DoubleArray(cutIdx) { hours[it] },
@@ -649,6 +654,16 @@ object Fermentation {
                 temps?.let { t -> DoubleArray(cutIdx) { t[it] } }
             )
         } else Triple(hours, sgs, temps)
+        // Clamp the krausen/CO2 false rise (readings above the true OG) down to
+        // OG so the Gompertz fits — and the drawn curve starts — at the real OG
+        // and bypasses the early bump, rather than being pulled up by it. SG
+        // can't exceed OG during fermentation; anything above is an artifact.
+        // Only in the krausen case, so every other capture's fit is untouched.
+        // The displayed data points are unaffected — this only reshapes the
+        // series the LM sees.
+        val fitSgs = if (krausenRise)
+            DoubleArray(fitSgsWindow.size) { min(fitSgsWindow[it], og) }
+        else fitSgsWindow
         // Pass fermentSg as a hard FG floor when cold-crash is detected.
         // The trimmed warm slice still uses the default 75 %-attenuation
         // prior (which lands cleanly when the data covers OG → FG, e.g.
