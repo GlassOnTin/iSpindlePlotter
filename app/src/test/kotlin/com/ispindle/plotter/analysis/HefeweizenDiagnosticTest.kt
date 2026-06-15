@@ -1,6 +1,7 @@
 package com.ispindle.plotter.analysis
 
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -27,6 +28,25 @@ class HefeweizenDiagnosticTest {
         }
         val t0 = xs.first()
         return Triple(DoubleArray(xs.size) { (xs[it] - t0) / 3_600_000.0 }, ys.toDoubleArray(), ts.toDoubleArray())
+    }
+
+    /**
+     * The current (warm, no cold crash) Hefeweizen settles at ~1.049 then has
+     * an early krausen/CO2 rise peaking ~1.052. OG must read the settled lag
+     * level, not the inflated krausen peak (raw robust max).
+     */
+    @Test
+    fun ogIgnoresKrausenRise() {
+        val (hours, sgs, temps) = load("ferment_hefeweizen_current.csv")
+        // The raw robust max is the krausen peak.
+        assertTrue("raw robustOg should be the krausen peak ~1.052", SeriesClean.robustOg(hours, sgs, temps) > 1.0510)
+        val tl = Fermentation.buildTimeline(hours, sgs, calRSquared = 0.9959, temps = temps)
+        assertNotNull("timeline should build", tl)
+        assertTrue(
+            "timeline OG should track the settled lag level ~1.049, not the krausen peak; was ${tl!!.og}",
+            tl.og in 1.0470..1.0500
+        )
+        assertNull("no cold crash in this ferment", tl.coldCrashOnsetH)
     }
 
     @Test

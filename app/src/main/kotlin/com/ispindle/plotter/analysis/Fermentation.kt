@@ -52,6 +52,13 @@ object Fermentation {
     private const val ACTIVE_CONFIRM_HOURS = 1.0
     private const val MIN_HOURS = 1.0
     private const val MIN_POINTS = 6
+    /**
+     * How far the raw-max OG must exceed the lag-plateau level before we treat
+     * the excess as an early krausen / CO2-onset false rise and take the lag
+     * level as the truer OG. 1.5 mSG is past iSpindle reading noise but well
+     * under a real krausen bump (commonly 2-4 mSG).
+     */
+    private const val KRAUSEN_OG_MARGIN = 0.0015
     private const val RECENT_WINDOW_HOURS = 6.0
     private const val STUCK_DROP_THRESHOLD = 0.005 // need to have actually fermented...
     private const val STUCK_FG_GAP = 0.005         // ...and still be this far from FG
@@ -600,12 +607,7 @@ object Fermentation {
         if (n < MIN_POINTS) return null
         if (hours.last() - hours.first() < MIN_HOURS) return null
 
-        // Robust OG over inliers (temperature-aware here, so the float
-        // drop-in transient is trimmed as well as any SG spike). See
-        // [SeriesClean] and analyse()'s note.
-        val og = SeriesClean.robustOg(hours, sgs, temps)
         val current = sgs.last()
-        val priorFg = max(0.998, 1.000 + 0.25 * (og - 1.000))
 
         val sigmaData = NoiseModel.estimateDataNoise(hours, sgs)
         val sigmaCal = calRSquared?.let { NoiseModel.fromCalibrationRSquared(it) }
@@ -619,6 +621,26 @@ object Fermentation {
         // the fit stays representative of the actual fermentation curve as
         // more cold-conditioning data accumulates.
         val (coldCrashOnsetH, fermentTempC, fermentSg) = detectColdCrashOnset(hours, sgs, temps)
+
+        // Plateaus first — both the OG estimate and the model selector use
+        // them. Detect on the full (un-trimmed) hours/sgs so a diauxic shift
+        // inside the active span isn't lost when the post-cold-crash tail is
+        // cut from the fit window. Pass the cold-crash onset so a pause running
+        // straight into the crash (its resume masked by the crash's density
+        // rise) still registers as a Mid.
+        val plateaus = PlateauDetector.detect(hours, sgs, coldCrashOnsetH)
+
+        // Robust OG over inliers (temperature-aware, so the float drop-in
+        // transient is trimmed as well as any SG spike). But when a Lag
+        // plateau is present and the raw max sits well above its settled
+        // level, an early krausen / CO2-onset rise inflated the max — the lag
+        // plateau's level is the truer OG (e.g. a Hefeweizen reading 1.052 at
+        // peak krausen but pitched at 1.049).
+        val ogRaw = SeriesClean.robustOg(hours, sgs, temps)
+        val lagSg = plateaus.firstOrNull { it.kind == Plateau.Kind.Lag }?.sg
+        val og = if (lagSg != null && lagSg < ogRaw - KRAUSEN_OG_MARGIN) lagSg else ogRaw
+        val priorFg = max(0.998, 1.000 + 0.25 * (og - 1.000))
+
         val (fitHours, fitSgs, fitTemps) = if (coldCrashOnsetH != null) {
             val cutIdx = (hours.indexOfLast { it < coldCrashOnsetH } + 1).coerceAtLeast(MIN_POINTS)
             Triple(
@@ -635,13 +657,6 @@ object Fermentation {
         // pre-crash plateau. Full-capture fits land above the floor on
         // their own merits and are unaffected.
         val fgFloor = if (coldCrashOnsetH != null) fermentSg else null
-        // Plateaus first — the selector uses them to decide whether to
-        // attempt the two-component fit. Detect on the full (un-trimmed)
-        // hours/sgs so a diauxic shift inside the active span isn't lost
-        // when the post-cold-crash tail is cut from the fit window. Pass the
-        // cold-crash onset so a pause running straight into the crash (its
-        // resume masked by the crash's density rise) still registers as a Mid.
-        val plateaus = PlateauDetector.detect(hours, sgs, coldCrashOnsetH)
         val gompertz = AttenuationModelSelector.fit(
             fitHours, fitSgs, plateaus, sigma,
             AttenuationFit.DefaultAttenuationPrior, fgFloor, fitTemps
