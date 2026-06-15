@@ -23,7 +23,7 @@ data class Plateau(
     val startH: Double,
     /** Hours from the first sample where the plateau ends. */
     val endH: Double,
-    /** Mean SG across the plateau. */
+    /** Median SG across the plateau (robust to a transient excursion within it). */
     val sg: Double,
     val kind: Kind
 ) {
@@ -151,7 +151,7 @@ object PlateauDetector {
                     val s = firstReadingAtOrAfter(hours, sFromGrid)
                     val e = lastReadingAtOrBefore(hours, eFromGrid)
                     if (s != null && e != null && e > s) {
-                        val sg = meanSgInRange(hours, sgs, s, e)
+                        val sg = medianSgInRange(hours, sgs, s, e)
                         if (!sg.isNaN()) {
                             val kind = when {
                                 // Run touches the data start → Lag plateau.
@@ -250,7 +250,7 @@ object PlateauDetector {
                 val newEnd = maxOf(cur.endH, next.endH)
                 cur = cur.copy(
                     endH = newEnd,
-                    sg = meanSgInRange(hours, sgs, cur.startH, newEnd)
+                    sg = medianSgInRange(hours, sgs, cur.startH, newEnd)
                 )
             } else {
                 merged += cur
@@ -299,20 +299,21 @@ object PlateauDetector {
         return null
     }
 
-    private fun meanSgInRange(
+    /**
+     * Median SG over the plateau window. Median rather than mean so a plateau
+     * that overlaps a transient excursion — an early krausen / CO2-onset rise
+     * inside the lag plateau, a brief spike inside a pause — reports the
+     * settled level, not a value dragged toward the excursion. The lag
+     * plateau's level feeds the OG estimate, where this robustness matters most.
+     */
+    private fun medianSgInRange(
         hours: DoubleArray,
         sgs: DoubleArray,
         lo: Double,
         hi: Double
     ): Double {
-        var sum = 0.0
-        var count = 0
-        for (i in hours.indices) {
-            if (hours[i] in lo..hi) {
-                sum += sgs[i]
-                count++
-            }
-        }
-        return if (count == 0) Double.NaN else sum / count
+        val vals = ArrayList<Double>()
+        for (i in hours.indices) if (hours[i] in lo..hi) vals.add(sgs[i])
+        return if (vals.isEmpty()) Double.NaN else Fits.median(vals.toDoubleArray()) ?: Double.NaN
     }
 }
