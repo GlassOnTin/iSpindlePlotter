@@ -1,0 +1,3 @@
+The modelled curve no longer follows the krausen blip at the start.
+
+The previous release made the original-gravity number ignore the early krausen / CO2 rise, but the fitted curve was still pulled up by it — bumping above the real OG for the first few hours before settling into the descent. The fit now treats that early rise as the artifact it is (gravity can't climb during fermentation) and starts cleanly at the true OG, so the modelled curve hugs the descent from the very beginning. Your raw readings are unchanged — only the curve the model draws through them.
