@@ -1,0 +1,3 @@
+Detects the yeast-settling stage at the end of a ferment.
+
+Once fermentation finishes, the yeast flocculates and drops out of suspension. Because the iSpindle floats in the clearing upper layer, the gravity reads a small step down — a couple of points — at steady temperature, before any cold crash. The graph now labels this as a Clarifying stage, shades it on the chart, and treats the clarified gravity as the final gravity: suspended yeast inflates a reading, so the settled value is closer to the true FG (and a slightly higher ABV). The yeast-in-suspension reading is shown alongside.
