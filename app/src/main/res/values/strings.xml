@@ -130,6 +130,8 @@
     <string name="graph_sg_abv_fragment"> · ABV %1$s%% → %2$s%%</string>
     <string name="graph_sg_paused_at"> · paused at %1$s for %2$s h</string>
     <string name="graph_sg_conditioning">Conditioning · OG %1$s · FG %2$s · %3$s%% ABV · yeast still cleaning up — verify stable readings before packaging</string>
+    <string name="graph_sg_clarifying">Clarifying · OG %1$s · FG %2$s · %3$s%% ABV · FG with yeast %4$s (settled −%5$s) · yeast dropping out, not fermenting</string>
+    <string name="graph_sg_settling_note"> · yeast settled %1$s→%2$s (−%3$s) before crash</string>
     <string name="graph_sg_stuck">⚠ Stuck · OG %1$s · current %2$s · expected ~%3$s · flat for %4$s h · ABV so far %5$s%%</string>
     <string name="graph_sg_cold_crash">Cold crash · OG %1$s · FG (pre-crash) %2$s · apparent %3$s now · %4$s °C from %5$s °C · %6$s h in</string>
     <string name="graph_model_prefix">model: </string>
@@ -153,12 +155,14 @@
     <string name="graph_plateau_lag">lag</string>
     <string name="graph_plateau_paused">paused %1$s</string>
     <string name="graph_plateau_asymptote">asymptote %1$s</string>
+    <string name="graph_settling_span">settling %1$s→%2$s</string>
     <!-- Per-stage brewing guidance shown under the SG estimate line -->
     <string name="graph_guidance_insufficient">Wait for more readings — the model needs at least 6 points spanning 2 h to fit. Check the iSpindle is reporting in.</string>
     <string name="graph_guidance_lag">Yeast is multiplying. Visible activity (krausen, airlock bubbles) usually starts within 12–48 h. If no SG drop after 72 h, check pitch viability and temperature.</string>
     <string name="graph_guidance_active">Hold fermentation temperature steady. Don\'t open the fermenter — the krausen and CO₂ blanket protect the wort. The model\'s lag time λ is now identifiable; ETA refines as the descent continues.</string>
     <string name="graph_guidance_slowing">Most of the attenuation has happened. Resist the urge to cold-crash before SG stabilises — yeast is still cleaning up flavour compounds. For lagers, raising temperature 2–3 °C now supports a diacetyl rest.</string>
     <string name="graph_guidance_conditioning">SG has reached the iSpindle\'s noise floor, but the ferment isn\'t biologically over. Yeast is reducing diacetyl/acetaldehyde and finishing slow sugars. Verify SG stable for 24–48 h before packaging. Cold-crash now if you want clarity.</string>
+    <string name="graph_guidance_clarifying">Yeast is settling out of suspension — the small SG step down is the floating sensor reading the clearing upper layer as flocculated yeast drops, not further fermentation. Suspended yeast inflates a hydrometer reading by a couple of points, so the clarified value is closer to the true final gravity; record it for ABV. A cold crash will finish clearing the beer.</string>
     <string name="graph_guidance_stuck">Fermentation has plateaued above the expected FG. Common causes: temperature drop, low yeast viability, or unfermentable sugars. Try raising temperature 2–3 °C, gently rousing the yeast, or pitching a fresh starter.</string>
     <string name="graph_guidance_paused_mid">Mid-ferment pause at SG %1$s for %2$s h, well above predicted FG. Most likely a diauxic shift — the yeast is finishing the easy sugars (glucose, maltose) before tackling the harder ones (maltotriose). Hold temperature steady; descent usually resumes within 24–48 h. If the SG hasn\'t resumed dropping after that, raise temperature 2–3 °C or gently rouse the yeast before assuming it\'s stuck.</string>
     <string name="graph_guidance_paused_late">Late-ferment pause at SG %1$s for %2$s h, close to predicted FG. SG is settling onto its asymptote rather than stalling — the yeast is on the harder sugars and starting to clean up flavour compounds (diacetyl, acetaldehyde). Give it 24–48 h; if SG holds, the state will switch to Conditioning. Resist cold-crashing until then.</string>

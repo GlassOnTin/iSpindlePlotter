@@ -143,6 +143,23 @@ object Fermentation {
             val plateaus: List<Plateau> = emptyList()
         ) : State()
 
+        /**
+         * Fermentation has reached FG and the yeast is now flocculating out
+         * of suspension: the SG steps down a few mSG at constant temperature
+         * (the floating sensor reads the clearing upper layer) *before* any
+         * cold crash. The clarified SG is the headline FG — closer to the true
+         * dissolved-extract gravity than the yeast-inflated plateau. The
+         * fermentation FG (yeast in suspension) is reported as secondary.
+         * See [SettlingDetector].
+         */
+        data class Clarifying(
+            val og: Double,
+            val current: Double,
+            val settling: SettlingEvent,
+            /** See [Active.plateaus]. */
+            val plateaus: List<Plateau> = emptyList()
+        ) : State()
+
         data class Stuck(
             val og: Double,
             val current: Double,
@@ -179,7 +196,10 @@ object Fermentation {
             /** See [Active.plateaus]. Carried so historical mid-active
              *  pauses keep their chart shading after the ferment moves
              *  on into Slowing / Conditioning / ColdCrash. */
-            val plateaus: List<Plateau> = emptyList()
+            val plateaus: List<Plateau> = emptyList(),
+            /** Yeast-settling step that occurred before the crash, if any —
+             *  so the cold-crash card can still report the clarification. */
+            val settling: SettlingEvent? = null
         ) : State()
     }
 
@@ -488,7 +508,7 @@ object Fermentation {
     // Slowing onset, and one Conditioning (or Stuck) onset per ferment;
     // there can be many paused episodes inside any of those.
 
-    enum class Phase { Lag, Active, Slowing, Conditioning, Stuck, ColdCrash }
+    enum class Phase { Lag, Active, Slowing, Conditioning, Clarifying, Stuck, ColdCrash }
 
     /** Tunables for the phase-machine walk-back. */
     private const val MIN_SLOWING_HOLD_HOURS = 3.0
@@ -576,12 +596,18 @@ object Fermentation {
         val recentRate: Double?,
         /** End-of-data ETA quantiles from the Gompertz Bayesian draws. */
         val etaCredibleLowHours: Double?,
-        val etaCredibleHighHours: Double?
+        val etaCredibleHighHours: Double?,
+        /** Detected yeast-settling step, if any. Drives the Clarifying phase. */
+        val settling: SettlingEvent? = null
     ) {
         fun phaseAt(hoursFromStart: Double): Phase {
             // ColdCrash overrides everything once entered — the apparent
             // SG and rate are thermal artifacts, not fermentation signal.
             if (coldCrashOnsetH != null && hoursFromStart >= coldCrashOnsetH) return Phase.ColdCrash
+            // Yeast settling: a constant-temperature step below the
+            // fermentation-FG plateau, before any crash. Overrides the
+            // rate-based Conditioning/Slowing labels for the settle window.
+            if (settling != null && hoursFromStart >= settling.startH) return Phase.Clarifying
             // Latest entered onset wins. Stuck and Conditioning are
             // mutually exclusive — only one is non-null.
             if (stuckOnsetH != null && hoursFromStart >= stuckOnsetH) return Phase.Stuck
@@ -645,6 +671,12 @@ object Fermentation {
         val krausenRise = lagSg != null && lagSg < ogRaw - KRAUSEN_OG_MARGIN
         val og = if (krausenRise) lagSg!! else ogRaw
         val priorFg = max(0.998, 1.000 + 0.25 * (og - 1.000))
+
+        // Yeast-settling / clarification step: a small constant-temperature SG
+        // drop after FG is reached and before any cold crash. Detected on the
+        // cumulative level (not slope — the step is too gentle for the plateau
+        // detector), so it can re-label the terminal region as Clarifying.
+        val settling = SettlingDetector.detect(hours, sgs, temps, og, coldCrashOnsetH)
 
         val (fitHours, fitSgsWindow, fitTemps) = if (coldCrashOnsetH != null) {
             val cutIdx = (hours.indexOfLast { it < coldCrashOnsetH } + 1).coerceAtLeast(MIN_POINTS)
@@ -823,7 +855,8 @@ object Fermentation {
             sigma = sigma,
             recentRate = recentRate,
             etaCredibleLowHours = etaCredible.first,
-            etaCredibleHighHours = etaCredible.second
+            etaCredibleHighHours = etaCredible.second,
+            settling = settling
         )
     }
 
@@ -950,6 +983,13 @@ object Fermentation {
                 fg = sgAtT,
                 plateaus = plateausUpToT
             )
+            Phase.Clarifying -> State.Clarifying(
+                og = timeline.og,
+                current = sgAtT,
+                // Non-null whenever phaseAt returns Clarifying.
+                settling = timeline.settling!!,
+                plateaus = plateausUpToT
+            )
             Phase.Stuck -> {
                 val flatHours = if (timeline.stuckOnsetH != null)
                     (tClamped - timeline.stuckOnsetH).coerceAtLeast(0.0)
@@ -973,7 +1013,8 @@ object Fermentation {
                     temperatureC = tempAtT,
                     fermentTemperatureC = timeline.fermentTemperatureC ?: tempAtT,
                     durationH = durationH,
-                    plateaus = plateausUpToT
+                    plateaus = plateausUpToT,
+                    settling = timeline.settling
                 )
             }
         }

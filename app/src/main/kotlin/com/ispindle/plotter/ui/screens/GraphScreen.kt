@@ -728,6 +728,20 @@ private fun StateDescription(
                 )
             )
         }
+        is Fermentation.State.Clarifying -> {
+            val s = state.settling
+            val abv = (state.og - s.clarifiedSg) * 131.25
+            EstimateText(
+                stringResource(
+                    R.string.graph_sg_clarifying,
+                    "%.4f".format(state.og),
+                    "%.4f".format(s.clarifiedSg),
+                    "%.1f".format(abv),
+                    "%.4f".format(s.fgWithYeast),
+                    "%.4f".format(s.dropSg)
+                )
+            )
+        }
         is Fermentation.State.Stuck -> {
             val abvNow = (state.og - state.current) * 131.25
             EstimateText(
@@ -743,17 +757,31 @@ private fun StateDescription(
             )
         }
         is Fermentation.State.ColdCrash -> {
-            EstimateText(
-                stringResource(
-                    R.string.graph_sg_cold_crash,
-                    "%.4f".format(state.og),
-                    "%.4f".format(state.fermentSg),
-                    "%.4f".format(state.apparentSg),
-                    "%.1f".format(state.temperatureC),
-                    "%.1f".format(state.fermentTemperatureC),
-                    "%.1f".format(state.durationH)
+            EstimateText(buildString {
+                append(
+                    ctx.getString(
+                        R.string.graph_sg_cold_crash,
+                        "%.4f".format(state.og),
+                        "%.4f".format(state.fermentSg),
+                        "%.4f".format(state.apparentSg),
+                        "%.1f".format(state.temperatureC),
+                        "%.1f".format(state.fermentTemperatureC),
+                        "%.1f".format(state.durationH)
+                    )
                 )
-            )
+                // Yeast settled out before the crash — note the clarification
+                // so the pre-crash FG isn't misread as the yeast-inflated one.
+                state.settling?.let {
+                    append(
+                        ctx.getString(
+                            R.string.graph_sg_settling_note,
+                            "%.4f".format(it.fgWithYeast),
+                            "%.4f".format(it.clarifiedSg),
+                            "%.4f".format(it.dropSg)
+                        )
+                    )
+                }
+            })
         }
     }
 
@@ -787,6 +815,7 @@ private fun StateDescription(
         state is Fermentation.State.Active -> stringResource(R.string.graph_guidance_active)
         state is Fermentation.State.Slowing -> stringResource(R.string.graph_guidance_slowing)
         state is Fermentation.State.Conditioning -> stringResource(R.string.graph_guidance_conditioning)
+        state is Fermentation.State.Clarifying -> stringResource(R.string.graph_guidance_clarifying)
         state is Fermentation.State.Stuck -> stringResource(R.string.graph_guidance_stuck)
         state is Fermentation.State.ColdCrash -> stringResource(
             R.string.graph_guidance_cold_crash,
@@ -807,7 +836,8 @@ private fun StateDescription(
     if (showCitation && (
             state is Fermentation.State.Active ||
                 state is Fermentation.State.Slowing ||
-                state is Fermentation.State.Conditioning
+                state is Fermentation.State.Conditioning ||
+                state is Fermentation.State.Clarifying
             )
     ) {
         // Use the model's own citation rather than the static one — when
@@ -922,7 +952,7 @@ private fun buildSgOverlay(
     // too short for the timeline classifier.
     val precomputedFit = timeline?.gompertz
 
-    return when (state) {
+    val overlay = when (state) {
         is Fermentation.State.Active -> {
             val fg = state.predictedFg
             val eta = state.etaToFinishHours
@@ -956,6 +986,10 @@ private fun buildSgOverlay(
             // data window only — no future extension, no dashed segment.
             buildInSampleOverlay(ctx, xs, ys, state.fg, tStartMs, state.plateaus, precomputedFit)
         }
+        is Fermentation.State.Clarifying -> {
+            // FG has been reached; the curve floors at the clarified SG.
+            buildInSampleOverlay(ctx, xs, ys, state.settling.clarifiedSg, tStartMs, state.plateaus, precomputedFit)
+        }
         is Fermentation.State.Stuck -> {
             // No predicted-finish to extrapolate to, but the historical
             // Gompertz fit and the mid-active pause shading are still
@@ -971,7 +1005,29 @@ private fun buildSgOverlay(
         }
         else -> null
     }
+    // Shade the yeast-settling window whenever it was detected, independent of
+    // the current state — so a cold-crashed ferment still shows where it
+    // clarified, not only while it's live in the Clarifying phase.
+    return overlay?.let { ov ->
+        timeline?.settling?.let { s ->
+            ov.copy(plateauSpans = ov.plateauSpans + settlingSpan(ctx, s, tStartMs))
+        } ?: ov
+    }
 }
+
+/** Chart span for the yeast-settling window: "settling 1.011→1.008". */
+private fun settlingSpan(
+    ctx: Context,
+    s: com.ispindle.plotter.analysis.SettlingEvent,
+    tStartMs: Double
+): PlateauSpan = PlateauSpan(
+    xRange = (tStartMs + s.startH * 3_600_000.0)..(tStartMs + s.endH * 3_600_000.0),
+    label = ctx.getString(
+        R.string.graph_settling_span,
+        "%.3f".format(s.fgWithYeast),
+        "%.3f".format(s.clarifiedSg)
+    )
+)
 
 /**
  * Overlay variant for "we're already at FG" states (Conditioning, or a
