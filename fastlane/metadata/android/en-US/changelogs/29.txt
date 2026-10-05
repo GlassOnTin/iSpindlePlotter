@@ -1,0 +1,17 @@
+Added a drag-select for marking bad data, and spunding guidance on the
+fermentation stage card.
+
+Mark bad data: press and drag along the graph to select a time range
+— for readings recorded while the spindle sat out of the wort, or
+across a WiFi gap — and mark it. Marked spans show as a shaded band
+on the chart and are listed under the Graph screen; they stop shaping
+the plots, the stage detection and the model fits. The recorded data
+itself is never deleted: excluded readings stay in the database and
+the CSV export, and a mark can be removed at any time.
+
+Spunding guidance: the fermentation stage description now says when
+it's safe to set ~10 psi of spunding pressure (once the ferment is
+strong), and when to raise to ~15 psi (near final gravity, or as the
+cold crash begins), with the target SG printed for this brew. Early
+pressure slows yeast growth, so the card asks you to hold off while
+the ferment is young.
