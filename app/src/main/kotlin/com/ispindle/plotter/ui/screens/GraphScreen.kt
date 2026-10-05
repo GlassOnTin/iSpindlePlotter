@@ -49,6 +49,7 @@ import com.ispindle.plotter.analysis.Exclusions
 import com.ispindle.plotter.analysis.FermentSegmenter
 import com.ispindle.plotter.analysis.Fits
 import com.ispindle.plotter.analysis.AttenuationFit
+import com.ispindle.plotter.analysis.Spunding
 import com.ispindle.plotter.data.ExclusionRange
 import com.ispindle.plotter.data.Reading
 import com.ispindle.plotter.ui.MainViewModel
@@ -948,6 +949,40 @@ private fun StateDescription(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
+        )
+    }
+
+    // Spunding (pressure-fermentation) readiness — orthogonal to the phase
+    // guidance above. Hidden entirely for Insufficient/Stuck: no OG to gate
+    // on, and a stalled ferment gains nothing from pressure.
+    when (val readiness = Spunding.evaluate(state)) {
+        null -> {}
+        is Spunding.Readiness.Hold -> Text(
+            stringResource(
+                R.string.graph_spunding_hold,
+                "%.4f".format(readiness.psi10Sg)
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+        )
+        is Spunding.Readiness.TenPsi -> Text(
+            stringResource(
+                R.string.graph_spunding_ten,
+                "%.4f".format(readiness.psi15Sg)
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+        )
+        Spunding.Readiness.FifteenPsi -> Text(
+            if (state is Fermentation.State.ColdCrash)
+                stringResource(R.string.graph_spunding_cold_crash)
+            else
+                stringResource(R.string.graph_spunding_fifteen),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
         )
     }
 

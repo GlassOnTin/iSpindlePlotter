@@ -301,7 +301,7 @@ object Fermentation {
         // sanity check for "is the current plateau where it ought to be?".
         // A data plateau much higher than this is the signature of a
         // stuck ferment, not a finished one.
-        val priorFg = max(0.998, 1.000 + 0.25 * (og - 1.000))
+        val priorFg = attenuationPriorFg(og)
 
         // Robust gate stats: Theil-Sen slope and a windowed median over the
         // 6-hour tail. Both are insensitive to a single outlying reading
@@ -425,6 +425,14 @@ object Fermentation {
         return max(rawFgSigma, priorFloor)
     }
 
+    /**
+     * The 75 %-attenuation prior FG: the fallback when no model fit is
+     * trusted (see [pickFgEstimate]). Shared so the spunding gate can
+     * state a target for states that carry no FG estimate (Lag).
+     */
+    internal fun attenuationPriorFg(og: Double): Double =
+        max(0.998, 1.000 + 0.25 * (og - 1.000))
+
     private fun pickFgEstimate(
         og: Double,
         gompertz: AttenuationModel?,
@@ -459,7 +467,7 @@ object Fermentation {
         }
         // Fallback: 75 % attenuation prior. Source distinguishes whether
         // we have an active rate to back the linear ETA or are guessing.
-        val attenuationPrior = max(0.998, 1.000 + 0.25 * (og - 1.000))
+        val attenuationPrior = attenuationPriorFg(og)
         val source = if (recentRate != null && recentRate < ACTIVE_RATE)
             PredictionSource.Linear else PredictionSource.Default
         return attenuationPrior to source
@@ -670,7 +678,7 @@ object Fermentation {
         // sets both the OG estimate and the fit-input clamp below.
         val krausenRise = lagSg != null && lagSg < ogRaw - KRAUSEN_OG_MARGIN
         val og = if (krausenRise) lagSg!! else ogRaw
-        val priorFg = max(0.998, 1.000 + 0.25 * (og - 1.000))
+        val priorFg = attenuationPriorFg(og)
 
         // Yeast-settling / clarification step: a small constant-temperature SG
         // drop after FG is reached and before any cold crash. Detected on the
