@@ -5,7 +5,8 @@ Wants=network-online.target
 
 [Service]
 # Adjust paths to where you copied the binary / want the buffer.
-ExecStart=/usr/local/bin/ispindle-proxy --addr :9501 --db /var/lib/ispindle-proxy/readings.jsonl
+# Add --cfg-file to enable config push (see README's Config push section):
+ExecStart=/usr/local/bin/ispindle-proxy --addr :9501 --db /var/lib/ispindle-proxy/readings.jsonl --cfg-file /var/lib/ispindle-proxy/cfg.json
 Restart=on-failure
 RestartSec=5
 DynamicUser=yes
