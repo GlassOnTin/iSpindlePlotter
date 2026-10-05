@@ -1,0 +1,146 @@
+--- /tmp/upstream-7.3.3/pio/lib/Sender/Sender.h	2026-10-04 20:40:36.931225209 +0100
++++ pio/lib/Sender/Sender.h	2026-10-04 20:42:49.208854974 +0100
+@@ -23,7 +23,7 @@
+   SenderClass();
+   String sendTCP(String server, uint16_t port = 80);
+   bool sendThingSpeak(String token, long Channel);
+-  bool sendGenericPost(String server, String uri, uint16_t port = 80);
++  bool sendGenericPost(String server, String uri, uint16_t port = 80, String *response = nullptr);
+   bool sendHTTPSPost(String server, String uri);
+   bool sendInfluxDB(String server, uint16_t port, String uri, String name, String username, String password, bool usehttps);
+   bool sendPrometheus(String server, uint16_t port, String job, String instance);
+--- /tmp/upstream-7.3.3/pio/lib/Sender/Sender.cpp	2026-10-04 20:40:36.931157688 +0100
++++ pio/lib/Sender/Sender.cpp	2026-10-04 20:42:56.049891938 +0100
+@@ -423,7 +423,7 @@
+   return true;
+ }
+ 
+-bool SenderClass::sendGenericPost(String server, String uri, uint16_t port)
++bool SenderClass::sendGenericPost(String server, String uri, uint16_t port, String *response)
+ {
+   serializeJson(_doc, Serial);
+   HTTPClient http;
+@@ -445,7 +445,11 @@
+   {
+     if (httpCode == HTTP_CODE_OK)
+     {
+-      CONSOLELN(http.getString());
++      String body = http.getString();
++      CONSOLELN(body);
++      // Config push: give the caller the body so processResponse can act on it.
++      if (response != nullptr)
++        *response = body;
+     }
+   }
+   else
+--- /tmp/upstream-7.3.3/pio/src/iSpindel.cpp	2026-10-04 20:40:36.931452881 +0100
++++ pio/src/iSpindel.cpp	2026-10-04 20:43:05.669943951 +0100
+@@ -552,12 +552,81 @@
+   }
+ }
+ 
++// Config push: a candidate POLYN from the sender's response is checked with the
++// same evaluator calculateGravity() uses; reject expressions that don't parse or
++// produce SG outside the plausible range (the NaN/inf cases fail the comparison).
++static bool validPolynomial(const char *polyn)
++{
++  if (polyn == nullptr || strlen(polyn) == 0 || strlen(polyn) >= sizeof(myData.polynominal))
++    return false;
++
++  double tilt = 0;
++  double temp = 20;
++  te_variable vars[] = {{"tilt", &tilt}, {"temp", &temp}};
++  int err;
++  te_expr *expr = te_compile(polyn, vars, 2, &err);
++  if (expr == nullptr)
++    return false;
++
++  bool valid = true;
++  for (uint8_t i = 0; valid && i < 5; i++)
++  {
++    tilt = 20 + 15 * i; // 20..80 deg: spans the usual working range
++    double sg = te_eval(expr);
++    if (!(sg >= 0.5 && sg <= 2.0))
++      valid = false;
++  }
++  te_free(expr);
++  return valid;
++}
++
++// Handles both the plain {"interval":N} reply (sendTCP path) and an optional
++// {"cfg":{...}} delta attached by the local proxy. Unknown keys are ignored;
++// WiFi credentials are never accepted this way.
+ bool processResponse(String response)
+ {
+   DynamicJsonDocument doc(1024);
++  bool changed = false;
+ 
+   DeserializationError error = deserializeJson(doc, response);
+-  if (!error && doc.containsKey("interval"))
++  if (error)
++    return false;
++
++  if (doc["cfg"].is<JsonObject>() && response.length() <= 4096)
++  {
++    JsonObject cfg = doc["cfg"].as<JsonObject>();
++
++    if (cfg["POLY"].is<const char *>())
++    {
++      const char *polyn = cfg["POLY"].as<const char *>();
++      bool polyValid = validPolynomial(polyn);
++      if (!polyValid)
++      {
++        CONSOLELN(F("Ignoring invalid gravity config"));
++      }
++      else if (strcmp(myData.polynominal, polyn) != 0)
++      {
++        strlcpy(myData.polynominal, polyn, sizeof(myData.polynominal));
++        CONSOLE(F("Received new gravity config: "));
++        CONSOLELN(polyn);
++        changed = true;
++      }
++    }
++
++    if (cfg["sleep"].is<uint32_t>())
++    {
++      uint32_t interval = cfg["sleep"];
++      if (interval != myData.sleeptime && interval < 24 * 60 * 60 && interval > 10)
++      {
++        myData.sleeptime = interval;
++        CONSOLE(F("Received new Interval config: "));
++        CONSOLELN(interval);
++        changed = true;
++      }
++    }
++  }
++
++  if (!changed && doc.containsKey("interval"))
+   {
+     uint32_t interval = doc["interval"];
+     if (interval != myData.sleeptime && interval < 24 * 60 * 60 && interval > 10)
+@@ -565,9 +634,12 @@
+       myData.sleeptime = interval;
+       CONSOLE(F("Received new Interval config: "));
+       CONSOLELN(interval);
+-      return saveConfig();
++      changed = true;
+     }
+   }
++
++  if (changed)
++    return saveConfig();
+   return false;
+ }
+ 
+@@ -687,7 +759,10 @@
+     if (service == DTHTTP)
+     {
+       CONSOLELN(F("\ncalling HTTP"));
+-      return sender.sendGenericPost(myData.server, myData.uri, myData.port);
++      String response;
++      bool posted = sender.sendGenericPost(myData.server, myData.uri, myData.port, &response);
++      processResponse(response);
++      return posted;
+     }
+     else if (service == DTCraftBeerPi)
+     {
