@@ -30,6 +30,7 @@ class RepositoryImportReadingsTest {
             deviceDao = StubDeviceDao(),
             readingDao = fake,
             calibrationDao = StubCalibrationDao(),
+            exclusionRangeDao = StubExclusionRangeDao(),
             database = null
         )
         val rows = (1..1_000L).map { r(deviceId = 5, timestampMs = it) }
@@ -47,6 +48,7 @@ class RepositoryImportReadingsTest {
             deviceDao = StubDeviceDao(),
             readingDao = fake,
             calibrationDao = StubCalibrationDao(),
+            exclusionRangeDao = StubExclusionRangeDao(),
             database = null
         )
         val rows = listOf(
@@ -68,6 +70,7 @@ class RepositoryImportReadingsTest {
             deviceDao = StubDeviceDao(),
             readingDao = fake,
             calibrationDao = StubCalibrationDao(),
+            exclusionRangeDao = StubExclusionRangeDao(),
             database = null
         )
         val rows = (1..5L).map { r(deviceId = 1, timestampMs = it * 100) }
@@ -82,6 +85,7 @@ class RepositoryImportReadingsTest {
             deviceDao = StubDeviceDao(),
             readingDao = fake,
             calibrationDao = StubCalibrationDao(),
+            exclusionRangeDao = StubExclusionRangeDao(),
             database = null
         )
         // Import a row that claims a different deviceId in its payload.
@@ -162,6 +166,14 @@ class RepositoryImportReadingsTest {
         override fun observeForDevice(deviceId: Long): Flow<List<CalibrationPoint>> = flowOf(emptyList())
         override suspend fun enabledForDevice(deviceId: Long): List<CalibrationPoint> = emptyList()
         override suspend fun listForDevice(deviceId: Long): List<CalibrationPoint> = emptyList()
+    }
+
+    private class StubExclusionRangeDao : ExclusionRangeDao {
+        override suspend fun insert(range: ExclusionRange): Long = 1L
+        override suspend fun delete(range: ExclusionRange) { /* no-op */ }
+        override suspend fun deleteForDevice(deviceId: Long) { /* no-op */ }
+        override fun observeForDevice(deviceId: Long): Flow<List<ExclusionRange>> = flowOf(emptyList())
+        override suspend fun listForDevice(deviceId: Long): List<ExclusionRange> = emptyList()
     }
 
     private fun r(deviceId: Long, timestampMs: Long): Reading = Reading(

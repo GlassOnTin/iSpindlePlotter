@@ -14,6 +14,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -176,6 +177,22 @@ fun LineChart(
      * scrubbed data x. Pass null to leave the chart static.
      */
     onCursorChange: ((Double?) -> Unit)? = null,
+    /**
+     * Vertical spans (epoch-ms) of user-marked "bad data" — shaded as the
+     * most-background layer on every chart that receives them.
+     */
+    exclusionSpans: List<PlateauSpan> = emptyList(),
+    /**
+     * When true the chart swaps the scrub cursor for a drag-to-mark gesture.
+     * Pass onCursorChange = null at the same time — the two gestures are
+     * mutually exclusive.
+     */
+    exclusionDragEnabled: Boolean = false,
+    /**
+     * Called with the snapped (lo, hi) epoch-ms span when a mark drag
+     * commits. Drags below the minimum span are discarded without a call.
+     */
+    onExclusionCommit: ((Double, Double) -> Unit)? = null,
     height: androidx.compose.ui.unit.Dp = 220.dp
 ) {
     val textMeasurer = rememberTextMeasurer()
@@ -183,6 +200,7 @@ fun LineChart(
     val axisColor = MaterialTheme.colorScheme.outline
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
     val cursorColor = MaterialTheme.colorScheme.primary
+    val exclusionColor = MaterialTheme.colorScheme.error
 
     if (series.points.size < 2) {
         Box(
@@ -233,43 +251,73 @@ fun LineChart(
 
     val secondary = secondaryAxis != null
     // Pointer input lives on the wrapper Box, not on the Canvas, so it
-    // doesn't compete with the canvas' own draw modifiers and can be
-    // cleanly toggled by passing onCursorChange = null.
+    // doesn't compete with the canvas' own draw modifiers. It is keyed on
+    // the mode flags, so toggling mark mode (or the scrub callback going
+    // null) restarts the coroutine with the new behaviour.
     //
-    // The onCursorChange callback is funnelled through rememberUpdatedState
-    // so the long-lived gesture coroutine (keyed on Unit, kept alive across
-    // recompositions) always invokes the *current* lambda. Without this
-    // indirection, the coroutine captures whichever lambda existed when
-    // pointerInput was first installed; if the underlying MutableState is
-    // re-keyed (e.g. when a new reading arrives and `remember(timestamps)`
-    // creates a fresh state in GraphScreen), the captured lambda becomes a
-    // dead writer to a discarded state — clicks fire, but the visible
-    // cursor never updates.
+    // The callback, the visible x-range, the plotted x values, and the
+    // mark-commit callback are funnelled through rememberUpdatedState so
+    // the long-lived gesture coroutine (kept alive across recompositions)
+    // always reads the *current* values. Without this indirection, the
+    // coroutine captures whatever existed when pointerInput was installed;
+    // if that state is re-keyed (e.g. a new reading arrives and widens the
+    // axis), the old capture becomes stale — cursor marks land at the wrong
+    // time, and marks get committed over the wrong span.
     val onCursorChangeUpdated by rememberUpdatedState(onCursorChange)
-    val outerModifier = if (onCursorChange != null) {
+    val onExclusionCommitUpdated by rememberUpdatedState(onExclusionCommit)
+    val xRangeUpdated by rememberUpdatedState(xMin to xMax)
+    val xsUpdated by rememberUpdatedState(xs)
+    // Live preview band while the finger is down in mark mode. Cleared on
+    // lift; re-keyed so a mode toggle can't leak a stale preview.
+    var dragPreview by remember(exclusionDragEnabled) { mutableStateOf<Pair<Double, Double>?>(null) }
+    val outerModifier = if (onCursorChange != null || exclusionDragEnabled) {
         modifier.fillMaxWidth().height(height)
-            .pointerInput(Unit) {
+            .pointerInput(onCursorChange != null, exclusionDragEnabled) {
                 awaitEachGesture {
                     val paddingLeftPx = 48.dp.toPx()
                     val paddingRightPx = (if (secondary) 56.dp else 8.dp).toPx()
                     val plotW = size.width - paddingLeftPx - paddingRightPx
                     if (plotW <= 0f) return@awaitEachGesture
                     fun pxToData(px: Float): Double {
-                        val cx = px.coerceIn(paddingLeftPx, paddingLeftPx + plotW)
-                        val t = ((cx - paddingLeftPx) / plotW).toDouble()
-                        return xMin + t * (xMax - xMin)
+                        val (xLo, xHi) = xRangeUpdated
+                        return dataFromPx(px, paddingLeftPx, plotW, xLo, xHi)
                     }
                     val first = awaitFirstDown(requireUnconsumed = false)
-                    onCursorChangeUpdated?.invoke(pxToData(first.position.x))
-                    first.consume()
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        val change = event.changes.firstOrNull() ?: break
-                        if (change.pressed) {
-                            onCursorChangeUpdated?.invoke(pxToData(change.position.x))
-                            change.consume()
+                    if (exclusionDragEnabled) {
+                        // Mark mode: the drag's two ends define the span.
+                        val anchor = pxToData(first.position.x)
+                        first.consume()
+                        var end = anchor
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull() ?: break
+                            if (change.pressed) {
+                                end = pxToData(change.position.x)
+                                dragPreview = minOf(anchor, end) to maxOf(anchor, end)
+                                change.consume()
+                            }
+                            if (event.changes.none { it.pressed }) break
                         }
-                        if (event.changes.none { it.pressed }) break
+                        dragPreview = null
+                        val (lo, hi) = snapSpan(anchor, end, xsUpdated)
+                        // Below the minimum span this is a tap or a fumble —
+                        // do nothing rather than commit an accidental sliver.
+                        if (hi - lo >= MIN_EXCLUSION_DRAG_MS) {
+                            onExclusionCommitUpdated?.invoke(lo, hi)
+                        }
+                    } else {
+                        // Scrub cursor mode.
+                        onCursorChangeUpdated?.invoke(pxToData(first.position.x))
+                        first.consume()
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull() ?: break
+                            if (change.pressed) {
+                                onCursorChangeUpdated?.invoke(pxToData(change.position.x))
+                                change.consume()
+                            }
+                            if (event.changes.none { it.pressed }) break
+                        }
                     }
                 }
             }
@@ -293,6 +341,27 @@ fun LineChart(
         fun yToPx(y: Double): Float {
             val t = if (yMax == yMin) 0.5 else (y - yMin) / (yMax - yMin)
             return paddingTop + plotH - (t.toFloat() * plotH)
+        }
+
+        // Marked "bad data" spans — the most-background layer: behind the
+        // y-bands, gridlines, and data alike.
+        for (span in exclusionSpans) {
+            val sx = xToPx(span.xRange.start.coerceIn(xMin, xMax))
+            val ex = xToPx(span.xRange.endInclusive.coerceIn(xMin, xMax))
+            if (ex <= sx) continue
+            drawRect(
+                color = exclusionColor.copy(alpha = 0.14f),
+                topLeft = Offset(sx, paddingTop),
+                size = androidx.compose.ui.geometry.Size(ex - sx, plotH)
+            )
+        }
+        // Live preview of the span being dragged (mark mode, finger down).
+        dragPreview?.let { (lo, hi) ->
+            drawRect(
+                color = exclusionColor.copy(alpha = 0.28f),
+                topLeft = Offset(xToPx(lo), paddingTop),
+                size = androidx.compose.ui.geometry.Size(xToPx(hi) - xToPx(lo), plotH)
+            )
         }
 
         // Coloured background y-bands — drawn first so gridlines, data,
@@ -564,6 +633,50 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawTextAt(
         style = androidx.compose.ui.text.TextStyle(color = color, fontSize = 10.sp)
     )
     drawText(layout, topLeft = Offset(x, y))
+}
+
+/** Minimum commit-able mark span, in data units (epoch-ms). Below this a
+ * drag is treated as a tap or a fumble and commits nothing. */
+internal const val MIN_EXCLUSION_DRAG_MS = 30_000.0
+
+/**
+ * Inverse of the chart's x mapping: plot-area px → data x, clamped to the
+ * plot edges so touches past the axis still map to its extremes. Pure, for
+ * testability.
+ */
+internal fun dataFromPx(
+    px: Float,
+    plotLeftPx: Float,
+    plotWidthPx: Float,
+    xMin: Double,
+    xMax: Double
+): Double {
+    val cx = px.coerceIn(plotLeftPx, plotLeftPx + plotWidthPx)
+    val t = ((cx - plotLeftPx) / plotWidthPx).toDouble()
+    return xMin + t * (xMax - xMin)
+}
+
+/** Nearest plotted x; on a distance tie the earlier list position wins. No
+ * plotted points → the raw target. Pure, for testability. */
+internal fun snapToNearestX(target: Double, xs: List<Double>): Double {
+    var best = xs.firstOrNull() ?: return target
+    var bestDist = kotlin.math.abs(target - best)
+    for (x in xs) {
+        val d = kotlin.math.abs(target - x)
+        if (d < bestDist) {
+            best = x
+            bestDist = d
+        }
+    }
+    return best
+}
+
+/** Snap a drag's two ends onto the nearest plotted x values, lowest first.
+ * Reversed drags are normalised so marks always span (lo, hi). Pure, for
+ * testability. */
+internal fun snapSpan(a: Double, b: Double, xs: List<Double>): Pair<Double, Double> {
+    val (lo, hi) = if (a <= b) a to b else b to a
+    return snapToNearestX(lo, xs) to snapToNearestX(hi, xs)
 }
 
 /**

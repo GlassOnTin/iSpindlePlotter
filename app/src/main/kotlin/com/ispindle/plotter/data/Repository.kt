@@ -12,6 +12,7 @@ class Repository(
     private val deviceDao: DeviceDao,
     private val readingDao: ReadingDao,
     private val calibrationDao: CalibrationDao,
+    private val exclusionRangeDao: ExclusionRangeDao,
     /**
      * Database handle used for [withTransaction]-wrapped bulk operations
      * (CSV import). Optional so unit-test fakes and the in-process
@@ -30,6 +31,7 @@ class Repository(
     fun observeLatestReading(deviceId: Long) = readingDao.observeLatestForDevice(deviceId)
     fun observeLatestAny() = readingDao.observeLatestAny()
     fun observeCalibration(deviceId: Long) = calibrationDao.observeForDevice(deviceId)
+    fun observeExclusions(deviceId: Long) = exclusionRangeDao.observeForDevice(deviceId)
 
     suspend fun deviceById(id: Long) = deviceDao.findById(id)
 
@@ -145,6 +147,27 @@ class Repository(
         readingDao.deleteForDeviceInRange(deviceId, startMs, endMs)
     }
 
+    /**
+     * Stores a user-marked ignored span. Degenerate or reversed spans
+     * (dragging backwards by less than a reading, or a tap) are no-ops and
+     * return false so callers can skip their confirmation toast.
+     */
+    suspend fun addExclusionRange(deviceId: Long, startMs: Long, endMs: Long): Boolean {
+        if (endMs <= startMs) return false
+        exclusionRangeDao.insert(
+            ExclusionRange(
+                deviceId = deviceId,
+                startMs = startMs,
+                endMs = endMs,
+                createdMs = System.currentTimeMillis()
+            )
+        )
+        return true
+    }
+
+    /** Lifts a mark; the readings it covered immediately rejoin the plots and fits. */
+    suspend fun deleteExclusionRange(range: ExclusionRange) = exclusionRangeDao.delete(range)
+
     suspend fun readingCount(deviceId: Long) = readingDao.countForDevice(deviceId)
 
     /** Snapshot for export. Ordered ASC so CSV consumers see chronological rows. */
@@ -214,11 +237,18 @@ class Repository(
     suspend fun calibrationSnapshot(deviceId: Long): List<CalibrationPoint> =
         calibrationDao.listForDevice(deviceId)
 
+    /** Snapshot of one device's marked exclusion ranges for settings backup. */
+    suspend fun exclusionSnapshot(deviceId: Long): List<ExclusionRange> =
+        exclusionRangeDao.listForDevice(deviceId)
+
     /**
      * Restore one device's settings (label, calibration polynomial, raw
-     * calibration points). Looks up by `hwId` — creates a new device row
-     * if none exists, otherwise updates the existing row's user label and
-     * polynomial coefficients. Calibration points get cleared and replaced.
+     * calibration points, marked exclusion ranges). Looks up by `hwId` —
+     * creates a new device row if none exists, otherwise updates the
+     * existing row's user label and polynomial coefficients. Calibration
+     * points and exclusion ranges get cleared and replaced; [exclusionRanges]
+     * defaults to empty so a v1 backup (marks didn't exist yet) clears the
+     * device's marks.
      *
      * Readings are NOT touched — settings backup is intentionally
      * lightweight; CSV import is the way to restore reading data.
@@ -229,7 +259,8 @@ class Repository(
         userLabel: String,
         calA: Double, calB: Double, calC: Double, calD: Double,
         calDegree: Int, calRSquared: Double?,
-        calibrationPoints: List<CalibrationPoint>
+        calibrationPoints: List<CalibrationPoint>,
+        exclusionRanges: List<ExclusionRange> = emptyList()
     ) {
         val now = System.currentTimeMillis()
         val existing = deviceDao.findByHwId(hwId)
@@ -263,6 +294,11 @@ class Repository(
         }
         for (p in calibrationPoints) {
             calibrationDao.insert(p.copy(id = 0, deviceId = deviceId))
+        }
+        // Same replace semantics for the marked exclusion ranges.
+        exclusionRangeDao.deleteForDevice(deviceId)
+        for (e in exclusionRanges) {
+            exclusionRangeDao.insert(e.copy(id = 0, deviceId = deviceId))
         }
     }
 }

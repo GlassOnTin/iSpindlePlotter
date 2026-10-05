@@ -30,6 +30,7 @@ class IspindleApp : Application() {
             deviceDao = db.deviceDao(),
             readingDao = db.readingDao(),
             calibrationDao = db.calibrationDao(),
+            exclusionRangeDao = db.exclusionRangeDao(),
             database = db,
             pendingCalibration = pendingCalibration
         )

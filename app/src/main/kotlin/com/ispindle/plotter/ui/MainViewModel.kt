@@ -6,6 +6,7 @@ import com.ispindle.plotter.IspindleApp
 import com.ispindle.plotter.calibration.Polynomial
 import com.ispindle.plotter.calibration.PolynomialFit
 import com.ispindle.plotter.data.CalibrationPoint
+import com.ispindle.plotter.data.ExclusionRange
 import com.ispindle.plotter.data.Device
 import com.ispindle.plotter.data.Reading
 import com.ispindle.plotter.data.Repository
@@ -26,6 +27,7 @@ class MainViewModel(private val repo: Repository) : ViewModel() {
     fun readingsFor(deviceId: Long): Flow<List<Reading>> = repo.observeReadings(deviceId)
     fun deviceFlow(deviceId: Long): Flow<Device?> = repo.observeDevice(deviceId)
     fun calibrationFlow(deviceId: Long): Flow<List<CalibrationPoint>> = repo.observeCalibration(deviceId)
+    fun exclusionRangesFor(deviceId: Long): Flow<List<ExclusionRange>> = repo.observeExclusions(deviceId)
     fun latestReadingFor(deviceId: Long): Flow<Reading?> = repo.observeLatestReading(deviceId)
 
     fun rename(deviceId: Long, label: String) {
@@ -38,6 +40,14 @@ class MainViewModel(private val repo: Repository) : ViewModel() {
 
     fun deleteReadingsForDeviceInRange(deviceId: Long, startMs: Long, endMs: Long) {
         viewModelScope.launch { repo.deleteReadingsForDeviceInRange(deviceId, startMs, endMs) }
+    }
+
+    fun addExclusionRange(deviceId: Long, startMs: Long, endMs: Long) {
+        viewModelScope.launch { repo.addExclusionRange(deviceId, startMs, endMs) }
+    }
+
+    fun deleteExclusionRange(range: ExclusionRange) {
+        viewModelScope.launch { repo.deleteExclusionRange(range) }
     }
 
     suspend fun readingCount(deviceId: Long): Int = repo.readingCount(deviceId)
@@ -191,15 +201,15 @@ class MainViewModel(private val repo: Repository) : ViewModel() {
 
     /**
      * Builds a JSON settings backup: every device's user label, calibration
-     * polynomial, and raw calibration points. Reading data is NOT
-     * included — that goes through the CSV export/import surface, which
-     * can ship gigabytes of rows that this lightweight backup shouldn't
-     * try to round-trip.
+     * polynomial, raw calibration points, and marked exclusion ranges.
+     * Reading data is NOT included — that goes through the CSV
+     * export/import surface, which can ship gigabytes of rows that this
+     * lightweight backup shouldn't try to round-trip.
      */
     suspend fun exportSettingsJson(): String {
         val root = org.json.JSONObject()
         root.put("schema", "ispindle-plotter-settings")
-        root.put("version", 1)
+        root.put("version", 2)
         root.put("exportedAtMs", System.currentTimeMillis())
         val devicesArr = org.json.JSONArray()
         for (d in repo.allDevices()) {
@@ -225,6 +235,16 @@ class MainViewModel(private val repo: Repository) : ViewModel() {
                 )
             }
             obj.put("calibrationPoints", pointsArr)
+            val exclArr = org.json.JSONArray()
+            for (e in repo.exclusionSnapshot(d.id)) {
+                exclArr.put(
+                    org.json.JSONObject()
+                        .put("startMs", e.startMs)
+                        .put("endMs", e.endMs)
+                        .put("createdMs", e.createdMs)
+                )
+            }
+            obj.put("exclusionRanges", exclArr)
             devicesArr.put(obj)
         }
         root.put("devices", devicesArr)
@@ -235,8 +255,10 @@ class MainViewModel(private val repo: Repository) : ViewModel() {
      * Restores devices and calibration from a JSON file produced by
      * [exportSettingsJson]. Matches by hwId — devices that aren't yet
      * known to this install are created; existing devices are updated
-     * in place. Calibration points are replaced (not merged) on a per-
-     * device basis. Reading history is left alone.
+     * in place. Calibration points and exclusion ranges are replaced (not
+     * merged) on a per-device basis — an old v1 backup with no
+     * exclusionRanges array clears the device's marks. Reading history is
+     * left alone.
      */
     suspend fun importSettingsJson(json: String): ImportResult {
         return try {
@@ -274,13 +296,31 @@ class MainViewModel(private val repo: Repository) : ViewModel() {
                         )
                     }
                 }
+                val exclArr = obj.optJSONArray("exclusionRanges")
+                val exclusions = mutableListOf<ExclusionRange>()
+                if (exclArr != null) {
+                    for (j in 0 until exclArr.length()) {
+                        val e = exclArr.getJSONObject(j)
+                        val startMs = e.optLong("startMs")
+                        val endMs = e.optLong("endMs")
+                        if (endMs > startMs) {
+                            exclusions += ExclusionRange(
+                                deviceId = 0, // overwritten by repo
+                                startMs = startMs,
+                                endMs = endMs,
+                                createdMs = e.optLong("createdMs", System.currentTimeMillis())
+                            )
+                        }
+                    }
+                }
                 repo.restoreDeviceSettings(
                     hwId = hwId,
                     reportedName = reportedName,
                     userLabel = userLabel,
                     calA = calA, calB = calB, calC = calC, calD = calD,
                     calDegree = calDegree, calRSquared = calRSquared,
-                    calibrationPoints = points
+                    calibrationPoints = points,
+                    exclusionRanges = exclusions
                 )
                 restored++
             }

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -44,9 +45,11 @@ import androidx.compose.ui.unit.dp
 import com.ispindle.plotter.R
 import com.ispindle.plotter.analysis.Fermentation
 import com.ispindle.plotter.analysis.FermentSegment
+import com.ispindle.plotter.analysis.Exclusions
 import com.ispindle.plotter.analysis.FermentSegmenter
 import com.ispindle.plotter.analysis.Fits
 import com.ispindle.plotter.analysis.AttenuationFit
+import com.ispindle.plotter.data.ExclusionRange
 import com.ispindle.plotter.data.Reading
 import com.ispindle.plotter.ui.MainViewModel
 import kotlinx.coroutines.Dispatchers
@@ -97,12 +100,27 @@ fun GraphScreen(
     val readings by remember(deviceId) { vm.readingsFor(deviceId).map { it } }
         .collectAsState(initial = emptyList())
 
+    // User-marked "bad data" spans (time-axis drag select). Stored rows are
+    // un-merged; coalescing happens here so overlapping drags shade and
+    // filter as one span while each row stays individually deletable.
+    // effectiveReadings is the single filter point: every chart, estimate,
+    // and fit below reads it, so a marked glitch vanishes everywhere at once.
+    val exclusions by remember(deviceId) { vm.exclusionRangesFor(deviceId) }
+        .collectAsState(initial = emptyList())
+    val coalescedExclusions = remember(exclusions) { Exclusions.coalesce(exclusions) }
+    val effectiveReadings = remember(readings, coalescedExclusions) {
+        Exclusions.filterReadings(readings, coalescedExclusions)
+    }
+    val exclusionSpanList = remember(coalescedExclusions) {
+        coalescedExclusions.map { PlateauSpan(it.startMs.toDouble()..it.endMs.toDouble()) }
+    }
+
     // Detect contiguous ferment episodes across the whole readings stream.
     // When at least one ferment is detected we default the chart to the
     // most recent one, since that's the brew the user is actively
     // watching; "All" falls back to the TimeWindow filter.
-    val segments = remember(readings) {
-        val sgList = readings.mapNotNull { r ->
+    val segments = remember(effectiveReadings) {
+        val sgList = effectiveReadings.mapNotNull { r ->
             val sg = r.computedGravity ?: r.reportedGravity
             if (sg != null && sg > 0.0) r.timestampMs to sg else null
         }
@@ -115,8 +133,8 @@ fun GraphScreen(
     // Start of the contiguous episode the latest reading belongs to. The
     // SG model is scoped to this (or to an explicitly selected segment),
     // never to the chart's time window — see [modelScoped] below.
-    val episodeStartMs = remember(readings) {
-        val sgList = readings.mapNotNull { r ->
+    val episodeStartMs = remember(effectiveReadings) {
+        val sgList = effectiveReadings.mapNotNull { r ->
             val sg = r.computedGravity ?: r.reportedGravity
             if (sg != null && sg > 0.0) r.timestampMs to sg else null
         }
@@ -133,7 +151,7 @@ fun GraphScreen(
     // (not segments.size) means a manual selection survives normal polling
     // and only resets when the episode situation actually changes.
     val defaultSelection = FermentSegmenter.defaultSelection(
-        segments, readings.lastOrNull()?.timestampMs
+        segments, effectiveReadings.lastOrNull()?.timestampMs
     )
     var selectedSegmentIdx by remember(defaultSelection) {
         mutableStateOf<Int?>(defaultSelection)
@@ -141,15 +159,17 @@ fun GraphScreen(
 
     var window by remember { mutableStateOf(TimeWindow.D7) }
     var deletingSegment by remember { mutableStateOf<FermentSegment?>(null) }
+    var markMode by remember { mutableStateOf(false) }
+    var deletingExclusion by remember { mutableStateOf<ExclusionRange?>(null) }
     val now = System.currentTimeMillis()
     val scoped = run {
         val sel = selectedSegmentIdx
         if (sel != null && sel in segments.indices) {
             val seg = segments[sel]
-            readings.filter { it.timestampMs in seg.startMs..seg.endMs }
+            effectiveReadings.filter { it.timestampMs in seg.startMs..seg.endMs }
         } else {
             val cutoff = window.hours?.let { now - it * 3_600_000L } ?: Long.MIN_VALUE
-            readings.filter { it.timestampMs >= cutoff }
+            effectiveReadings.filter { it.timestampMs >= cutoff }
         }
     }
     // Data the SG model is fitted to. Deliberately independent of the
@@ -163,10 +183,10 @@ fun GraphScreen(
         when {
             sel != null && sel in segments.indices -> {
                 val seg = segments[sel]
-                readings.filter { it.timestampMs in seg.startMs..seg.endMs }
+                effectiveReadings.filter { it.timestampMs in seg.startMs..seg.endMs }
             }
             episodeStartMs != null ->
-                readings.filter { it.timestampMs >= episodeStartMs }
+                effectiveReadings.filter { it.timestampMs >= episodeStartMs }
             else -> scoped
         }
     }
@@ -324,6 +344,14 @@ fun GraphScreen(
                     label = { Text(stringResource(w.labelResId)) }
                 )
             }
+            // Toggles the drag-to-mark gesture on the SG chart: while on,
+            // dragging across the chart shades and commits an ignored span
+            // instead of scrubbing the cursor.
+            FilterChip(
+                selected = markMode,
+                onClick = { markMode = !markMode },
+                label = { Text(stringResource(R.string.graph_mark_bad_data_chip)) }
+            )
         }
         @OptIn(ExperimentalLayoutApi::class)
         FlowRow(
@@ -353,6 +381,75 @@ fun GraphScreen(
         toast?.let {
             Text(it, style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.tertiary)
+        }
+
+        // Mark-mode hint, the stored spans list, and the delete confirm.
+        // Deliberately before the scoped.isEmpty() early return so a window
+        // that is entirely excluded is still recoverable from here.
+        if (markMode) {
+            Text(
+                stringResource(R.string.graph_mark_bad_data_hint),
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+        if (exclusions.isNotEmpty()) {
+            Text(
+                stringResource(R.string.graph_exclusions_title, exclusions.size),
+                style = MaterialTheme.typography.titleSmall
+            )
+            exclusions.sortedBy { it.startMs }.forEach { e ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                ) {
+                    Text(
+                        stringResource(
+                            R.string.graph_exclusion_span,
+                            dateFmt.format(Date(e.startMs)),
+                            dateFmt.format(Date(e.endMs))
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = { deletingExclusion = e }) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = stringResource(R.string.graph_exclusion_delete_cd)
+                        )
+                    }
+                }
+            }
+        }
+        deletingExclusion?.let { ex ->
+            AlertDialog(
+                onDismissRequest = { deletingExclusion = null },
+                title = { Text(stringResource(R.string.graph_exclusion_delete_title)) },
+                text = {
+                    Text(
+                        stringResource(
+                            R.string.graph_exclusion_delete_body,
+                            dateFmt.format(Date(ex.startMs)),
+                            dateFmt.format(Date(ex.endMs))
+                        )
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            vm.deleteExclusionRange(ex)
+                            deletingExclusion = null
+                            toast = ctx.getString(R.string.graph_exclusion_deleted)
+                        }
+                    ) {
+                        Text(stringResource(R.string.graph_exclusion_remove))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { deletingExclusion = null }) {
+                        Text(stringResource(R.string.common_cancel))
+                    }
+                }
+            )
         }
 
         if (scoped.isEmpty()) {
@@ -398,6 +495,9 @@ fun GraphScreen(
         var sgCursorX by remember(scoped.firstOrNull()?.timestampMs, scoped.lastOrNull()?.timestampMs) {
             mutableStateOf<Double?>(null)
         }
+        // Entering mark mode retires the scrub cursor so returning from a
+        // marking drag can't revive a cursor parked somewhere stale.
+        LaunchedEffect(markMode) { if (markMode) sgCursorX = null }
         MetricCard(
             title = stringResource(R.string.graph_section_specific_gravity),
             series = ChartSeries(
@@ -416,8 +516,23 @@ fun GraphScreen(
                 format = { pa -> "%.1f%%".format(pa) }
             ),
             overlay = sgOverlay,
-            cursorX = sgCursorX,
-            onCursorChange = { sgCursorX = it }
+            // The scrub cursor and the mark drag are mutually exclusive
+            // gestures on the same chart (LineChart keys its pointerInput
+            // per mode), so only one is wired at a time.
+            cursorX = if (markMode) null else sgCursorX,
+            onCursorChange = if (markMode) {
+                null
+            } else {
+                { x: Double? -> sgCursorX = x }
+            },
+            exclusionSpans = exclusionSpanList,
+            exclusionDragEnabled = markMode,
+            onExclusionCommit = if (markMode) {
+                { lo, hi ->
+                    vm.addExclusionRange(deviceId, lo.toLong(), hi.toLong())
+                    toast = ctx.getString(R.string.graph_exclusion_added)
+                }
+            } else null
         )
         SgEstimateLine(modelScoped, modelSgPoints, calR2, sgCursorX, onClearCursor = { sgCursorX = null })
 
@@ -429,7 +544,8 @@ fun GraphScreen(
                 points = scoped.map { it.timestampMs.toDouble() to it.angle },
                 format = { "%.1f°".format(it) }
             ),
-            xFormatter = xFmt
+            xFormatter = xFmt,
+            exclusionSpans = exclusionSpanList
         )
 
         MetricCard(
@@ -440,7 +556,8 @@ fun GraphScreen(
                 points = scoped.map { it.timestampMs.toDouble() to it.temperatureC },
                 format = { "%.1f°C".format(it) }
             ),
-            xFormatter = xFmt
+            xFormatter = xFmt,
+            exclusionSpans = exclusionSpanList
         )
 
         val rawBatteryPoints = scoped.map { it.timestampMs.toDouble() to it.batteryV }
@@ -494,7 +611,8 @@ fun GraphScreen(
             // terms, not in autoscaled-to-data terms.
             fixedYRange = 3.00..4.20,
             yBands = LithiumZones,
-            yTickStep = 0.2
+            yTickStep = 0.2,
+            exclusionSpans = exclusionSpanList
         )
         BatteryEstimateLine(scoped, batteryFit?.first)
     }
@@ -1367,7 +1485,10 @@ private fun MetricCard(
     fixedYRange: ClosedFloatingPointRange<Double>? = null,
     yTickStep: Double? = null,
     cursorX: Double? = null,
-    onCursorChange: ((Double?) -> Unit)? = null
+    onCursorChange: ((Double?) -> Unit)? = null,
+    exclusionSpans: List<PlateauSpan> = emptyList(),
+    exclusionDragEnabled: Boolean = false,
+    onExclusionCommit: ((Double, Double) -> Unit)? = null
 ) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1385,7 +1506,10 @@ private fun MetricCard(
                     fixedYRange = fixedYRange,
                     yTickStep = yTickStep,
                     cursorX = cursorX,
-                    onCursorChange = onCursorChange
+                    onCursorChange = onCursorChange,
+                    exclusionSpans = exclusionSpans,
+                    exclusionDragEnabled = exclusionDragEnabled,
+                    onExclusionCommit = onExclusionCommit
                 )
                 Latest(series)
             }

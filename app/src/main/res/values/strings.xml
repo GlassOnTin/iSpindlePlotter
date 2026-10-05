@@ -174,6 +174,17 @@
     <string name="graph_battery_days_to_cutoff">days to 3.4 V cutoff: %1$s</string>
     <string name="graph_battery_rms">RMS ±%1$s V</string>
     <!-- Trim dialog -->
+    <!-- Graph: mark-bad-data mode -->
+    <string name="graph_mark_bad_data_chip">Mark bad data</string>
+    <string name="graph_mark_bad_data_hint">Drag across the SG chart to shade a span of readings to ignore. Marks are excluded from the plots and model fitting — nothing is deleted, and the marks survive syncs and restarts.</string>
+    <string name="graph_exclusions_title">Marked spans (%1$d)</string>
+    <string name="graph_exclusion_span">%1$s → %2$s</string>
+    <string name="graph_exclusion_delete_cd">Remove this marked span</string>
+    <string name="graph_exclusion_delete_title">Remove marked span?</string>
+    <string name="graph_exclusion_delete_body">Readings between %1$s and %2$s become visible again in the plots and fits. No readings are deleted.</string>
+    <string name="graph_exclusion_remove">Remove mark</string>
+    <string name="graph_exclusion_added">Span marked as ignored</string>
+    <string name="graph_exclusion_deleted">Marked span removed</string>
 
     <!-- ── CalibrationScreen ─────────────────────────────────────────── -->
     <string name="cal_helper_title">Sugar / water mixer</string>
