@@ -176,6 +176,32 @@ class FermentSegmenterTest {
         assertEquals("excursion-and-recover is not a ferment", 0, segs.size)
     }
 
+    @Test fun `pre-gap dip that recovers to plateau across a reboot gap stays one segment`() {
+        // Ferment drops from 1.019 to a 1.0151 plateau, then experiences a
+        // 4.5 h mechanical dip to 1.0077 right before a 24 h station reboot
+        // outage, and resumes at 1.0151 on the plateau afterward.
+        val (ts1, s1) = syntheticLogistic(0L, 48.0, og = 1.019, fg = 1.0151, intervalMin = 15)
+        // Dip the last 18 readings (4.5 h) before the gap down to 1.0078
+        for (i in (s1.size - 18) until s1.size) {
+            s1[i] = 1.0078
+        }
+        val resumeStart = ts1.last() + 24 * hourMs
+        val postN = 16 // 4 h of post-reboot readings back on the ~1.0152 plateau
+        val ts2 = LongArray(postN) { resumeStart + it.toLong() * 15 * 60_000L }
+        val s2 = DoubleArray(postN) { 1.0151 + it * 0.00003 }
+        val ts = ts1 + ts2
+        val sgs = s1 + s2
+
+        assertEquals(
+            "latestEpisodeStartMs must stay at the start of the brew, not cut at the reboot gap",
+            ts.first(),
+            FermentSegmenter.latestEpisodeStartMs(ts, sgs)
+        )
+        val segs = FermentSegmenter.detect(ts, sgs)
+        assertEquals("must remain a single fermentation segment", 1, segs.size)
+        assertEquals("segment must include the post-reboot readings", ts2.last(), segs.single().endMs)
+    }
+
     /**
      * Generates a logistic SG curve from `og` to `fg` over `durationH`,
      * sampled every 10 minutes. Returns (timestamps, SGs).

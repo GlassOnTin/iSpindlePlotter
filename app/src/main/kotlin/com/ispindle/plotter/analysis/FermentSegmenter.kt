@@ -121,7 +121,26 @@ object FermentSegmenter {
                 // ferment.
                 val preGap = medianOf(sgs, (i - 3).coerceAtLeast(0), i)
                 val postGap = medianOf(sgs, i, (i + 3).coerceAtMost(n))
-                if (kotlin.math.abs(postGap - preGap) > NEW_FERMENT_RISE) cuts += i
+                if (postGap - preGap > NEW_FERMENT_RISE) {
+                    // Confirm the post-gap SG actually exceeds the pre-gap
+                    // lookback window (anchored at timestamps[i - 1] so the
+                    // offline gap duration itself does not consume the
+                    // lookback). If the SG was already at/above postGap
+                    // shortly before the gap, the post-gap reading is just a
+                    // recovery from a pre-gap dip back to the same ferment.
+                    val lookbackStartMs = timestamps[i - 1] - (RISE_LOOKBACK_HOURS * 3_600_000.0).toLong()
+                    var foundPriorPeak = false
+                    for (j in i - 1 downTo 0) {
+                        if (timestamps[j] < lookbackStartMs) break
+                        if (sgs[j] >= postGap - RISE_LOOKBACK_TOLERANCE) {
+                            foundPriorPeak = true
+                            break
+                        }
+                    }
+                    if (!foundPriorPeak) cuts += i
+                } else if (preGap - postGap > NEW_FERMENT_RISE) {
+                    cuts += i
+                }
                 continue
             }
             val rise = sgs[i] - sgs[i - 1]
